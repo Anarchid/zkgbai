@@ -381,10 +381,10 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	        x = x * w8;
         	
 	        AIFloat3 center = new AIFloat3(x,0,z);
-	        AIFloat3 topLeft = new AIFloat3(sb[3]*w8,0,sb[1]*h8);
-	        AIFloat3 topRight = new AIFloat3(sb[3]*w8,0,sb[2]*h8);
-	        AIFloat3 bottomLeft = new AIFloat3(sb[0]*w8,0,sb[1]*h8);
-	        AIFloat3 bottomRight = new AIFloat3(sb[0]*w8,0,sb[2]*h8);
+	        AIFloat3 topLeft = new AIFloat3(sb[1]*h8,0,sb[3]*w8);
+	        AIFloat3 topRight = new AIFloat3(sb[2]*h8,0,sb[3]*w8);
+	        AIFloat3 bottomLeft = new AIFloat3(sb[1]*h8,0,sb[0]*w8);
+	        AIFloat3 bottomRight = new AIFloat3(sb[2]*h8,0,sb[0]*w8);
 	        
 	        drawLine(topLeft, topRight);
 	        drawLine(topLeft, bottomLeft);
