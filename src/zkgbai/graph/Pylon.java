@@ -27,14 +27,14 @@ public class Pylon {
 	@Override 
 	public boolean equals(Object other) {
 		if (other instanceof Pylon) {
-			return (((Pylon) other).getUnitId() == this.unit.getUnitId());
+			return (((Pylon) other).getUnit().getUnitId() == this.unit.getUnitId());
 		}
-		return result;
+		return false;
 	}
 	
 	@Override 
 	public int hashCode() {
-		return (position.x*position.y*position.z*unit.getUnitId());
+		return unit.getUnitId();
 	}
 	
 	void addNeighbour(Pylon p){
