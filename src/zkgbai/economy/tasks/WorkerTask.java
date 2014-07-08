@@ -12,6 +12,20 @@ public class WorkerTask {
 		this.worker = worker;
 	}
 	
+	@Override
+	public boolean equals(Object other){
+		if(other instanceof WorkerTask){
+			WorkerTask wt = (WorkerTask)other;
+			return (worker.getUnit().getUnitId() == wt.getWorker().getUnit().getUnitId());
+		}
+		return false;
+	}
+	
+	@Override
+	public int hashCode(){
+		return worker.getUnit().getUnitId()*43;
+	}
+	
 	public boolean isCompleted(){
 		return completed;
 	}

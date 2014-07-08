@@ -18,6 +18,20 @@ public class ProductionTask extends WorkerTask {
 		this.builderPriority = builderPriority;
 	}
 	
+	@Override
+	public boolean equals(Object other){
+		if(other instanceof ProductionTask){
+			ProductionTask wt = (ProductionTask)other;
+			return (worker.getUnit().getUnitId() == wt.getWorker().getUnit().getUnitId() && buildType == wt.buildType);
+		}
+		return false;
+	}
+	
+	@Override
+	public int hashCode(){
+		return worker.getUnit().getUnitId()*43+buildType.getUnitDefId();
+	}
+	
 	public void setBuilding(Unit unit){
 		this.building = unit;
 	}

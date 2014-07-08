@@ -11,4 +11,18 @@ public class ConstructionTask extends ProductionTask {
 		super(who, what, taskPriority, builderPriority);
 		this.location = location;
 	}
+	
+	@Override
+	public boolean equals(Object other){
+		if(other instanceof ConstructionTask){
+			ConstructionTask wt = (ConstructionTask)other;
+			return (worker.getUnit().getUnitId() == wt.getWorker().getUnit().getUnitId() && buildType == wt.buildType && wt.location == location);
+		}
+		return false;
+	}
+	
+	@Override
+	public int hashCode(){
+		return worker.getUnit().getUnitId()*43+buildType.getUnitDefId()*location.hashCode();
+	}
 }

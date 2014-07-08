@@ -9,6 +9,7 @@ import com.springrts.ai.oo.clb.Unit;
 public class MetalSpot {
 	AIFloat3 position;
 	float value;
+	float danger = 0;
 	boolean owned = false;
 	boolean hostile = false;
 	boolean connected = false;
@@ -23,6 +24,15 @@ public class MetalSpot {
 		this.position = new AIFloat3(x,y,z);
 		this.pylons = new ArrayList<Pylon>();
 		this.links = new ArrayList<Link>();
+	}
+	
+	@Override
+	public boolean equals(Object other){
+		if(other instanceof MetalSpot){
+			MetalSpot ms = (MetalSpot)other;
+			return (ms.value == value && ms.position == position);
+		}
+		return false;
 	}
 	
 	public void addPylon(Pylon p){

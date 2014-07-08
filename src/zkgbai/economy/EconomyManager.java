@@ -8,6 +8,7 @@ import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.tasks.ConstructionTask;
 import zkgbai.economy.tasks.ProductionTask;
+import zkgbai.economy.tasks.ReclaimTask;
 import zkgbai.economy.tasks.TemporaryAssistTask;
 import zkgbai.economy.tasks.WorkerTask;
 import zkgbai.graph.GraphManager;
@@ -18,6 +19,7 @@ import zkgbai.graph.Pylon;
 import com.springrts.ai.Enumerations.UnitCommandOptions;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Economy;
+import com.springrts.ai.oo.clb.Feature;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Unit;
@@ -97,7 +99,7 @@ public class EconomyManager extends Module {
 		effectiveIncome= Math.min(effectiveIncomeMetal, effectiveIncomeEnergy);
 		effectiveExpenditure = Math.min(expendMetal, expendEnergy);
 		
-		if(frame%30 ==0){
+		if(frame%10 == 0){
 			inventarizeWorkers();
 		}
 		
@@ -121,7 +123,6 @@ public class EconomyManager extends Module {
 			}
 		}
 		
-		
 		return 0;
 	}
 	
@@ -135,27 +136,7 @@ public class EconomyManager extends Module {
     	
 		if(unit.getDef().getName().equals("factorycloak")){
 			factories.add(unit);
-			int numTeams = callback.getGame().getTeams();
 			unit.setMoveState(2, (short) 0, frame+10);
-			for(int i=0;i<numTeams;i++){
-				if (i == parent.teamID){
-					continue;
-				}else{
-					int allyTeam = callback.getGame().getTeamAllyTeam(i);
-					if(!callback.getGame().isAllied(parent.allyTeamID, allyTeam)){
-						//Gotcha! ENEMIES!
-						ArrayList<AIFloat3> enemyPos = parent.getEnemyPositions(allyTeam);
-						if(enemyPos != null){
-							int z = UnitCommandOptions.UNIT_COMMAND_OPTION_SHIFT_KEY.getValue();
-							for(AIFloat3 position:enemyPos){
-								unit.patrolTo(position, (short) z, frame+20);
-							}
-						}
-					}	
-				}
-			}
-			
-
 		}
     	checkWorker(unit);
     	
@@ -187,6 +168,7 @@ public class EconomyManager extends Module {
 	    
 	    if(unit.getDef().getName() == "factorycloak"){
 	    	factories.remove(unit);
+	    	parent.debug(factories.size()+" factories remain");
 	    }
         return 0; // signaling: OK
     }
@@ -273,7 +255,7 @@ public class EconomyManager extends Module {
     		if (worker.getUnit().getDef().getName() == "armnanotc"){
     			
     		}else{
-	    		if(totalBuildpower < effectiveIncome  || effectiveExpenditure+2 < effectiveIncome){
+	    		if(totalBuildpower < effectiveIncome  || effectiveExpenditure+totalBuildpower*0.1 < effectiveIncome){
 	    			ProductionTask task = createUnitTask(worker, "armrectr");
 	    			workerTasks.add(task);
 	    			worker.setTask(task);
@@ -306,7 +288,7 @@ public class EconomyManager extends Module {
     	}
     	
     	// ponder building a nanoturret
-    	if(effectiveExpenditure+2 < effectiveIncome){
+    	if(effectiveExpenditure+totalBuildpower*0.1 < effectiveIncome){
     		for(Worker w:workers){
     			Unit u = w.getUnit();
     			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
@@ -320,13 +302,55 @@ public class EconomyManager extends Module {
     		}
     	}
     	
-    	// are there uncolonized metal spots?   	
-		MetalSpot ms = graphManager.getSpotToColonize(worker.getUnit().getPos());
-		if (ms != null){
-			ConstructionTask task = createColonizeTask(worker, ms);
-			worker.setTask(task);
-			ms.addColonist(worker.getUnit());
-			return;
+    	// are there uncolonized metal spots? or is reclaim more worth it?
+    	float minWeight = Float.MAX_VALUE;
+    	MetalSpot spot = null;
+    	AIFloat3 mypos = worker.getUnit().getPos();
+    	List<MetalSpot> metalSpots = graphManager.getNeutralSpots();
+    	for(MetalSpot ms:metalSpots){
+	    		float weight = GraphManager.groundDistance(ms.getPosition(), mypos)/(ms.getValue()+0.001f);
+	    		weight += weight*ms.getColonists().size();
+	    		if (weight < minWeight){
+	    			spot = ms;
+	    			minWeight = weight;
+	    		}
+    	}
+    	
+    	List<Feature> features = callback.getFeatures();
+    	float fMinWeight = Float.MAX_VALUE;
+    	Feature bestFeature = null;
+    	for(Feature f:features){
+    		float weight = GraphManager.groundDistance(f.getPosition(), mypos) / (f.getDef().getContainedResource(m));
+    		if(fMinWeight < weight){
+    			bestFeature = f;
+    			fMinWeight = weight;
+    		}
+    	}
+    	
+		if (spot != null){
+			if(bestFeature == null){
+				ConstructionTask task = createColonizeTask(worker, spot);
+				worker.setTask(task);
+				spot.addColonist(worker.getUnit());
+				return;
+			}else{
+				if(minWeight<fMinWeight){
+					ConstructionTask task = createColonizeTask(worker, spot);
+					worker.setTask(task);
+					spot.addColonist(worker.getUnit());
+					return;
+				}else{
+					parent.debug("RECLAIMAN");
+					ReclaimTask rt = createReclaimTask(worker, bestFeature);
+					worker.setTask(rt);
+				}
+			}
+		}else{
+			if(bestFeature != null){
+				parent.debug("RECLAIMAN");
+				ReclaimTask rt = createReclaimTask(worker, bestFeature);
+				worker.setTask(rt);
+			}
 		}
 		
     	// are there damaged nearby ally units?
@@ -336,6 +360,13 @@ public class EconomyManager extends Module {
 		ConstructionTask task = createEnergyTask(worker);
 		worker.setTask(task);
 		return;
+    }
+    
+    ReclaimTask createReclaimTask(Worker worker, Feature f){
+        worker.getUnit().reclaimInArea(f.getPosition(),100, (short)0, frame+1000);
+        ReclaimTask rt =  new ReclaimTask(worker,f);
+    	workerTasks.add(rt);
+    	return rt;
     }
     
     ProductionTask createUnitTask(Worker worker, String unitname){
@@ -376,7 +407,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-        worker.getUnit().build(factory, position, facing, (short) 0, frame +10);
+        worker.getUnit().build(factory, position, facing, (short) 0, frame+30);
     	ConstructionTask ct =  new ConstructionTask(worker,factory,priority,constructionPriority, position);
     	workerTasks.add(ct);
     	return ct;

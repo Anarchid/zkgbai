@@ -30,6 +30,20 @@ public class Link {
 			this.weight = (v0.value+v1.value)/this.length+1; 
 		}
 		
+		@Override
+		public boolean equals(Object other){
+			if(other instanceof Link){
+				Link that = (Link) other;
+				return (v1 == that.v1 && v0 == that.v0 || v0 == that.v1 && v1 == that.v0);
+			}
+			return false;
+		}
+		
+		@Override
+		public int hashCode(){
+			return v0.position.hashCode() + v1.position.hashCode()*2 + centerPos.hashCode()*4;
+		}
+		
 		public void addPylon(Pylon p){
 			pylons.add(p);
 		}

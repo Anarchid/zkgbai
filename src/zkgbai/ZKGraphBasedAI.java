@@ -2,6 +2,7 @@ package zkgbai;
 
 import java.util.HashMap;
 
+import com.springrts.ai.Enumerations.UnitCommandOptions;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.CommandDescription;
 import com.springrts.ai.oo.clb.OOAICallback;
@@ -13,9 +14,11 @@ import com.springrts.ai.oo.clb.WeaponDef;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,13 +28,17 @@ import zkgbai.Module;
 import zkgbai.economy.EconomyManager;
 import zkgbai.graph.GraphManager;
 import zkgbai.los.LosManager;
+import zkgbai.military.MilitaryManager;
 
 public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     private OOAICallback callback;
     private List<Module> modules = new LinkedList<Module>();
     public HashMap<Integer, float[]> startBoxes;
+	HashSet<Integer> enemyTeams = new HashSet<Integer>();
+	HashSet<Integer> enemyAllyTeams = new HashSet<Integer>(); 
     public int teamID;
     public int allyTeamID;
+    public int currentFrame = 0;
     
 	@Override
     public int init(int teamId, OOAICallback callback) {
@@ -39,7 +46,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         this.teamID = teamId;
         this.allyTeamID = callback.getGame().getMyAllyTeam();
         startBoxes = new HashMap<Integer, float[]>();
+        
         parseStartScript();
+        identifyEnemyTeams();
         
         callback.getCheats().setEventsEnabled(false);
         callback.getCheats().setEnabled(false);
@@ -47,13 +56,19 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         LosManager losManager = new LosManager(this);
         GraphManager graphManager = new GraphManager(this);
         EconomyManager ecoManager = new EconomyManager(this);
+        MilitaryManager warManager = new MilitaryManager(this);
         
         graphManager.setLosManager(losManager);
+        warManager.setLosManager(losManager);
+        
         ecoManager.setGraphManager(graphManager);
+        warManager.setGraphManager(graphManager);
+        
         
         modules.add(losManager);
         modules.add(graphManager);
         modules.add(ecoManager);
+        modules.add(warManager);
         
         for (Module module : modules) {
         	try {
@@ -80,6 +95,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     
     @Override
     public int update(int frame) {
+    	currentFrame = frame;
         for (Module module : modules) {
         	try {
         		module.update(frame);
@@ -340,12 +356,41 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     		     		 
     		 float[] startbox = new float[4];
     		 int i = 0;
+ 	        
+ 	         // 0 -> bottom
+ 	         // 1 -> left
+ 	         // 2 -> right
+ 	         // 3 -> top
         	 while (mb.find()) {
         		 startbox[i] = Float.parseFloat(mb.group(1));
         		 i++;
         	 }
+        	 
+        	 int mapWidth  = 8* callback.getMap().getWidth();
+        	 int mapHeight = 8* callback.getMap().getHeight();
+        	 
+        	 startbox[0] *= mapHeight;
+        	 startbox[1] *= mapWidth;
+        	 startbox[2] *= mapWidth;
+        	 startbox[3] *= mapHeight;
+        	 
         	 startBoxes.put(allyTeamId, startbox);
     	}
+    }
+    
+    private void identifyEnemyTeams(){
+		int numTeams = callback.getGame().getTeams();
+
+		for(int i=0;i<numTeams;i++){
+			if (i != teamID){
+				int allyTeam = callback.getGame().getTeamAllyTeam(i);
+				if(!callback.getGame().isAllied(allyTeamID, allyTeam)){
+					//Gotcha! ENEMIES!
+					enemyTeams.add(i);
+					enemyAllyTeams.add(i);
+				}	
+			}
+		}
     }
     
     public OOAICallback getCallback(){
@@ -365,43 +410,16 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	callback.getMap().getDrawer().addLine(v0,v1);
     }
     
-    public ArrayList<AIFloat3> getEnemyPositions(int enemyAllyTeam){
-        float[] sb = startBoxes.get(enemyAllyTeam);
-        if(sb == null){
-        	return null;
-        }else{    	
-
-	        float z = (sb[0]+sb[3]) / 2;
-	        float x = (sb[1]+sb[2]) / 2;
-	        
-	        int w8 = 8*callback.getMap().getWidth();
-	        int h8 = 8*callback.getMap().getHeight();
-	        
-	        z = z * h8;
-	        x = x * w8;
-        	
-	        AIFloat3 center = new AIFloat3(x,0,z);
-	        AIFloat3 topLeft = new AIFloat3(sb[1]*h8,0,sb[3]*w8);
-	        AIFloat3 topRight = new AIFloat3(sb[2]*h8,0,sb[3]*w8);
-	        AIFloat3 bottomLeft = new AIFloat3(sb[1]*h8,0,sb[0]*w8);
-	        AIFloat3 bottomRight = new AIFloat3(sb[2]*h8,0,sb[0]*w8);
-	        
-	        drawLine(topLeft, topRight);
-	        drawLine(topLeft, bottomLeft);
-	        drawLine(bottomRight, topRight);
-	        drawLine(bottomRight, bottomLeft);
-	        
-	        ArrayList<AIFloat3> positions = new ArrayList<AIFloat3>();
-	        
-	        positions.add(center);
-	        positions.add(topLeft);
-	        positions.add(topRight);
-	        positions.add(bottomLeft);
-	        positions.add(bottomRight);
-
-
-	        return positions;
-        }
+    public Set<Integer> getEnemyAllyTeamIDs(){
+    	return this.enemyAllyTeams;
+    }
+    
+    public Set<Integer> getEnemyTeamIDs(){
+    	return this.enemyTeams;
+    }
+    
+    public float[] getEnemyBox(int allyTeamID){
+    	return this.startBoxes.get(allyTeamID);
     }
     
     

@@ -18,6 +18,7 @@ import com.json.parsers.JSONParser;
 import com.json.parsers.JsonParserFactory;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Map;
+import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
@@ -70,6 +71,25 @@ public class GraphManager extends Module {
 			ArrayList<HashMap> jsonData=(ArrayList)parser.parseJson(json).values().toArray()[0];
 			initializeGraph(jsonData);
     		parent.debug("Parsed JSON metalmap with "+metalSpots.size()+" spots and "+links.size()+" links");
+    		
+			Set<Integer> enemies = parent.getEnemyAllyTeamIDs();
+			for(int enemy:enemies){
+				float[] box = parent.getEnemyBox(enemy);
+				if(box!=null){
+					
+		 	         // 0 -> bottom
+		 	         // 1 -> left
+		 	         // 2 -> right
+		 	         // 3 -> top
+					for (MetalSpot ms:metalSpots){
+						AIFloat3 pos = ms.position;
+						if(pos.z > box[3] && pos.z < box[0] && pos.x>box[1] && pos.x<box[2]){
+							ms.hostile = true;
+							parent.marker(ms.position,"Enemy");
+						}
+					}
+				}
+			}
     	}
     	return 0; //signaling: OK
     }
@@ -270,22 +290,22 @@ public class GraphManager extends Module {
     		links.add(l);
     	}
     }
+   
     
-    public MetalSpot getSpotToColonize(AIFloat3 position){
-    	// arbitrary weighting for now, but can be tuned later
-    	float minWeight = Float.MAX_VALUE;
-    	MetalSpot spot = null;
+    public List<MetalSpot> getEnemySpots(){
+    	ArrayList<MetalSpot> spots = new ArrayList<MetalSpot>();
     	for(MetalSpot ms:metalSpots){
-    		if(!ms.owned && !ms.hostile){
-	    		float weight = groundDistance(ms.position, position)/(ms.value+0.001f);
-	    		weight += weight*ms.getColonists().size();
-	    		if (weight < minWeight){
-	    			spot = ms;
-	    			minWeight = weight;
-	    		}
-    		}
+    		if(ms.hostile) spots.add(ms);
     	}
-		return spot;	
+    	return spots;
+    }
+
+    public List<MetalSpot> getNeutralSpots(){
+    	ArrayList<MetalSpot> spots = new ArrayList<MetalSpot>();
+    	for(MetalSpot ms:metalSpots){
+    		if(!ms.owned && !ms.hostile) spots.add(ms);
+    	}
+    	return spots;
     }
     
     public AIFloat3 getOverdriveSweetSpot(AIFloat3 position){
