@@ -6,7 +6,6 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 
 public class Pylon {
-	int id;
 	int radius;
 	float output;
 	AIFloat3 position;
@@ -25,6 +24,19 @@ public class Pylon {
 		this.links = new ArrayList<Link>();
 	}
 	
+	@Override 
+	public boolean equals(Object other) {
+		if (other instanceof Pylon) {
+			return (((Pylon) other).getUnitId() == this.unit.getUnitId());
+		}
+		return result;
+	}
+	
+	@Override 
+	public int hashCode() {
+		return (position.x*position.y*position.z*unit.getUnitId());
+	}
+	
 	void addNeighbour(Pylon p){
 		neighbours.add(p);
 	}
@@ -37,12 +49,15 @@ public class Pylon {
 		spots.add(s);
 	}
 	
+	void addLink(Link l){
+		links.add(l);
+	}
+
 	ArrayList<MetalSpot>getSpots(){
 		return spots;
 	}
 	
-	void addLink(Link l){
-		links.add(l);
+	Unit getUnit(){
+		return unit;
 	}
-	
 }
