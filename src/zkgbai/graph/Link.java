@@ -57,6 +57,7 @@ public class Link {
 		
 		public boolean checkConnected()
 		{
+			int i = 0;
 			ArrayList<Pylon>visited = new ArrayList<Pylon>();
 			Queue <Pylon>queue = new LinkedList<Pylon>();
 			
@@ -70,6 +71,7 @@ public class Link {
 					connected = true;
 					return true;
 				}else{
+					if(i++>1000) return false;
 					visited.add(q);
 					for(Pylon child:q.neighbours){
 						if(!visited.contains(child)){
@@ -80,5 +82,42 @@ public class Link {
 			}
 			connected = false;
 			return false;
+		}
+		
+		public Pylon getConnectionHead(){
+			if(connected || !owned || pylons.size() == 0){
+				return null;
+			}
+			
+			Pylon winner = null;
+			float minDistance = Float.MAX_VALUE;
+			
+			int i = 0;
+			ArrayList<Pylon>visited = new ArrayList<Pylon>();
+			Queue <Pylon>queue = new LinkedList<Pylon>();
+			
+			for(Pylon p:v0.pylons){
+				queue.add(p);	
+			}
+			
+			while(!queue.isEmpty()) {
+				Pylon q = queue.remove();
+				if(i++>1000) return null;
+				visited.add(q);
+				
+				float distance = GraphManager.groundDistance(q.position, v1.position);
+				if (distance < minDistance){
+					minDistance = distance;
+					winner = q;
+				}
+				
+				for(Pylon child:q.neighbours){
+					if(!visited.contains(child)){
+						queue.add(child);
+					}
+				}
+			}
+			
+			return winner;
 		}
 }

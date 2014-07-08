@@ -114,14 +114,13 @@ public class GraphManager extends Module {
 	    			if(groundDistance(p.position,m.position)<p.radius+50){
 	    				m.addPylon(p);
 	    				p.addSpot(m);
-	    				parent.drawLine(m.position, p.position);
 	    			}
 	    		}
 	    		
 	    		for(Link l:links){
-	    			if(groundDistance(p.position,l.centerPos) < l.length/2){
+	    			if(GraphManager.groundDistance(p.position,l.centerPos) < l.length/2){
 	    				for(Pylon lp:l.pylons){
-	    					if(groundDistance(p.position,lp.position) < p.radius+lp.radius){
+	    					if(GraphManager.groundDistance(p.position,lp.position) < p.radius+lp.radius){
 	    						lp.addNeighbour(p);
 	    						p.addNeighbour(lp);
 	    					}
@@ -145,7 +144,7 @@ public class GraphManager extends Module {
     	if(unit.getDef().getUnitDefId() == mexDefID){
     		AIFloat3 unitpos = unit.getPos();
 	    	for(MetalSpot ms:metalSpots){
-	    		if(!ms.hostile && groundDistance(unitpos,ms.getPosition()) < 50){
+	    		if(!ms.hostile && GraphManager.groundDistance(unitpos,ms.getPosition()) < 50){
 	    			ms.owned = false;
 	    			ms.hostile = true;
 	    			ms.setExtractor(unit);
@@ -167,7 +166,6 @@ public class GraphManager extends Module {
 	    				link.owned = false;
 	    			}
 	    			ms.setExtractor(null);
-	    			parent.marker(ms.position,"MexDestroyed");
 	    		}
 	    	}
     	} else if(!def.isBuilder() && def.getMakesResource(e)>0){
@@ -221,7 +219,7 @@ public class GraphManager extends Module {
 		return 0;
 	}
 
-    public float groundDistance(AIFloat3 v0, AIFloat3 v1){
+    public static float groundDistance(AIFloat3 v0, AIFloat3 v1){
     	float dx = v0.x-v1.x;
     	float dz = v0.z-v1.z;
     	return (float) Math.sqrt(dx*dx+dz*dz);
@@ -291,8 +289,40 @@ public class GraphManager extends Module {
     }
     
     public AIFloat3 getOverdriveSweetSpot(AIFloat3 position){
+    	float minWeight = Float.MAX_VALUE;  	
+    	Link link = null;
+    	for(Link l:links){
+    		if(l.owned && !l.connected){
+    			float combinedValue = (l.v0.value+l.v1.value+l.pylons.size()+0.001f);
+    			float combinedCost = l.length + GraphManager.groundDistance(l.centerPos, position);
+	    		float weight = combinedCost/combinedValue;
+	    		if (weight < minWeight){
+	    			link = l;
+	    			minWeight = weight;
+	    		}
+    		}
+    	}
+    	if(link != null){
+    		
+    		Pylon p = link.getConnectionHead();
+    		
+    		if(p != null){
+				float dx=link.v1.position.x - p.position.x;
+				float dz=link.v1.position.z - p.position.z;
+				
+				double d = Math.sqrt(dx*dx+dz*dz);
+				float vx = (float) (dx/d);
+				float vz = (float) (dz/d);
+				
+				float x = p.position.x + vx*90;
+				float z = p.position.z + vz*90;
+				AIFloat3 newpos = new AIFloat3(x,p.position.y,z);
+				return newpos;
+    		}
+    	}	
+    	
     	// if no unconnected links nearby, just pick a metal spot
-    	float minWeight = Float.MAX_VALUE;
+    	minWeight = Float.MAX_VALUE;
     	MetalSpot spot = null;
     	for(MetalSpot ms:metalSpots){
     		if(ms.owned){

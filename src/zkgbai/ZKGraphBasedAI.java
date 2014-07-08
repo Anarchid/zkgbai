@@ -335,8 +335,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	 while (m.find()) {
     		 int allyTeamId = Integer.parseInt(m.group(1));
     		 String teamDefBody = m.group(2);
-    		 Pattern sbp = Pattern.compile("startrect\\w+=(\\d+\\.\\d+);");
+    		 Pattern sbp = Pattern.compile("startrect\\w+=(\\d+(\\.\\d+)?);");
     		 Matcher mb = sbp.matcher(teamDefBody);
+    		     		 
     		 float[] startbox = new float[4];
     		 int i = 0;
         	 while (mb.find()) {
@@ -364,22 +365,42 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	callback.getMap().getDrawer().addLine(v0,v1);
     }
     
-    public AIFloat3 getEnemyPosition(int enemyAllyTeam){
-        float[] myStartBox = startBoxes.get(enemyAllyTeam);
-        
-        if(myStartBox == null){
+    public ArrayList<AIFloat3> getEnemyPositions(int enemyAllyTeam){
+        float[] sb = startBoxes.get(enemyAllyTeam);
+        if(sb == null){
         	return null;
-        }else{
-	        float z = (myStartBox[0]+myStartBox[3]) / 2;
-	        float x = (myStartBox[1]+myStartBox[2]) / 2;
+        }else{    	
+
+	        float z = (sb[0]+sb[3]) / 2;
+	        float x = (sb[1]+sb[2]) / 2;
 	        
-	        int w = callback.getMap().getWidth();
-	        int h = callback.getMap().getHeight();
+	        int w8 = 8*callback.getMap().getWidth();
+	        int h8 = 8*callback.getMap().getHeight();
 	        
-	        z = z * 8 * h;
-	        x = x * 8 * w;
+	        z = z * h8;
+	        x = x * w8;
+        	
+	        AIFloat3 center = new AIFloat3(x,0,z);
+	        AIFloat3 topLeft = new AIFloat3(sb[3]*w8,0,sb[1]*h8);
+	        AIFloat3 topRight = new AIFloat3(sb[3]*w8,0,sb[2]*h8);
+	        AIFloat3 bottomLeft = new AIFloat3(sb[0]*w8,0,sb[1]*h8);
+	        AIFloat3 bottomRight = new AIFloat3(sb[0]*w8,0,sb[2]*h8);
 	        
-	        return new AIFloat3(x,0,z);
+	        drawLine(topLeft, topRight);
+	        drawLine(topLeft, bottomLeft);
+	        drawLine(bottomRight, topRight);
+	        drawLine(bottomRight, bottomLeft);
+	        
+	        ArrayList<AIFloat3> positions = new ArrayList<AIFloat3>();
+	        
+	        positions.add(center);
+	        positions.add(topLeft);
+	        positions.add(topRight);
+	        positions.add(bottomLeft);
+	        positions.add(bottomRight);
+
+
+	        return positions;
         }
     }
     

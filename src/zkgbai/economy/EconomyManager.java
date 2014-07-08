@@ -15,6 +15,7 @@ import zkgbai.graph.Link;
 import zkgbai.graph.MetalSpot;
 import zkgbai.graph.Pylon;
 
+import com.springrts.ai.Enumerations.UnitCommandOptions;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Economy;
 import com.springrts.ai.oo.clb.OOAICallback;
@@ -135,7 +136,7 @@ public class EconomyManager extends Module {
 		if(unit.getDef().getName().equals("factorycloak")){
 			factories.add(unit);
 			int numTeams = callback.getGame().getTeams();
-			
+			unit.setMoveState(2, (short) 0, frame+10);
 			for(int i=0;i<numTeams;i++){
 				if (i == parent.teamID){
 					continue;
@@ -143,10 +144,12 @@ public class EconomyManager extends Module {
 					int allyTeam = callback.getGame().getTeamAllyTeam(i);
 					if(!callback.getGame().isAllied(parent.allyTeamID, allyTeam)){
 						//Gotcha! ENEMIES!
-						AIFloat3 enemyPos = parent.getEnemyPosition(allyTeam);
+						ArrayList<AIFloat3> enemyPos = parent.getEnemyPositions(allyTeam);
 						if(enemyPos != null){
-							parent.marker(enemyPos, "ENEMY HERE");
-							unit.patrolTo(enemyPos, (short) 0, frame+10);
+							int z = UnitCommandOptions.UNIT_COMMAND_OPTION_SHIFT_KEY.getValue();
+							for(AIFloat3 position:enemyPos){
+								unit.patrolTo(position, (short) z, frame+20);
+							}
 						}
 					}	
 				}
@@ -307,7 +310,7 @@ public class EconomyManager extends Module {
     		for(Worker w:workers){
     			Unit u = w.getUnit();
     			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
-    				float dist = graphManager.groundDistance(worker.getUnit().getPos(),u.getPos());
+    				float dist = GraphManager.groundDistance(worker.getUnit().getPos(),u.getPos());
     				if (dist<1000){
     					ConstructionTask task = createNanoTurretTask(worker,u);
     					worker.setTask(task);
@@ -350,7 +353,30 @@ public class EconomyManager extends Module {
     	AIFloat3 position = callback.getMap().findClosestBuildSite(factory,worker.getUnit().getPos(),600f, 3, 0);
     	int priority = 100;
     	int constructionPriority = 3;
-        worker.getUnit().build(factory, position, (short) Math.floor(Math.random()*4), (short) 0, frame + 1000);
+    	
+    	short facing = 0;
+    	int mapWidth = callback.getMap().getWidth() *8;
+    	int mapHeight = callback.getMap().getHeight() *8;
+    	
+		if (Math.abs(mapWidth - 2*position.x) > Math.abs(mapHeight - 2*position.z)){
+			if (2*position.x>mapWidth){
+				// facing="west"
+				facing=3;
+			}else{
+				// facing="east"
+				facing=1;
+			}
+		}else{
+			if (2*position.z>mapHeight){
+				// facing="north"
+				facing=2;
+			}else{
+				// facing="south"
+				facing=0;
+			}
+		}
+
+        worker.getUnit().build(factory, position, facing, (short) 0, frame +10);
     	ConstructionTask ct =  new ConstructionTask(worker,factory,priority,constructionPriority, position);
     	workerTasks.add(ct);
     	return ct;
@@ -358,7 +384,7 @@ public class EconomyManager extends Module {
     
     ConstructionTask createColonizeTask(Worker worker, MetalSpot ms){
     	UnitDef mex = callback.getUnitDefByName("cormex");
-    	AIFloat3 position = callback.getMap().findClosestBuildSite(mex,ms.getPosition(),600f, 3, 0);
+    	AIFloat3 position = ms.getPosition();
     	int priority = 100;
     	int constructionPriority = 3;
         worker.getUnit().build(mex, position, (short) Math.floor(Math.random()*4), (short) 0, frame + 1000);
@@ -374,6 +400,19 @@ public class EconomyManager extends Module {
     	UnitDef solar = callback.getUnitDefByName("armsolar");
     	AIFloat3 position = graphManager.getOverdriveSweetSpot(worker.getUnit().getPos());
     	position = callback.getMap().findClosestBuildSite(solar,position,600f, 3, 0);
+    	
+    	List<Unit>stuffNearby = callback.getFriendlyUnitsIn(position, 300);
+    	for (Unit u:stuffNearby){
+			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
+				float distance = GraphManager.groundDistance(u.getPos(), position);
+				float extraDistance = Math.max(50,300-distance);
+				float vx = (position.x - u.getPos().x)/distance; 
+				float vz = (position.z - u.getPos().z)/distance; 
+				position.x = position.x+vx*extraDistance;
+				position.z = position.z+vz*extraDistance;
+			}
+    	}
+
     	int priority = 100;
     	int constructionPriority = 3;
         worker.getUnit().build(solar, position, (short) Math.floor(Math.random()*4), (short) 0, frame + 1000);
@@ -385,8 +424,15 @@ public class EconomyManager extends Module {
     ConstructionTask createNanoTurretTask(Worker worker, Unit target){ 	
     	UnitDef nano = callback.getUnitDefByName("armnanotc");
     	AIFloat3 position = target.getPos();
-    	position.x += Math.random()*100f-50;
-    	position.z += Math.random()*100f-50;
+    	float buildDist = (float) (nano.getBuildDistance() * 0.9);
+    	double angle = Math.random()*2*Math.PI;
+    	
+    	double vx = Math.cos(angle);
+    	double vz = Math.sin(angle);
+    	
+    	position.x += buildDist*vx;
+    	position.z += buildDist*vz;
+    	
     	position = callback.getMap().findClosestBuildSite(nano,position,600f, 3, 0);
     	int priority = 100;
     	int constructionPriority = 3;
