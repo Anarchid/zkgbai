@@ -34,7 +34,8 @@ public class EconomyManager extends Module {
 	Set<Integer> factories;
 	List<ConstructionTask> factoryTasks;
 	List<WorkerTask> workerTasks;
-	List<Feature> features;
+	List<Wreck> features;
+	List<Wreck> invalidWrecks;
 	
 	float effectiveIncomeMetal = 0;
 	float effectiveIncomeEnergy = 0;
@@ -69,6 +70,8 @@ public class EconomyManager extends Module {
 		this.factories = new HashSet<Integer>();
 		this.factoryTasks = new ArrayList<ConstructionTask>();
 		this.workerTasks = new ArrayList<WorkerTask>();
+		this.features = new ArrayList<Wreck>();
+		this.invalidWrecks = new ArrayList<Wreck>();
 
 		this.eco = callback.getEconomy();
 		
@@ -104,7 +107,13 @@ public class EconomyManager extends Module {
 		effectiveExpenditure = Math.min(expendMetal, expendEnergy);
 		
 		if(frame%30 == 0){
-			features = callback.getFeatures();
+			List<Feature>feats = callback.getFeatures();
+			features = new ArrayList<Wreck>();
+			
+			for(Feature f:feats){
+				features.add(new Wreck(f,f.getDef().getContainedResource(m)));
+			}
+			
 			inventarizeWorkers();
 		}
 		
@@ -299,7 +308,7 @@ public class EconomyManager extends Module {
 	    		}else{
 	    			ProductionTask task = createUnitTask(worker, getRandomAttacker());
 	    			workerTasks.add(task);
-	    			worker.setTask(task);	
+	    			worker.setTask(task);
 	    		}
     		}
     		return;
@@ -349,7 +358,7 @@ public class EconomyManager extends Module {
     	List<MetalSpot> metalSpots = graphManager.getNeutralSpots();
     	
     	float fMinWeight = Float.MAX_VALUE;
-    	Feature bestFeature = null;
+    	Wreck bestFeature = null;
     	
     	for(MetalSpot ms:metalSpots){
 	    		float weight = GraphManager.groundDistance(ms.getPosition(), mypos)/(ms.getValue()+0.001f);
@@ -360,18 +369,15 @@ public class EconomyManager extends Module {
 	    		}
     	}
 
-    	for(Feature f:features){
-			FeatureDef fd = f.getDef();
-			if(fd != null){ // because we only update them once in a while
-	    		float reclaimValue = fd.getContainedResource(m);
-	    		if(reclaimValue > 0){
-	        		float weight = (float) (50*GraphManager.groundDistance(f.getPosition(), mypos) / (reclaimValue+0.01));
-	        		if(weight < fMinWeight){
-	        			bestFeature = f;
-	        			fMinWeight = weight;
-	        		}
-	    		}
-			}
+    	for(Wreck f:features){
+    		float reclaimValue = f.reclaimValue;
+    		if(reclaimValue > 0){
+        		float weight = (float) (50*GraphManager.groundDistance(f.position, mypos) / (reclaimValue+0.01));
+        		if(weight < fMinWeight){
+        			bestFeature = f;
+        			fMinWeight = weight;
+        		}
+    		}
     	} 
 
     	
@@ -412,8 +418,8 @@ public class EconomyManager extends Module {
 		return;
     }
     
-    ReclaimTask createReclaimTask(Worker worker, Feature f){
-        worker.getUnit().reclaimInArea(f.getPosition(),100, (short)0, frame+1000);
+    ReclaimTask createReclaimTask(Worker worker, Wreck f){
+        worker.getUnit().reclaimInArea(f.position,100, (short)0, frame+1000);
     	//worker.getUnit().reclaimFeature(f, (short)0, frame+100);
         ReclaimTask rt =  new ReclaimTask(worker,f);
     	workerTasks.add(rt);

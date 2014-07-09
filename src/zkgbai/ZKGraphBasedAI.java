@@ -408,7 +408,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
     
     public void debug(String s) {
-        callback.getGame().sendTextMessage(s, 0);
+        System.out.println(s);
     }
     
     public void marker(AIFloat3 position, String message){
