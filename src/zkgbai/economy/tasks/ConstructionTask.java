@@ -16,13 +16,18 @@ public class ConstructionTask extends ProductionTask {
 	public boolean equals(Object other){
 		if(other instanceof ConstructionTask){
 			ConstructionTask wt = (ConstructionTask)other;
-			return (worker.getUnit().getUnitId() == wt.getWorker().getUnit().getUnitId() && buildType == wt.buildType && wt.location == location);
+			return (worker.getUnit().getUnitId() == wt.getWorker().getUnit().getUnitId() && buildType.getUnitDefId() == wt.buildType.getUnitDefId());
 		}
 		return false;
+	}
+
+	@Override
+	public String toString(){
+		return this.worker.getUnit().getDef().getName()+" to construct "+buildType.getName();
 	}
 	
 	@Override
 	public int hashCode(){
-		return worker.getUnit().getUnitId()*43+buildType.getUnitDefId()*location.hashCode();
+		return worker.getUnit().getUnitId()*43+buildType.getUnitDefId();
 	}
 }

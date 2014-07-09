@@ -313,7 +313,7 @@ public class GraphManager extends Module {
     	Link link = null;
     	for(Link l:links){
     		if(l.owned && !l.connected){
-    			float combinedValue = (l.v0.value+l.v1.value+l.pylons.size()+0.001f);
+    			float combinedValue = (float) (l.v0.value+l.v1.value+Math.sqrt(l.pylons.size())+0.001f);
     			float combinedCost = l.length + GraphManager.groundDistance(l.centerPos, position);
 	    		float weight = combinedCost/combinedValue;
 	    		if (weight < minWeight){

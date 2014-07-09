@@ -12,6 +12,12 @@ public class WorkerTask {
 		this.worker = worker;
 	}
 	
+	
+	@Override
+	public String toString(){
+		return this.worker.getUnit().getDef().getName()+" to get a fresh assignment";
+	}
+	
 	@Override
 	public boolean equals(Object other){
 		if(other instanceof WorkerTask){

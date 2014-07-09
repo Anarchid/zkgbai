@@ -45,6 +45,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         this.callback = callback;
         this.teamID = teamId;
         this.allyTeamID = callback.getGame().getMyAllyTeam();
+        
         startBoxes = new HashMap<Integer, float[]>();
         
         parseStartScript();
@@ -384,13 +385,22 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		for(int i=0;i<numTeams;i++){
 			if (i != teamID){
 				int allyTeam = callback.getGame().getTeamAllyTeam(i);
-				if(!callback.getGame().isAllied(allyTeamID, allyTeam)){
-					//Gotcha! ENEMIES!
+				
+				if(allyTeam != this.allyTeamID){
 					enemyTeams.add(i);
 					enemyAllyTeams.add(i);
-				}	
+				}
 			}
 		}
+		
+		for(int i:enemyAllyTeams){
+			debug("ally team  "+i+" is ENEMY.");
+		}
+		
+		for(int i:enemyTeams){
+			debug("team "+i+" is ENEMY.");
+		}
+		
     }
     
     public OOAICallback getCallback(){

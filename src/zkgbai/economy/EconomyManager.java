@@ -2,7 +2,9 @@ package zkgbai.economy;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
@@ -28,7 +30,7 @@ import com.springrts.ai.oo.clb.UnitDef;
 public class EconomyManager extends Module {
 	ZKGraphBasedAI parent;
 	List<Worker> workers;
-	ArrayList<Unit> factories;
+	Set<Integer> factories;
 	List<ConstructionTask> factoryTasks;
 	List<WorkerTask> workerTasks;
 	
@@ -62,7 +64,7 @@ public class EconomyManager extends Module {
 		this.callback = parent.getCallback();
 		this.myTeamID = parent.teamID;
 		this.workers = new ArrayList<Worker>();
-		this.factories = new ArrayList<Unit>();
+		this.factories = new HashSet<Integer>();
 		this.factoryTasks = new ArrayList<ConstructionTask>();
 		this.workerTasks = new ArrayList<WorkerTask>();
 
@@ -111,6 +113,13 @@ public class EconomyManager extends Module {
 				if(factoryTasks.contains(wt)){
 					factoryTasks.remove(wt);
 				}
+				
+				if(factoryTasks.size() > 0 && wt instanceof ConstructionTask){
+					ConstructionTask ct = (ConstructionTask)wt;
+					if(factoryTasks.contains(ct)){
+						factoryTasks.remove(ct);
+					}
+				}
 			}
 		}
 		
@@ -135,7 +144,7 @@ public class EconomyManager extends Module {
     public int unitFinished(Unit unit) { 
     	
 		if(unit.getDef().getName().equals("factorycloak")){
-			factories.add(unit);
+			factories.add(unit.getUnitId());
 			unit.setMoveState(2, (short) 0, frame+10);
 		}
     	checkWorker(unit);
@@ -165,10 +174,9 @@ public class EconomyManager extends Module {
 	    if (deadWorker != null){
 	    	workers.remove(deadWorker);
 	    }
-	    
-	    if(unit.getDef().getName() == "factorycloak"){
-	    	factories.remove(unit);
-	    	parent.debug(factories.size()+" factories remain");
+	    	    
+	    if(factories.remove(unit.getUnitId())){
+	    	//parent.debug(factories.size()+" factories remain");
 	    }
         return 0; // signaling: OK
     }
@@ -176,6 +184,7 @@ public class EconomyManager extends Module {
 
     @Override
     public int unitIdle(Unit unit) {
+    	parent.debug("Unit "+unit.getDef().getName()+ " is idling!");
 	    for (Worker worker : workers) {
 	    	if(worker.getUnit().getUnitId() == unit.getUnitId()){
 	    		worker.getTask().setCompleted();
@@ -184,6 +193,24 @@ public class EconomyManager extends Module {
 	    		workerTasks.add(wt);
 	    	}
 	    } 
+        return 0; // signaling: OK
+    }
+    
+    @Override
+    public int commandFinished(Unit unit, int commandId, int commandTopicId) {
+    	
+    	if(unit.getCurrentCommands().isEmpty()){
+        	parent.debug("Unit "+unit.getDef().getName()+ " has finished all its commands and is reporting for new duty");
+
+		    for (Worker worker : workers) {
+		    	if(worker.getUnit().getUnitId() == unit.getUnitId()){
+		    		worker.getTask().setCompleted();
+		    		WorkerTask wt = new WorkerTask(worker); 
+		    		worker.setTask(wt);
+		    		workerTasks.add(wt);
+		    	}
+		    }    
+    	}
         return 0; // signaling: OK
     }
     
@@ -225,6 +252,8 @@ public class EconomyManager extends Module {
     	for(Worker w:workers){
     		Unit u = w.getUnit();
     		if (u.getCurrentCommands().size() == 0){
+            	parent.debug("Worker "+u.getDef().getName()+ " has been caught slacking!");
+
 	    		w.getTask().setCompleted();
 	    		WorkerTask wt = new WorkerTask(w); 
 	    		w.setTask(wt);
@@ -270,7 +299,7 @@ public class EconomyManager extends Module {
     	
     	// is there a factory? a queued one maybe?
     	if (factories.size() == 0){
-    		if(factoryTasks.size() ==0){
+    		if(factoryTasks.size() == 0){
     			ConstructionTask task = createFactoryTask(worker);
     			factoryTasks.add(task);
     			worker.setTask(task);
@@ -318,13 +347,22 @@ public class EconomyManager extends Module {
     	
     	List<Feature> features = callback.getFeatures();
     	float fMinWeight = Float.MAX_VALUE;
+    	float bestReclaimValue = 0;
     	Feature bestFeature = null;
     	for(Feature f:features){
-    		float weight = GraphManager.groundDistance(f.getPosition(), mypos) / (f.getDef().getContainedResource(m));
-    		if(fMinWeight < weight){
-    			bestFeature = f;
-    			fMinWeight = weight;
+    		float reclaimValue = f.getDef().getContainedResource(m);
+    		
+    		if(reclaimValue > 0){
+    			if(reclaimValue > bestReclaimValue){
+    				bestReclaimValue = reclaimValue;
+    			}
+        		float weight = 10*(float) (GraphManager.groundDistance(f.getPosition(), mypos) / (reclaimValue+0.01));
+        		if(weight < fMinWeight){
+        			bestFeature = f;
+        			fMinWeight = weight;
+        		}
     		}
+
     	}
     	
 		if (spot != null){
@@ -340,16 +378,16 @@ public class EconomyManager extends Module {
 					spot.addColonist(worker.getUnit());
 					return;
 				}else{
-					parent.debug("RECLAIMAN");
 					ReclaimTask rt = createReclaimTask(worker, bestFeature);
 					worker.setTask(rt);
+					return;
 				}
 			}
 		}else{
 			if(bestFeature != null){
-				parent.debug("RECLAIMAN");
 				ReclaimTask rt = createReclaimTask(worker, bestFeature);
 				worker.setTask(rt);
+				return;
 			}
 		}
 		
@@ -363,7 +401,8 @@ public class EconomyManager extends Module {
     }
     
     ReclaimTask createReclaimTask(Worker worker, Feature f){
-        worker.getUnit().reclaimInArea(f.getPosition(),100, (short)0, frame+1000);
+        //worker.getUnit().reclaimInArea(f.getPosition(),100, (short)0, frame+1000);
+    	worker.getUnit().reclaimFeature(f, (short)0, frame+100);
         ReclaimTask rt =  new ReclaimTask(worker,f);
     	workerTasks.add(rt);
     	return rt;
@@ -430,8 +469,7 @@ public class EconomyManager extends Module {
     	
     	UnitDef solar = callback.getUnitDefByName("armsolar");
     	AIFloat3 position = graphManager.getOverdriveSweetSpot(worker.getUnit().getPos());
-    	position = callback.getMap().findClosestBuildSite(solar,position,600f, 3, 0);
-    	
+
     	List<Unit>stuffNearby = callback.getFriendlyUnitsIn(position, 300);
     	for (Unit u:stuffNearby){
 			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
@@ -443,6 +481,8 @@ public class EconomyManager extends Module {
 				position.z = position.z+vz*extraDistance;
 			}
     	}
+    	
+    	position = callback.getMap().findClosestBuildSite(solar,position,600f, 3, 0);
 
     	int priority = 100;
     	int constructionPriority = 3;

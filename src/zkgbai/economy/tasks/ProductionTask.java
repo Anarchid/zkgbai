@@ -28,6 +28,11 @@ public class ProductionTask extends WorkerTask {
 	}
 	
 	@Override
+	public String toString(){
+		return this.worker.getUnit().getDef().getName()+" to produce "+buildType.getName();
+	}
+	
+	@Override
 	public int hashCode(){
 		return worker.getUnit().getUnitId()*43+buildType.getUnitDefId();
 	}
