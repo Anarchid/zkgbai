@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import zkgbai.Module;
@@ -17,6 +18,7 @@ import zkgbai.graph.GraphManager;
 import zkgbai.graph.Link;
 import zkgbai.graph.MetalSpot;
 import zkgbai.graph.Pylon;
+import zkgbai.military.MilitaryManager;
 
 import com.springrts.ai.Enumerations.UnitCommandOptions;
 import com.springrts.ai.oo.AIFloat3;
@@ -51,7 +53,12 @@ public class EconomyManager extends Module {
 	float metalQueued = 0;
 	float buildpowerQueued = 0;
 	
+	/* hax */
+	int numWarriors = 0;
+	int numGlaives = 0;
+	
 	int frame = 0;
+	static int CMD_PRIORITY = 34220;
 	
 	Economy eco;
 	Resource m;
@@ -60,6 +67,7 @@ public class EconomyManager extends Module {
 	private int myTeamID;
 	private OOAICallback callback;
 	private GraphManager graphManager;
+	private MilitaryManager warManager;
 	private ArrayList<String> attackers;
 	
 	public EconomyManager(ZKGraphBasedAI parent){
@@ -75,12 +83,24 @@ public class EconomyManager extends Module {
 
 		this.eco = callback.getEconomy();
 		
+		/*
+		Map<String,String> customParams = callback.getUnitDefByName("armsolar").getCustomParams();
+		
+		String pylonRange = customParams.get("pylonrange");
+		
+		parent.debug("length of solar customparams: " +customParams.size());
+		for(String s:customParams.keySet()){
+			parent.debug("solar customparam "+s+" => "+customParams.get(s));
+		}
+		*/
+		
 		this.m = callback.getResourceByName("Metal");
 		this.e = callback.getResourceByName("Energy");
 		
 		this.attackers = new ArrayList<String>();
 		attackers.add("armrock");
 		attackers.add("armrock");
+		attackers.add("armwar");
 		attackers.add("armpw");
 		attackers.add("armpw");
 		attackers.add("armpw");
@@ -96,6 +116,9 @@ public class EconomyManager extends Module {
 	@Override
 	public int update(int frame){
 		this.frame = frame;
+		
+		energyQueued = 0;
+		metalQueued = 0;
 		
 		effectiveIncomeMetal = eco.getIncome(m);
 		effectiveIncomeEnergy = eco.getIncome(e);
@@ -155,10 +178,29 @@ public class EconomyManager extends Module {
     @Override
     public int unitFinished(Unit unit) { 
     	
-		if(unit.getDef().getName().equals("factorycloak")){
+    	UnitDef def = unit.getDef(); 
+    	String defName = def.getName();
+    	
+    	
+    	if(defName.equals("armcom1") || defName.equals("commbasic") || (unit.getMaxSpeed()>0 && def.getBuildSpeed()>=10)){
+    		ArrayList<Float> params = new ArrayList<Float>();
+    		params.add((float) 2);
+    		unit.executeCustomCommand(CMD_PRIORITY, params, (short)0, parent.currentFrame);
+    	}
+    	
+		if(defName.equals("armpw")){
+			numGlaives--;
+		}
+		
+		if(defName.equals("armwar")){
+			numWarriors--;
+		}
+    	
+		if(defName.equals("factorycloak")){
 			factories.add(unit.getUnitId());
 			unit.setMoveState(2, (short) 0, frame+10);
 		}
+		
     	checkWorker(unit);
     	
     	for (WorkerTask wt:workerTasks){
@@ -186,7 +228,6 @@ public class EconomyManager extends Module {
 	    		WorkerTask wt = worker.getTask();
 	    		workerTasks.remove(wt);
 				if(factoryTasks.contains(wt)){
-					parent.debug("builderDestroyed: "+wt);
 					factoryTasks.remove(wt);
 				}
 	    	}
@@ -197,7 +238,6 @@ public class EconomyManager extends Module {
 	    
 	    for(ConstructionTask ct:factoryTasks){
 	    	if(ct.building != null && ct.building == unit){
-				parent.debug("buildingDestroyed: "+ct);
 				factoryTasks.remove(ct);
 	    	}
 	    }
@@ -257,6 +297,16 @@ public class EconomyManager extends Module {
     }
     
     private String getRandomAttacker(){
+    	
+    	if(numWarriors == 0){
+    		return "armwar";
+    	}
+
+    	if(numGlaives == 0){
+    		return "armpw";
+    	}
+    	
+    	
     	int index = (int) Math.floor(Math.random()*attackers.size());
     	return attackers.get(index);
     }
@@ -301,7 +351,7 @@ public class EconomyManager extends Module {
     	// factories get special treatment
     	if(worker.getUnit().getMaxSpeed() == 0){
     		if (!worker.getUnit().getDef().getName().equals("armnanotc")){
-	    		if(totalBuildpower < effectiveIncome  || effectiveExpenditure+totalBuildpower*0.1 < effectiveIncome){
+	    		if(totalBuildpower < effectiveIncome  || 2+effectiveExpenditure+totalBuildpower*0.1 < effectiveIncome || Math.random() < 0.1){
 	    			ProductionTask task = createUnitTask(worker, "armrectr");
 	    			workerTasks.add(task);
 	    			worker.setTask(task);
@@ -328,7 +378,7 @@ public class EconomyManager extends Module {
     	}
 
     	// is there sufficient energy to cover metal income?
-    	if(effectiveIncomeMetal*1.1 +2 > effectiveIncomeEnergy){
+    	if(effectiveIncomeMetal*1.1 +2 > effectiveIncomeEnergy + energyQueued/2){
 			ConstructionTask task = createEnergyTask(worker);
 			worker.setTask(task);
 			return;
@@ -352,6 +402,7 @@ public class EconomyManager extends Module {
 
     	
     	// are there uncolonized metal spots? or is reclaim more worth it?
+    	// or maybe just overdrive more
     	float minWeight = Float.MAX_VALUE;
     	MetalSpot spot = null;
     	AIFloat3 mypos = worker.getUnit().getPos();
@@ -362,6 +413,7 @@ public class EconomyManager extends Module {
     	
     	for(MetalSpot ms:metalSpots){
 	    		float weight = GraphManager.groundDistance(ms.getPosition(), mypos)/(ms.getValue()+0.001f);
+        		weight += weight * warManager.getThreat(ms.getPosition()); 
 	    		weight += weight*ms.getColonists().size();
 	    		if (weight < minWeight){
 	    			spot = ms;
@@ -372,44 +424,47 @@ public class EconomyManager extends Module {
     	for(Wreck f:features){
     		float reclaimValue = f.reclaimValue;
     		if(reclaimValue > 0){
-        		float weight = (float) (50*GraphManager.groundDistance(f.position, mypos) / (reclaimValue+0.01));
+    			float distance = (float) Math.pow(GraphManager.groundDistance(f.position, mypos),1.5);
+        		float weight = (float) ( distance / (reclaimValue+0.01));
+        		weight += weight * warManager.getThreat(f.position); 
+        		weight += metalQueued;
         		if(weight < fMinWeight){
         			bestFeature = f;
         			fMinWeight = weight;
         		}
     		}
     	} 
-
+    	
+    	AIFloat3 overDrivePos = graphManager.getOverdriveSweetSpot(mypos);
     	
     	WorkerTask task = null;
-		if (spot != null){
-			if(bestFeature == null){
-				task = createColonizeTask(worker, spot);
-				worker.setTask(task);
-				spot.addColonist(worker.getUnit());
+    	
+    	if((!mypos.equals(overDrivePos)) && Math.min(minWeight, fMinWeight) > Math.pow(GraphManager.groundDistance(mypos,overDrivePos ),5)){
+    		if(task == null){
+    			task = createEnergyTask(worker);
+    			worker.setTask(task);
+    		}
+	
+    		return;
+    	}
 
-			}else{
-				if(minWeight<fMinWeight){
-					task = createColonizeTask(worker, spot);
-					worker.setTask(task);
-					spot.addColonist(worker.getUnit());
-				}else{
-					task = createReclaimTask(worker, bestFeature);
-					worker.setTask(task);;
-				}
-			}
-		}else{
-			if(bestFeature != null){
-				task = createReclaimTask(worker, bestFeature);
-				worker.setTask(task);
-			}
+		if(minWeight<fMinWeight){
+			task = createColonizeTask(worker, spot);
+			worker.setTask(task);
+			spot.addColonist(worker.getUnit());
+		}else if(fMinWeight < minWeight){
+			task = createReclaimTask(worker, bestFeature);
+			worker.setTask(task);;
 		}
 		
+		
+
     	// are there damaged nearby ally units?
     	// is it useful to assist?
 		
 		// final fallback: make even more energy
 		if(task == null){
+			parent.debug("all hope is lost, spam solars!");
 			task = createEnergyTask(worker);
 			worker.setTask(task);
 		}
@@ -452,6 +507,17 @@ public class EconomyManager extends Module {
 			}
     	}
     	
+    	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
+    	
+    	if (GraphManager.groundDistance(closest.getPosition(),position)<100){
+    		AIFloat3 mexpos = closest.getPosition();
+			float distance = GraphManager.groundDistance(mexpos, position);
+			float extraDistance = 100;
+			float vx = (position.x - mexpos.x)/distance; 
+			float vz = (position.z - mexpos.z)/distance; 
+			position.x = position.x+vx*extraDistance;
+			position.z = position.z+vz*extraDistance;
+    	}
     	
     	position = callback.getMap().findClosestBuildSite(factory,position,600f, 3, 0);
     	
@@ -522,6 +588,7 @@ public class EconomyManager extends Module {
     	int constructionPriority = 3;
         worker.getUnit().build(solar, position, (short) Math.floor(Math.random()*4), (short) 0, frame + 1000);
     	ConstructionTask ct =  new ConstructionTask(worker,solar,priority,constructionPriority, position);
+    	energyQueued += 2;
     	workerTasks.add(ct);
     	return ct;
     }
@@ -546,6 +613,10 @@ public class EconomyManager extends Module {
     	workerTasks.add(ct);
     	return ct;
     }
+    
+	public void setMilitaryManager(MilitaryManager militaryManager) {
+		this.warManager = militaryManager;
+	}
     
 	public void setGraphManager(GraphManager graphManager) {
 		this.graphManager = graphManager;

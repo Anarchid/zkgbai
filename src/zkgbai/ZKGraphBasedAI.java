@@ -11,6 +11,7 @@ import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.WeaponDef;
 
+import java.awt.image.BufferedImage;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import javax.vecmath.Tuple3f;
 import zkgbai.Module;
 import zkgbai.economy.EconomyManager;
 import zkgbai.graph.GraphManager;
+import zkgbai.gui.DebugView;
 import zkgbai.los.LosManager;
 import zkgbai.military.MilitaryManager;
 
@@ -39,21 +41,18 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int teamID;
     public int allyTeamID;
     public int currentFrame = 0;
+    DebugView debugView;
     
 	@Override
     public int init(int teamId, OOAICallback callback) {
         this.callback = callback;
         this.teamID = teamId;
         this.allyTeamID = callback.getGame().getMyAllyTeam();
-        
         startBoxes = new HashMap<Integer, float[]>();
         
         parseStartScript();
         identifyEnemyTeams();
         
-        callback.getCheats().setEventsEnabled(false);
-        callback.getCheats().setEnabled(false);
-
         LosManager losManager = new LosManager(this);
         GraphManager graphManager = new GraphManager(this);
         EconomyManager ecoManager = new EconomyManager(this);
@@ -65,11 +64,14 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         ecoManager.setGraphManager(graphManager);
         warManager.setGraphManager(graphManager);
         
+        ecoManager.setMilitaryManager(warManager);
         
         modules.add(losManager);
         modules.add(graphManager);
         modules.add(ecoManager);
         modules.add(warManager);
+        
+        debugView = new DebugView(this);
         
         for (Module module : modules) {
         	try {
@@ -79,6 +81,10 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    		printException(e);
 	    	}
         }
+                
+        debugView.setLosImage(losManager.getImage());
+        debugView.setThreatImage(warManager.getThreatMap());
+        
         return 0;
     }
 	
@@ -103,7 +109,10 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    	} catch (Exception e) {
 	    		printException(e);
 	    	}
-        }	    
+        }
+        
+        //debugView.repaint();
+        
         return 0; // signaling: OK
     }
 
@@ -392,15 +401,6 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 				}
 			}
 		}
-		
-		for(int i:enemyAllyTeams){
-			debug("ally team  "+i+" is ENEMY.");
-		}
-		
-		for(int i:enemyTeams){
-			debug("team "+i+" is ENEMY.");
-		}
-		
     }
     
     public OOAICallback getCallback(){
@@ -408,7 +408,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
     
     public void debug(String s) {
-        System.out.println(s);
+    	callback.getGame().sendTextMessage(s, 0);
     }
     
     public void marker(AIFloat3 position, String message){

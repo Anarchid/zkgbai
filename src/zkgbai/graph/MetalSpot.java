@@ -8,11 +8,15 @@ import com.springrts.ai.oo.clb.Unit;
 
 public class MetalSpot {
 	AIFloat3 position;
-	float value;
+	float value = 0;
 	float danger = 0;
+	float protection = 0;
 	boolean owned = false;
 	boolean hostile = false;
 	boolean connected = false;
+	boolean visible = false;
+
+	int lastSeen = 0;
 	ArrayList<Unit> colonizers; 
 	public ArrayList<Pylon> pylons;
 	public ArrayList<Link> links;
@@ -65,6 +69,10 @@ public class MetalSpot {
 	
 	public ArrayList<Unit> getColonists(){
 		return colonizers;
+	}
+	
+	public float getLastSeen(){
+		return lastSeen;
 	}
 	
 	public float getValue(){

@@ -30,7 +30,7 @@ local infos = {
 	},
 	{
 		key    = 'name',
-		value  = 'Graph-theory obsessed AI that tries to cover the world in windchains.',
+		value  = 'Turns your world into a solar freaking parking lot.',
 		desc   = 'human readable name.',
 	},
 	{

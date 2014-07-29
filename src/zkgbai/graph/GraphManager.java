@@ -1,5 +1,6 @@
 package zkgbai.graph;
 
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +26,7 @@ import com.springrts.ai.oo.clb.UnitDef;
 
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
+import zkgbai.gui.DebugView;
 import zkgbai.los.LosManager;
 
 public class GraphManager extends Module {
@@ -38,6 +40,8 @@ public class GraphManager extends Module {
 	private LosManager losManager;
 	Resource e;
 	Resource m;
+	
+	BufferedImage threatMap;
 	
 	public HashMap<String, Integer> pylonDefs; 
 	int pylonCounter;
@@ -85,7 +89,6 @@ public class GraphManager extends Module {
 						AIFloat3 pos = ms.position;
 						if(pos.z > box[3] && pos.z < box[0] && pos.x>box[1] && pos.x<box[2]){
 							ms.hostile = true;
-							parent.marker(ms.position,"Enemy");
 						}
 					}
 				}
@@ -104,7 +107,7 @@ public class GraphManager extends Module {
 	    			ms.owned = true;
 	    			ms.hostile = false;
 	    			ms.setExtractor(unit);
-	    			
+
 	    			for(Pylon p:pylons){
 		    			if(groundDistance(p.position,ms.position)<p.radius+50){
 		    				p.addSpot(ms);
@@ -115,9 +118,7 @@ public class GraphManager extends Module {
 	    				if(l.v0.owned && l.v1.owned){
 	    					l.owned = true;
 	    					if(l.pylons.size() > 0){
-	    	    				if(l.checkConnected()){
-	    	    					parent.drawLine(l.v0.position, l.v1.position);
-	    	    				}
+	    						l.checkConnected();
 	    					}
 	    				}else{
 	    					l.owned = false;
@@ -148,7 +149,7 @@ public class GraphManager extends Module {
 	    				
 	    				l.addPylon(p);
 	    				if(l.checkConnected()){
-	    					parent.drawLine(l.v0.position, l.v1.position);
+	    					
 	    				}
 	    			}
 	    		}
@@ -160,17 +161,21 @@ public class GraphManager extends Module {
     }
     
     @Override
-    public int enemyEnterLOS(Unit unit) {        
-    	if(unit.getDef().getUnitDefId() == mexDefID){
-    		AIFloat3 unitpos = unit.getPos();
-	    	for(MetalSpot ms:metalSpots){
-	    		if(!ms.hostile && GraphManager.groundDistance(unitpos,ms.getPosition()) < 50){
-	    			ms.owned = false;
-	    			ms.hostile = true;
-	    			ms.setExtractor(unit);
-	    		}
+    public int enemyEnterLOS(Unit unit) {
+    	UnitDef def = unit.getDef();
+    	
+    	if(def != null){
+	    	if(def.getUnitDefId() == mexDefID){
+	    		AIFloat3 unitpos = unit.getPos();
+		    	for(MetalSpot ms:metalSpots){
+		    		if(!ms.hostile && GraphManager.groundDistance(unitpos,ms.getPosition()) < 50){
+		    			ms.owned = false;
+		    			ms.hostile = true;
+		    			ms.setExtractor(unit);
+		    		}
+		    	}
 	    	}
-    	}    
+    	}
         return 0; // signaling: OK
     }
     
@@ -181,14 +186,37 @@ public class GraphManager extends Module {
 	    		if(ms.extractor != null && ms.extractor.getUnitId() == unit.getUnitId()){
 	    			ms.owned = false;
 	    			ms.hostile = false;
+
 	    			ms.colonizers.clear();
 	    			for(Link link:ms.links){
 	    				link.owned = false;
 	    			}
+	    			
 	    			ms.setExtractor(null);
 	    		}
 	    	}
-    	} else if(!def.isBuilder() && def.getMakesResource(e)>0){
+    	} else if(!def.isBuilder() && def.getName().equals("armsolar")){
+    		Pylon deadPylon = null;
+    		for(Pylon p:pylons){
+    			if(p.unit.equals(unit)){
+    				deadPylon = p;
+    				break;
+    			}
+    		}
+    		
+    		if(deadPylon != null){
+    			for(Pylon p:deadPylon.neighbours){
+    				p.neighbours.remove(deadPylon);
+    			}
+    			for(MetalSpot m:deadPylon.spots){
+    				m.pylons.remove(deadPylon);
+    			}
+    			for(Link l:deadPylon.links){
+    				l.pylons.remove(deadPylon);
+    				if(!l.checkConnected()){
+    				}
+    			}
+    		}
     		// destroy pylon
     	}
         return 0; // signaling: OK
@@ -203,6 +231,7 @@ public class GraphManager extends Module {
 	    			ms.owned = false;
 	    			ms.hostile = false;
 	    			ms.setExtractor(null);
+
 	    		}
 	    	}
     	}
@@ -216,9 +245,13 @@ public class GraphManager extends Module {
 			return 0;
 		}
 
-    	for(MetalSpot ms:metalSpots){
-    		if(ms.hostile){
-    			if(losManager.isInLos(ms.getPosition())){
+    	for(MetalSpot ms:metalSpots){    		
+    		if(losManager.isInLos(ms.getPosition())){
+    			if(!ms.visible){
+    				ms.lastSeen = frame;
+    				ms.visible = false;
+    			}
+    			if(ms.hostile){
     				boolean hasMex = false;
     				List<Unit> hostiles = parent.getCallback().getEnemyUnitsIn(ms.getPosition(), 50f);
     				for(Unit hostile:hostiles){
@@ -228,10 +261,15 @@ public class GraphManager extends Module {
     					}
     				}
     				if (!hasMex){
+    	    			parent.getCallback().getMap().getDrawer().deletePointsAndLines(ms.position);
     	    			ms.owned = false;
     	    			ms.hostile = false;
     	    			ms.setExtractor(null);
     				}
+    			}
+    		}else{
+    			if(ms.visible){
+    				ms.visible = false;
     			}
     		}
     	}
@@ -308,13 +346,29 @@ public class GraphManager extends Module {
     	return spots;
     }
     
+    public MetalSpot getClosestNeutralSpot(AIFloat3 position){
+    	float minRange = Float.MAX_VALUE;
+    	MetalSpot bestMS = null;
+    	for(MetalSpot ms:metalSpots){
+    		if(!ms.owned && !ms.hostile){
+    			float dist = groundDistance(position,ms.position); 
+    			if(dist < minRange){
+    				bestMS = ms;
+    				minRange = dist;
+    			}
+    		}
+    	}
+    	
+    	return bestMS;
+    }
+    
     public AIFloat3 getOverdriveSweetSpot(AIFloat3 position){
     	float minWeight = Float.MAX_VALUE;  	
     	Link link = null;
     	for(Link l:links){
     		if(l.owned && !l.connected){
     			float combinedValue = (float) (l.v0.value+l.v1.value+Math.sqrt(l.pylons.size())+0.001f);
-    			float combinedCost = l.length + GraphManager.groundDistance(l.centerPos, position);
+    			float combinedCost = (float) (l.length + Math.pow(GraphManager.groundDistance(l.centerPos, position),2));
 	    		float weight = combinedCost/combinedValue;
 	    		if (weight < minWeight){
 	    			link = l;
@@ -323,7 +377,6 @@ public class GraphManager extends Module {
     		}
     	}
     	if(link != null){
-    		
     		Pylon p = link.getConnectionHead();
     		
     		if(p != null){
@@ -334,8 +387,8 @@ public class GraphManager extends Module {
 				float vx = (float) (dx/d);
 				float vz = (float) (dz/d);
 				
-				float x = p.position.x + vx*90;
-				float z = p.position.z + vz*90;
+				float x = p.position.x + vx*95;
+				float z = p.position.z + vz*95;
 				AIFloat3 newpos = new AIFloat3(x,p.position.y,z);
 				return newpos;
     		}
@@ -346,7 +399,7 @@ public class GraphManager extends Module {
     	MetalSpot spot = null;
     	for(MetalSpot ms:metalSpots){
     		if(ms.owned){
-	    		float weight = groundDistance(ms.position, position)/(ms.value+0.001f);
+	    		float weight = (float) (groundDistance(ms.position, position));
 	    		weight += weight*Math.sqrt(ms.getPylonCount());
 	    		if (weight < minWeight){
 	    			spot = ms;
