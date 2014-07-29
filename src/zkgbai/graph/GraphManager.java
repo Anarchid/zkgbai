@@ -1,5 +1,9 @@
 package zkgbai.graph;
 
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Stroke;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +32,7 @@ import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.gui.DebugView;
 import zkgbai.los.LosManager;
+import zkgbai.military.Enemy;
 
 public class GraphManager extends Module {
 	private ZKGraphBasedAI parent;
@@ -45,6 +50,8 @@ public class GraphManager extends Module {
 	
 	public HashMap<String, Integer> pylonDefs; 
 	int pylonCounter;
+	private BufferedImage graphImage;
+	private Graphics2D graphGraphics;
 	
 	public GraphManager(ZKGraphBasedAI parent){
 		this.metalSpots = new ArrayList<MetalSpot>();
@@ -59,6 +66,12 @@ public class GraphManager extends Module {
 		// hardwired for now because of segfaults upon segfaults
 		pylonDefs = new java.util.HashMap<String, Integer>();
 		pylonDefs.put("armsolar", 100);
+		
+		int width = parent.getCallback().getMap().getWidth();
+		int height = parent.getCallback().getMap().getHeight();
+		
+		this.graphImage = new BufferedImage(width, height,BufferedImage.TYPE_INT_ARGB_PRE);
+		this.graphGraphics = graphImage.createGraphics();
 	}
 	
 	@Override
@@ -273,6 +286,8 @@ public class GraphManager extends Module {
     			}
     		}
     	}
+    	
+    	paintGraph();
 
 		return 0;
 	}
@@ -328,7 +343,44 @@ public class GraphManager extends Module {
     		links.add(l);
     	}
     }
-   
+    
+	private void paintGraph(){
+		
+		int w = graphImage.getWidth();
+		int h = graphImage.getHeight();
+		
+		graphGraphics.setBackground(new Color(255, 255, 255, 0));
+		graphGraphics.clearRect(0,0, w,h);
+		graphGraphics.setStroke(new BasicStroke(2f));
+
+		for(MetalSpot ms:metalSpots){
+			AIFloat3 position = ms.position;
+			
+			int x = (int) (position.x / 8);
+			int y = (int) (position.z / 8);
+			
+			if(ms.owned){
+				graphGraphics.setColor(new Color(0,255,0,255));
+				paintCircle(x,y,4);
+				if(ms.connected){
+					graphGraphics.setColor(new Color(0,255,255,255));
+					paintCircle(x,y,6);
+				}		
+			}else{
+				graphGraphics.setColor(new Color(255,255,0,255));
+				paintCircle(x,y,4);
+
+				if(ms.hostile){
+					graphGraphics.setColor(new Color(255,0,0,255));
+					paintCircle(x,y,6);
+				}
+			}
+		}
+	}
+	
+	private void paintCircle(int x, int y, int r){
+		graphGraphics.drawOval(x-r, y-r, 2*r, 2*r);
+	}
     
     public List<MetalSpot> getEnemySpots(){
     	ArrayList<MetalSpot> spots = new ArrayList<MetalSpot>();
@@ -412,6 +464,10 @@ public class GraphManager extends Module {
     	}else{
     		return position;
     	}	
+    }
+    
+    public BufferedImage getGraphImage(){
+    	return this.graphImage;
     }
     
 	public void setLosManager(LosManager losManager) {

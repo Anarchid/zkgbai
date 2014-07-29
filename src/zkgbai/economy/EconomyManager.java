@@ -105,6 +105,14 @@ public class EconomyManager extends Module {
 		attackers.add("armpw");
 		attackers.add("armpw");
 		attackers.add("armzeus");
+		attackers.add("armrock");
+		attackers.add("armrock");
+		attackers.add("armwar");
+		attackers.add("armpw");
+		attackers.add("armpw");
+		attackers.add("armpw");
+		attackers.add("armzeus");
+		attackers.add("armsnipe");
 	}
 	
 	@Override
@@ -319,6 +327,11 @@ public class EconomyManager extends Module {
     		Unit u = w.getUnit();
     		if (u.getCurrentCommands().size() == 0){
 				if(factoryTasks.contains(w.getTask())){
+					ConstructionTask c = (ConstructionTask) w.getTask();
+					Unit building = c.getBuilding();
+					if(building != null && building.isBeingBuilt()){
+						u.repair(building, (short)0, frame+100);
+					}
 					parent.debug("caught without order: "+w.getTask());
 				}else{
 		    		w.getTask().setCompleted();
@@ -326,7 +339,6 @@ public class EconomyManager extends Module {
 		    		w.setTask(wt);
 		    		workerTasks.add(wt);	
 				}
-
     		}
     	}
     }
@@ -378,14 +390,14 @@ public class EconomyManager extends Module {
     	}
 
     	// is there sufficient energy to cover metal income?
-    	if(effectiveIncomeMetal*1.1 +2 > effectiveIncomeEnergy + energyQueued/2){
+    	if(effectiveIncomeMetal*1.1 +1 > effectiveIncomeEnergy + energyQueued/2){
 			ConstructionTask task = createEnergyTask(worker);
 			worker.setTask(task);
 			return;
     	}
     	
     	// ponder building a nanoturret
-    	if(effectiveExpenditure+totalBuildpower*0.1 < effectiveIncome){
+    	if(effectiveExpenditure+totalBuildpower*0.2+1 < effectiveIncome + Math.pow(effectiveIncome, 1/2)){
     		for(Worker w:workers){
     			Unit u = w.getUnit();
     			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
@@ -424,8 +436,8 @@ public class EconomyManager extends Module {
     	for(Wreck f:features){
     		float reclaimValue = f.reclaimValue;
     		if(reclaimValue > 0){
-    			float distance = (float) Math.pow(GraphManager.groundDistance(f.position, mypos),1.5);
-        		float weight = (float) ( distance / (reclaimValue+0.01));
+    			float weight = (float) Math.pow(GraphManager.groundDistance(f.position, mypos),1.5);
+    			weight /= Math.min(f.reclaimValue * f.feature.getReclaimLeft()+1,100);
         		weight += weight * warManager.getThreat(f.position); 
         		weight += metalQueued;
         		if(weight < fMinWeight){

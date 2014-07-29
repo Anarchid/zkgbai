@@ -73,7 +73,7 @@ public class LosManager extends Module {
 		if(losImage != null){
 			WritableRaster r = (WritableRaster) losImage.getData();
 			for(int x=0;x<gridWidth;x++){
-				for(int z=0;z<gridWidth;z++){
+				for(int z=0;z<gridHeight;z++){
 					int coord = Math.min(x+z*gridWidth,losMap.size()-1);
 					
 					int value = losMap.get(coord);
@@ -99,6 +99,10 @@ public class LosManager extends Module {
 	}
 	
 	public boolean isInLos(AIFloat3 position){
+		return isInLos(position,0);
+	}
+	
+	public boolean isInLos(AIFloat3 position, int level){
 		//the value for the full resolution position (x, z) is at index ((z * width + x) / res) -
 		//the last value, bottom right, is at index (width/res * height/res - 1)
 		
@@ -114,7 +118,7 @@ public class LosManager extends Module {
 		if(index > losMap.size()){
 			return false;
 		}
-		return (losMap.get(index) > 0);
+		return (losMap.get(index) > level);
 	}
 	
 }  

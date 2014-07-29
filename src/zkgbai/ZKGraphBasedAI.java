@@ -84,6 +84,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
                 
         debugView.setLosImage(losManager.getImage());
         debugView.setThreatImage(warManager.getThreatMap());
+        debugView.setGraphImage(graphManager.getGraphImage());
         
         return 0;
     }
@@ -111,7 +112,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    	}
         }
         
-        //debugView.repaint();
+        debugView.repaint();
         
         return 0; // signaling: OK
     }
