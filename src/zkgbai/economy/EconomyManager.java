@@ -53,6 +53,9 @@ public class EconomyManager extends Module {
 	float metalQueued = 0;
 	float buildpowerQueued = 0;
 	
+	float metal = 0;
+	float energy = 0;
+	
 	/* hax */
 	int numWarriors = 0;
 	int numGlaives = 0;
@@ -130,6 +133,9 @@ public class EconomyManager extends Module {
 		
 		effectiveIncomeMetal = eco.getIncome(m);
 		effectiveIncomeEnergy = eco.getIncome(e);
+		
+		metal = eco.getCurrent(m);
+		energy = eco.getCurrent(e);
 		
 		float expendMetal = eco.getUsage(m);
 		float expendEnergy = eco.getUsage(e);
@@ -390,14 +396,14 @@ public class EconomyManager extends Module {
     	}
 
     	// is there sufficient energy to cover metal income?
-    	if(effectiveIncomeMetal*1.1 +1 > effectiveIncomeEnergy + energyQueued/2){
+    	if(effectiveIncomeMetal*1.1 +1 > effectiveIncomeEnergy + energyQueued/2 || energy < 10){
 			ConstructionTask task = createEnergyTask(worker);
 			worker.setTask(task);
 			return;
     	}
     	
     	// ponder building a nanoturret
-    	if(effectiveExpenditure+totalBuildpower*0.2+1 < effectiveIncome + Math.pow(effectiveIncome, 1/2)){
+    	if(effectiveExpenditure+totalBuildpower*0.2 < effectiveIncome || effectiveIncome > 10  && metal>200){
     		for(Worker w:workers){
     			Unit u = w.getUnit();
     			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
