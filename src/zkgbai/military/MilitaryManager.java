@@ -161,10 +161,9 @@ public class MilitaryManager extends Module {
     		Iterator<Enemy> enemies = targets.values().iterator();
     		while(enemies.hasNext()){
     			Enemy e = enemies.next();
-    			float score = e.value;
-    			if(e.danger == 0){
-    				score /= e.danger;
-    			}
+    			float score = (float) Math.sqrt(e.value/5);
+    			
+    			score /= this.getThreat(e.position);
     			
     			if(!e.visible){
     				score /= Math.sqrt(parent.currentFrame - e.lastSeen);

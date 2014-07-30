@@ -108,14 +108,6 @@ public class EconomyManager extends Module {
 		attackers.add("armpw");
 		attackers.add("armpw");
 		attackers.add("armzeus");
-		attackers.add("armrock");
-		attackers.add("armrock");
-		attackers.add("armwar");
-		attackers.add("armpw");
-		attackers.add("armpw");
-		attackers.add("armpw");
-		attackers.add("armzeus");
-		attackers.add("armsnipe");
 	}
 	
 	@Override
@@ -322,6 +314,15 @@ public class EconomyManager extends Module {
     	
     	
     	int index = (int) Math.floor(Math.random()*attackers.size());
+    	
+    	if(Math.random()*30 < 1 && this.frame > 1000 && totalIncomeEnergy > 30){
+    		return "armsnipe";
+    	}
+    	
+    	if(Math.random()*30 < 1 && this.frame > 1000 && totalIncomeEnergy > 30){
+    		return "spherepole";
+    	}
+    	
     	return attackers.get(index);
     }
     
@@ -442,7 +443,7 @@ public class EconomyManager extends Module {
     	for(Wreck f:features){
     		float reclaimValue = f.reclaimValue;
     		if(reclaimValue > 0){
-    			float weight = (float) Math.pow(GraphManager.groundDistance(f.position, mypos),1.5);
+    			float weight = (float) Math.pow(GraphManager.groundDistance(f.position, mypos),2);
     			weight /= Math.min(f.reclaimValue * f.feature.getReclaimLeft()+1,100);
         		weight += weight * warManager.getThreat(f.position); 
         		weight += metalQueued;
@@ -457,7 +458,7 @@ public class EconomyManager extends Module {
     	
     	WorkerTask task = null;
     	
-    	if((!mypos.equals(overDrivePos)) && Math.min(minWeight, fMinWeight) > Math.pow(GraphManager.groundDistance(mypos,overDrivePos ),5)){
+    	if((!mypos.equals(overDrivePos)) && Math.min(minWeight, fMinWeight) > Math.pow(GraphManager.groundDistance(mypos,overDrivePos ),4)){
     		if(task == null){
     			task = createEnergyTask(worker);
     			worker.setTask(task);

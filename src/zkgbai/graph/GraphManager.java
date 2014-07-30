@@ -352,7 +352,18 @@ public class GraphManager extends Module {
 		graphGraphics.setBackground(new Color(255, 255, 255, 0));
 		graphGraphics.clearRect(0,0, w,h);
 		graphGraphics.setStroke(new BasicStroke(2f));
-
+		
+		Color spotOwned = new Color(0,255,0,255);
+		Color spotLinked = new Color(0,255,255,255);
+		Color spotUnowned = new Color(255,255,0,255);
+		Color spotHostile = new Color(255,0,0,255);
+		
+		
+		Color linkOwned = new Color(0,255,0,100);
+		Color linkLinked = new Color(0,255,255,100);
+		Color linkUnowned = new Color(255,255,0,100);
+		Color linkHostile = new Color(255,0,0,100);
+		
 		for(MetalSpot ms:metalSpots){
 			AIFloat3 position = ms.position;
 			
@@ -360,21 +371,43 @@ public class GraphManager extends Module {
 			int y = (int) (position.z / 8);
 			
 			if(ms.owned){
-				graphGraphics.setColor(new Color(0,255,0,255));
+				graphGraphics.setColor(spotOwned);
 				paintCircle(x,y,4);
 				if(ms.connected){
-					graphGraphics.setColor(new Color(0,255,255,255));
+					graphGraphics.setColor(spotLinked);
 					paintCircle(x,y,6);
 				}		
 			}else{
-				graphGraphics.setColor(new Color(255,255,0,255));
+				graphGraphics.setColor(spotUnowned);
 				paintCircle(x,y,4);
 
 				if(ms.hostile){
-					graphGraphics.setColor(new Color(255,0,0,255));
+					graphGraphics.setColor(spotHostile);
 					paintCircle(x,y,6);
 				}
 			}
+		}
+		final float[] dash = {10.0f};
+		graphGraphics.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, dash, 0f));
+		Color linkColor = null;
+		for (Link l:links){
+			if(l.connected){
+				linkColor = linkLinked;
+			}else if(l.owned){
+				linkColor = linkOwned;
+			}else{
+				linkColor = linkUnowned;
+			}
+			
+			graphGraphics.setColor(linkColor);
+
+			int x1 = (int) (l.v0.position.x / 8);
+			int y1 = (int) (l.v0.position.z / 8);
+			
+			int x2 = (int) (l.v1.position.x / 8);
+			int y2 = (int) (l.v1.position.z / 8);		
+			
+			graphGraphics.drawLine(x1, y1, x2, y2);
 		}
 	}
 	
