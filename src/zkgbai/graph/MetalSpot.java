@@ -22,6 +22,26 @@ public class MetalSpot {
 	public ArrayList<Link> links;
 	Unit extractor;
 	
+	float shadowInfluence = 0;
+	
+	public float getShadowInfluence() {
+		return shadowInfluence;
+	}
+
+	public void setShadowInfluence(float shadowInfluence) {
+		this.shadowInfluence = shadowInfluence;
+	}
+
+	public boolean isShadowCaptured() {
+		return isShadowCaptured;
+	}
+
+	public void setShadowCaptured(boolean isShadowCaptured) {
+		this.isShadowCaptured = isShadowCaptured;
+	}
+
+	boolean isShadowCaptured = false;
+	
 	MetalSpot(float x, float y, float z, float m){
 		colonizers = new ArrayList<Unit>();
 		this.value = m;

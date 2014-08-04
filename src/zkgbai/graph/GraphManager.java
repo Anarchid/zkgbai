@@ -102,6 +102,10 @@ public class GraphManager extends Module {
 						AIFloat3 pos = ms.position;
 						if(pos.z > box[3] && pos.z < box[0] && pos.x>box[1] && pos.x<box[2]){
 							ms.hostile = true;
+							ms.setShadowCaptured(true);
+							for(Link l:ms.links){
+								l.contested = true;
+							}
 						}
 					}
 				}
@@ -120,6 +124,8 @@ public class GraphManager extends Module {
 	    			ms.owned = true;
 	    			ms.hostile = false;
 	    			ms.setExtractor(unit);
+	    			ms.setShadowCaptured(false);
+	    			ms.setShadowInfluence(0);
 
 	    			for(Pylon p:pylons){
 		    			if(groundDistance(p.position,ms.position)<p.radius+50){
@@ -185,6 +191,12 @@ public class GraphManager extends Module {
 		    			ms.owned = false;
 		    			ms.hostile = true;
 		    			ms.setExtractor(unit);
+		    			ms.setShadowCaptured(false);
+		    			ms.setShadowInfluence(0);
+		    			
+		    			for(Link l:ms.links){
+		    				l.contested = true;
+		    			}
 		    		}
 		    	}
 	    	}
@@ -244,7 +256,13 @@ public class GraphManager extends Module {
 	    			ms.owned = false;
 	    			ms.hostile = false;
 	    			ms.setExtractor(null);
-
+	    			ms.setShadowCaptured(false);
+	    			ms.setShadowInfluence(0);
+	    			for(Link l:ms.links){
+	    				if(!l.v0.hostile && !l.v1.hostile){
+	    					l.contested = false;
+	    				}
+	    			}
 	    		}
 	    	}
     	}
@@ -260,10 +278,9 @@ public class GraphManager extends Module {
 
     	for(MetalSpot ms:metalSpots){    		
     		if(losManager.isInLos(ms.getPosition())){
-    			if(!ms.visible){
-    				ms.lastSeen = frame;
-    				ms.visible = false;
-    			}
+				ms.lastSeen = frame;
+				ms.visible = true;
+    			
     			if(ms.hostile){
     				boolean hasMex = false;
     				List<Unit> hostiles = parent.getCallback().getEnemyUnitsIn(ms.getPosition(), 50f);
@@ -274,10 +291,16 @@ public class GraphManager extends Module {
     					}
     				}
     				if (!hasMex){
-    	    			parent.getCallback().getMap().getDrawer().deletePointsAndLines(ms.position);
     	    			ms.owned = false;
     	    			ms.hostile = false;
     	    			ms.setExtractor(null);
+    	    			ms.setShadowCaptured(false);
+    	    			ms.setShadowInfluence(0);
+    	    			for(Link l:ms.links){
+    	    				if(!l.v0.hostile && !l.v1.hostile){
+    	    					l.contested = false;
+    	    				}
+    	    			}
     				}
     			}
     		}else{
@@ -286,6 +309,28 @@ public class GraphManager extends Module {
     			}
     		}
     	}
+    	
+    	for(MetalSpot ms:metalSpots){
+    		if(ms.hostile){
+    			for(Link l:ms.links){
+    				if(!l.v0.hostile){
+    					l.v0.shadowInfluence += l.weight;
+    					if(l.v0.shadowInfluence > 100){
+    						l.v0.hostile = true;
+    						l.v0.isShadowCaptured = true;
+    					}
+    				}
+    				if(!l.v1.hostile){
+    					l.v0.shadowInfluence += l.weight;
+    					if(l.v0.shadowInfluence > 100){
+    						l.v0.hostile = true;
+    						l.v0.isShadowCaptured = true;
+    					}
+    				}
+    			}
+    		}
+    	}
+
     	
     	paintGraph();
 
@@ -362,7 +407,7 @@ public class GraphManager extends Module {
 		Color linkOwned = new Color(0,255,0,100);
 		Color linkLinked = new Color(0,255,255,100);
 		Color linkUnowned = new Color(255,255,0,100);
-		Color linkHostile = new Color(255,0,0,100);
+		Color linkHostile = new Color(255,120,0,100);
 		
 		for(MetalSpot ms:metalSpots){
 			AIFloat3 position = ms.position;
@@ -388,13 +433,22 @@ public class GraphManager extends Module {
 			}
 		}
 		final float[] dash = {10.0f};
-		graphGraphics.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, dash, 0f));
+	
 		Color linkColor = null;
 		for (Link l:links){
+			
+			float phase = 0;
+			if(l.contested){
+				phase = parent.currentFrame/30;
+			}
+			
+			graphGraphics.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, dash, phase));
 			if(l.connected){
 				linkColor = linkLinked;
 			}else if(l.owned){
 				linkColor = linkOwned;
+			}else if (l.contested){
+				linkColor = linkHostile;
 			}else{
 				linkColor = linkUnowned;
 			}
