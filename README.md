@@ -11,7 +11,9 @@ Compiling
 =========
 The git repository contains everything necessary to build the AI except for the ant build tool. 
 
-To compile the AI, simply `cd` to your checkout folder, and run `ant dist`.
+To compile the AI using only `ant`, simply `cd` to your checkout folder, and run `ant dist`.
+
+Alternatively, you can import the Eclipse .project file.
 
 Installing
 ==========
