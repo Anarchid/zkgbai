@@ -485,6 +485,20 @@ public class GraphManager extends Module {
     	return spots;
     }
     
+    public MetalSpot getClosestMetalSpot(AIFloat3 position){
+    	float minRange = Float.MAX_VALUE;
+    	MetalSpot bestMS = null;
+    	for(MetalSpot ms:metalSpots){
+			float dist = groundDistance(position,ms.position); 
+			if(dist < minRange){
+				bestMS = ms;
+				minRange = dist;
+			}
+    	}
+    	
+    	return bestMS;
+    }
+    
     public MetalSpot getClosestNeutralSpot(AIFloat3 position){
     	float minRange = Float.MAX_VALUE;
     	MetalSpot bestMS = null;

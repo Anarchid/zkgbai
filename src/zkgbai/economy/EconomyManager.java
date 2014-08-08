@@ -353,6 +353,11 @@ public class EconomyManager extends Module {
 						u.repair(building, (short)0, frame+1);
 						parent.marker(building.getPos(),"interrupted: "+w.getTask());
 					}else if(!factoryTasks.contains(c)){
+						
+						if(c.buildType.getName().equals("cormex")){
+							graphManager.getClosestMetalSpot(c.location).removeColonist(u);;
+						}
+						
 			    		w.getTask().setCompleted();
 			    		WorkerTask wt = new WorkerTask(w); 
 			    		w.setTask(wt);
@@ -539,7 +544,7 @@ public class EconomyManager extends Module {
     }
     
     ReclaimTask createReclaimTask(Worker worker, Wreck f){
-        worker.getUnit().reclaimInArea(f.position,100, (short)0, frame+1000);
+        worker.getUnit().reclaimInArea(f.position,200, (short)0, frame+1000);
     	//worker.getUnit().reclaimFeature(f, (short)0, frame+100);
         ReclaimTask rt =  new ReclaimTask(worker,f);
     	workerTasks.add(rt);

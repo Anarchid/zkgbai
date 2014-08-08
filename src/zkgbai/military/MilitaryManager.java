@@ -213,7 +213,7 @@ public class MilitaryManager extends Module {
     			
     			score /= this.getThreat(e.position);
 
-    			score /= Math.pow(GraphManager.groundDistance(e.position, origin),2);
+    			score /= Math.pow(GraphManager.groundDistance(e.position, origin),4);
     			
     			score /= getThreat(e.position);
     			
