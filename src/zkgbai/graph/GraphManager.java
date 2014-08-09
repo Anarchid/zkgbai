@@ -276,7 +276,7 @@ public class GraphManager extends Module {
 			return 0;
 		}
 
-    	for(MetalSpot ms:metalSpots){    		
+    	for(MetalSpot ms:metalSpots){
     		if(losManager.isInLos(ms.getPosition())){
 				ms.lastSeen = frame;
 				ms.visible = true;
@@ -308,6 +308,32 @@ public class GraphManager extends Module {
     				ms.visible = false;
     			}
     		}
+    		
+    		if(!ms.hostile && !ms.owned){
+				boolean hasMex = false;
+				Unit extractor = null;
+				List<Unit> allies = parent.getCallback().getFriendlyUnitsIn(ms.getPosition(), 50f);
+				for(Unit ally:allies){
+					if(ally.getDef().getUnitDefId() == mexDefID){
+						hasMex = true;
+						extractor = ally;
+						break;
+					}
+				}
+				if (hasMex){
+	    			ms.owned = true;
+	    			ms.hostile = false;
+	    			ms.setExtractor(extractor);
+	    			ms.setShadowCaptured(false);
+	    			ms.setShadowInfluence(0);
+	    			for(Link l:ms.links){
+	    				if(!l.v0.hostile && !l.v1.hostile){
+	    					l.contested = false;
+	    				}
+	    			}
+				}
+    		}
+    		
     	}
     	
     	for(MetalSpot ms:metalSpots){

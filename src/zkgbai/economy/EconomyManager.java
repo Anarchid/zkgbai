@@ -362,7 +362,13 @@ public class EconomyManager extends Module {
 			    		WorkerTask wt = new WorkerTask(w); 
 			    		w.setTask(wt);
 			    		workerTasks.add(wt);	
-					}					
+					}else{
+						factoryTasks.remove(c);
+						workerTasks.remove(c);
+			    		WorkerTask wt = new WorkerTask(w); 
+			    		w.setTask(wt);
+			    		workerTasks.add(wt);	
+					}		
 				}else{
 		    		w.getTask().setCompleted();
 		    		WorkerTask wt = new WorkerTask(w); 
