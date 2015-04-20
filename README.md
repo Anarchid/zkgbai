@@ -19,7 +19,7 @@ Installing
 ==========
 This AI will only work with Spring AI interface versions from Spring versions newer than 97.0.1-135.
 
-To instal lthe AI, put the files from created `/dist/` directory to `$SpringData/AI/Skirmish/ZKGBAI/dist`.
+To install the AI, put the files from created `/dist/` directory to `$SpringData/AI/Skirmish/ZKGBAI/dist`.
 
 An example location on linux would be `/home/user/.spring/AI/Skirmish/ZKGBAI/dist`
 
