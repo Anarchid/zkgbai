@@ -411,8 +411,8 @@ public class MilitaryManager extends Module {
     
     @Override
     public int unitDamaged(Unit h, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {
-    	if(cowardUnits.contains(h) || h.getDef().isBuilder()){
-			if(h.getHealth()/h.getMaxHealth() < 0.6 || h.getDef().isBuilder()){
+    	if(cowardUnits.contains(h)){
+			if(h.getHealth()/h.getMaxHealth() < 0.3){
 				if(!retreatingUnits.contains(h)){
 					if(!h.getDef().isBuilder()){
 						retreatingUnits.add(h);	

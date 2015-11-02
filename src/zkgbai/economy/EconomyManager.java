@@ -41,27 +41,26 @@ public class EconomyManager extends Module {
 	List<Wreck> invalidWrecks;
 	List<Unit> radars;
 	List<Unit> porcs;
+	List<Unit> nanos;
+	List<Unit> fusions;
 	
 	float effectiveIncomeMetal = 0;
 	float effectiveIncomeEnergy = 0;
-	
-	float totalIncomeMetal = 0;
-	float totalIncomeEnergy = 0;
+
 	float totalBuildpower = 0;
+
+	boolean buildingFusion = false;
 	
 	float effectiveIncome = 0;
 	float effectiveExpenditure = 0;
 	
-	float energyQueued = 0;
-	float metalQueued = 0;
-	float buildpowerQueued = 0;
+	float energyQueued = 2;
+	float metalQueued = 2;
 	
 	float metal = 0;
 	float energy = 0;
-	
-	/* hax */
-	int numWarriors = 0;
-	int numGlaives = 0;
+
+	int numWorkers = 0;
 	
 	int frame = 0;
 	static int CMD_PRIORITY = 34220;
@@ -89,6 +88,8 @@ public class EconomyManager extends Module {
 		this.invalidWrecks = new ArrayList<Wreck>();
 		this.radars = new ArrayList<Unit>();
 		this.porcs = new ArrayList<Unit>();
+		this.nanos = new ArrayList<Unit>();
+		this.fusions = new ArrayList<Unit>();
 
 		this.eco = callback.getEconomy();
 		
@@ -125,10 +126,15 @@ public class EconomyManager extends Module {
 	@Override
 	public int update(int frame){
 		this.frame = frame;
-		
-		energyQueued = 0;
-		metalQueued = 0;
-		
+
+		if (metalQueued < 2){
+				metalQueued = 2;
+		}
+
+		if (energyQueued < 2){
+			energyQueued = 2;
+		}
+
 		effectiveIncomeMetal = eco.getIncome(m);
 		effectiveIncomeEnergy = eco.getIncome(e);
 		
@@ -141,48 +147,56 @@ public class EconomyManager extends Module {
 		effectiveIncome= Math.min(effectiveIncomeMetal, effectiveIncomeEnergy);
 		effectiveExpenditure = Math.min(expendMetal, expendEnergy);
 		
-		if(frame%30 == 0){
-			List<Feature>feats = callback.getFeatures();
+		if(frame%15 == 0) {
+			List<Feature> feats = callback.getFeatures();
 			features = new ArrayList<Wreck>();
-			
-			for(Feature f:feats){
-				features.add(new Wreck(f,f.getDef().getContainedResource(m)));
+
+			for (Feature f : feats) {
+				features.add(new Wreck(f, f.getDef().getContainedResource(m)));
 			}
-			
+
 			inventarizeWorkers();
-		}
-		
-		for(Worker w:workers){
-			WorkerTask wt = w.getTask();
-			if(wt.isCompleted()){
-				if(wt instanceof ConstructionTask){
-					ConstructionTask ct = (ConstructionTask)wt;
-					if(factoryTasks.contains(ct)){
-						factoryTasks.remove(ct);
+
+
+			for (Worker w : workers) {
+				WorkerTask wt = w.getTask();
+				if (wt.isCompleted()) {
+					if (wt instanceof ConstructionTask) {
+						ConstructionTask ct = (ConstructionTask) wt;
+						if (factoryTasks.contains(ct)) {
+							factoryTasks.remove(ct);
+						}
+
+						if (radarTasks.contains(ct)) {
+							radarTasks.remove(ct);
+						}
+
+						workerTasks.remove(ct);
+						assignWorkerTask(w);
+					} else {
+						workerTasks.remove(wt);
+						assignWorkerTask(w);
 					}
-					
-					if(radarTasks.contains(ct)){
-						radarTasks.remove(ct);
+				}
+			}
+
+			for (WorkerTask wt : workerTasks) {
+				if (wt instanceof TemporaryAssistTask) {
+					TemporaryAssistTask at = (TemporaryAssistTask) wt;
+					if (at.getTimeout() < frame) {
+						at.setCompleted();
 					}
-					
-					workerTasks.remove(ct);
-					assignWorkerTask(w);
-				}else {
-					workerTasks.remove(wt);
-					assignWorkerTask(w);
+				}
+			}
+			for(Worker w:workers) {
+				Unit u = w.getUnit();
+				if (u.getMaxSpeed() > 0 && effectiveIncome > 30) {
+					ArrayList<Float> params = new ArrayList<Float>();
+					params.add((float) 1);
+					u.executeCustomCommand(CMD_PRIORITY, params, (short)0, parent.currentFrame);
 				}
 			}
 		}
-		
-		for(WorkerTask wt:workerTasks){
-			if(wt instanceof TemporaryAssistTask){
-				TemporaryAssistTask at = (TemporaryAssistTask) wt;
-				if(at.getTimeout() < frame){
-					at.setCompleted();
-				}
-			}
-		}
-		
 		return 0;
 	}
 	
@@ -200,30 +214,36 @@ public class EconomyManager extends Module {
     	if(defName.equals("corrad")){
     		radars.add(unit);
     	}
-    	
-    	if(defName.equals("corrl")){
-    		porcs.add(unit);
-    	}
+
+		if(defName.equals("armsolar")){
+			energyQueued += 2;
+		}
+
+		if(defName.equals("cormex")){
+			metalQueued += 2;
+		}
     	
     	if(defName.equals("armcom1") || defName.equals("commbasic") || (unit.getMaxSpeed()>0 && def.getBuildSpeed()>=10)){
     		ArrayList<Float> params = new ArrayList<Float>();
     		params.add((float) 2);
     		unit.executeCustomCommand(CMD_PRIORITY, params, (short)0, parent.currentFrame);
     	}
-    	
-		if(defName.equals("armpw")){
-			numGlaives--;
-		}
-		
-		if(defName.equals("armwar")){
-			numWarriors--;
-		}
-    	
+
 		if(defName.equals("factorycloak")){
 			factories.add(unit.getUnitId());
 			unit.setMoveState(2, (short) 0, frame+10);
 		}
-		
+
+		if (defName.equals("armfus")){
+			fusions.add(unit);
+			buildingFusion = false;
+		}
+
+		if (defName.equals("cafus")){
+			fusions.add(unit);
+			buildingFusion = false;
+		}
+
     	checkWorker(unit);
     	
     	for (WorkerTask wt:workerTasks){
@@ -244,6 +264,8 @@ public class EconomyManager extends Module {
     	
     	radars.remove(unit);
     	porcs.remove(unit);
+		nanos.remove(unit);
+		fusions.remove(unit);
     	
     	Worker deadWorker = null;
 	    for (Worker worker : workers) {
@@ -251,6 +273,7 @@ public class EconomyManager extends Module {
 	    		deadWorker = worker;
 	    		WorkerTask wt = worker.getTask();
 	    		workerTasks.remove(wt);
+				numWorkers--;
 				if(factoryTasks.contains(wt)){
 					factoryTasks.remove(wt);
 				}
@@ -259,7 +282,7 @@ public class EconomyManager extends Module {
 	    if (deadWorker != null){
 	    	workers.remove(deadWorker);
 	    }
-	    
+
 	    for(ConstructionTask ct:factoryTasks){
 	    	if(ct.building != null && ct.building == unit){
 				factoryTasks.remove(ct);
@@ -311,12 +334,62 @@ public class EconomyManager extends Module {
 		    	}
 			}
     	}
+		String defName = unit.getDef().getName();
+
+		if(defName.equals("corrl") || defName.equals("corllt") || defName.equals("corhlt")){
+			porcs.add(unit);
+		}
+
+		if (defName.equals("armnanotc")){
+			nanos.add(unit);
+		}
+
+		if(defName.equals("cormex") && metalQueued > 2){
+			metalQueued -= 2;
+		}
+
+		if(defName.equals("armsolar")){
+			energyQueued -= 2;
+		}
+
         return 0;
     }
     
     private String getRandomAttacker(){
-    	
-    	if(numWarriors == 0){
+		if (effectiveIncome < 18){
+			if (Math.random() > 0.9){
+				return "armwar";
+			}
+			else{
+				return "armpw";
+			}
+		}
+		else{
+			double rand = Math.random();
+			if (rand > 0.6){
+				return "armrock";
+			}
+			else if (rand > 0.5){
+				return "armzeus";
+			}
+			else if (rand > 0.4) {
+				return "armwar";
+			}
+			else if (rand > 0.25){
+				return "armham";
+			}
+			else if (rand > 0.1){
+				return "spherepole";
+			}
+			else if (fusions.size() > 0){
+				return "armsnipe";
+			}
+			else{
+				return "armpw";
+			}
+		}
+
+    	/*if(numWarriors == 0){
     		return "armwar";
     	}
 
@@ -327,15 +400,15 @@ public class EconomyManager extends Module {
     	
     	int index = (int) Math.floor(Math.random()*attackers.size());
     	
-    	if(Math.random()*20 < 1 && this.frame > 1000){
+    	if(Math.random()*20 < 1 && effectiveIncomeMetal > 25){
     		return "armsnipe";
     	}
     	
-    	if(Math.random()*30 < 1 && this.frame > 1000){
+    	if(Math.random()*30 < 1 && effectiveIncomeMetal > 25){
     		return "spherepole";
     	}
     	
-    	return attackers.get(index);
+    	return attackers.get(index);*/
     }
     
     /**
@@ -384,7 +457,14 @@ public class EconomyManager extends Module {
 		if (def.isBuilder()){
 			if (def.getBuildOptions().size()>0){
 				workers.add(new Worker(unit));
-			}else{
+				numWorkers++;
+				if (unit.getMaxSpeed() > 0 && effectiveIncome < 30) {
+					ArrayList<Float> params = new ArrayList<Float>();
+					params.add((float) 2);
+					unit.executeCustomCommand(CMD_PRIORITY, params, (short) 0, parent.currentFrame);
+				}
+			}
+			else{
 				AIFloat3 shiftedPosition = unit.getPos();
 		    	shiftedPosition.x+=30;
 		    	shiftedPosition.z+=30;
@@ -399,7 +479,7 @@ public class EconomyManager extends Module {
     	// factories get special treatment
     	if(worker.getUnit().getMaxSpeed() == 0){
     		if (!worker.getUnit().getDef().getName().equals("armnanotc")){
-	    		if(totalBuildpower < effectiveIncome  || 2+effectiveExpenditure+totalBuildpower*0.1 < effectiveIncome || Math.random() < 0.1){
+	    		if((float)numWorkers < ((effectiveIncomeMetal+2)/5) + (2 * fusions.size())) {
 	    			ProductionTask task = createUnitTask(worker, "armrectr");
 	    			workerTasks.add(task);
 	    			worker.setTask(task);
@@ -413,7 +493,7 @@ public class EconomyManager extends Module {
     	}
     	
     	// is there a factory? a queued one maybe?
-    	if (factories.size() == 0 || effectiveIncome / factories.size() > 25){
+    	if (factories.size() == 0 || effectiveIncome / factories.size() > 80){
     		if(factoryTasks.size() == 0){
     			ConstructionTask task = createFactoryTask(worker);
     			factoryTasks.add(task);
@@ -425,17 +505,19 @@ public class EconomyManager extends Module {
     	}
 
     	// is there sufficient energy to cover metal income?
-    	if(effectiveIncomeMetal*1.1 +1 > effectiveIncomeEnergy + energyQueued/2 || energy < 10){
-			ConstructionTask task = createEnergyTask(worker);
-			worker.setTask(task);
-			return;
+    	if(effectiveIncomeMetal + metalQueued + 2 > effectiveIncomeEnergy + energyQueued || energy < 10 || (effectiveIncomeMetal > 25 && !buildingFusion)){
+			if (effectiveIncomeMetal >= 6) {
+				ConstructionTask task = createEnergyTask(worker);
+				worker.setTask(task);
+				return;
+			}
     	}
     	
     	// ponder building a nanoturret
-    	if(effectiveExpenditure+totalBuildpower*0.2 < effectiveIncome || effectiveIncome > 10  && metal>200){
+    	if(((float)nanos.size() < (effectiveIncomeMetal/10) + fusions.size()) && effectiveIncome > 18){
     		for(Worker w:workers){
     			Unit u = w.getUnit();
-    			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
+    			if((u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0) || fusions.contains(u)){
     				float dist = GraphManager.groundDistance(worker.getUnit().getPos(),u.getPos());
     				if (dist<1000){
     					ConstructionTask task = createNanoTurretTask(worker,u);
@@ -445,7 +527,17 @@ public class EconomyManager extends Module {
     			}
     		}
     	}
-    	
+
+		boolean tooCloseToFac = false;
+		for(Worker w:workers){
+			Unit u = w.getUnit();
+			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
+				float dist = GraphManager.groundDistance(worker.getUnit().getPos(),u.getPos());
+				if (dist<300){
+					tooCloseToFac = true;
+				}
+			}
+		}
     	// ponder building a defender
     	float porcdist = Float.MAX_VALUE;
 		for(Unit u:porcs){
@@ -454,13 +546,20 @@ public class EconomyManager extends Module {
 				porcdist = dist;
 			}
 		}
-		
-		if(porcdist > 1200 && Math.random() > 0.5){
+
+		int minporcdist = 400;
+		if (warManager.getThreat(worker.getUnit().getPos()) > 0.7){
+			minporcdist /= 2;
+		}
+		if (effectiveIncome > 20){
+			minporcdist /= 2;
+		}
+
+		if(porcdist > minporcdist && effectiveIncomeMetal > 10 && !tooCloseToFac){
 			ConstructionTask task = createPorcTask(worker);
 			worker.setTask(task);
 			return;
 		}
-    	
     	
     	float closestRadarDistance = Float.MAX_VALUE;
     	for(Unit r:radars){
@@ -470,13 +569,13 @@ public class EconomyManager extends Module {
     		}
     	}
     	
-    	if(closestRadarDistance > 2100 && radarTasks.size() == 0){
+    	if(closestRadarDistance > 1800 && radarTasks.size() == 0 && effectiveIncomeMetal > 10 && !tooCloseToFac){
     		ConstructionTask task = createRadarTask(worker);
     		radarTasks.add(task);
     		worker.setTask(task);
     		return;
     	}
-    	
+
     	// are there uncolonized metal spots? or is reclaim more worth it?
     	// or maybe just overdrive more
     	float minWeight = Float.MAX_VALUE;
@@ -488,52 +587,50 @@ public class EconomyManager extends Module {
     	Wreck bestFeature = null;
     	
     	for(MetalSpot ms:metalSpots){
-	    		float weight = GraphManager.groundDistance(ms.getPosition(), mypos)/(ms.getValue()+0.001f);
-        		weight += weight * warManager.getThreat(ms.getPosition()); 
-	    		weight += weight*ms.getColonists().size();
+	    		float weight = GraphManager.groundDistance(ms.getPosition(), mypos) + ((ms.getColonists().size()-1) * 1200);
+			//weight += weight * (1 + warManager.getThreat(ms.getPosition()));
 	    		if (weight < minWeight){
 	    			spot = ms;
-	    			minWeight = weight;
+					minWeight = weight;
 	    		}
     	}
 
-    	for(Wreck f:features){
-    		float reclaimValue = f.reclaimValue;
-    		if(reclaimValue > 0){
-    			float weight = (float) Math.pow(GraphManager.groundDistance(f.position, mypos),1.6);
-    			weight /= Math.min(f.reclaimValue * f.feature.getReclaimLeft()+1,100);
-        		weight *= 1 + warManager.getThreat(f.position); 
-        		weight += metalQueued;
-        		if(weight < fMinWeight){
-        			bestFeature = f;
-        			fMinWeight = weight;
-        		}
-    		}
-    	} 
+		if (effectiveIncomeEnergy > 20){
+			for(Wreck f:features){
+				float reclaimValue = f.reclaimValue;
+				if(reclaimValue > 0){
+					float weight = GraphManager.groundDistance(f.position, mypos);
+					//weight = weight * (1 + warManager.getThreat(f.position));
+					weight += metalQueued;
+					if(weight < fMinWeight){
+						bestFeature = f;
+						fMinWeight = weight;
+					}
+				}
+			}
+		}
     	
     	AIFloat3 overDrivePos = graphManager.getOverdriveSweetSpot(mypos);
     	
     	WorkerTask task = null;
-    	
-    	if((!mypos.equals(overDrivePos)) && Math.min(minWeight, fMinWeight) > Math.pow(GraphManager.groundDistance(mypos,overDrivePos ),4)){
-    		if(task == null){
-    			task = createEnergyTask(worker);
-    			worker.setTask(task);
-    		}
-	
-    		return;
-    	}
 
-		if(minWeight<fMinWeight){
+		if(minWeight<fMinWeight && spot != null){
 			task = createColonizeTask(worker, spot);
 			worker.setTask(task);
 			spot.addColonist(worker.getUnit());
-		}else if(fMinWeight < minWeight){
+			return;
+		}else if(fMinWeight < minWeight && bestFeature != null){
 			task = createReclaimTask(worker, bestFeature);
 			worker.setTask(task);;
+			return;
 		}
-		
-		
+
+    	if((!mypos.equals(overDrivePos)) && Math.min(minWeight, fMinWeight) > Math.pow(GraphManager.groundDistance(mypos,overDrivePos ),4) && effectiveIncomeMetal > 30){
+			task = createEnergyTask(worker);
+			worker.setTask(task);
+			parent.debug("Spamming energy for no reason!");
+			return;
+    	}
 
     	// are there damaged nearby ally units?
     	// is it useful to assist?
@@ -595,7 +692,23 @@ public class EconomyManager extends Module {
     }
     
     ConstructionTask createPorcTask(Worker worker){
-    	UnitDef radar = callback.getUnitDefByName("corrl");
+		UnitDef porc;
+		if (effectiveIncome < 20) {
+			porc = callback.getUnitDefByName("corllt");
+		}
+		else if (Math.random() > 0.9) {
+			porc = callback.getUnitDefByName("corhlt");
+		}
+		else if (Math.random() > 0.85) {
+			//faraday
+			porc = callback.getUnitDefByName("armartic");
+		}
+		else if (Math.random() > 0.5) {
+			porc = callback.getUnitDefByName("corrl");
+		}
+		else {
+			porc = callback.getUnitDefByName("corllt");
+		}
     	AIFloat3 position = worker.getUnit().getPos();
     	
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
@@ -610,13 +723,13 @@ public class EconomyManager extends Module {
 			position.z = position.z+vz*extraDistance;
     	}
     	
-    	position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
+    	position = callback.getMap().findClosestBuildSite(porc,position,600f, 3, 0);
     	
     	int priority = 100;
     	int constructionPriority = 3;
     	
-        worker.getUnit().build(radar, position, (short)0, (short) 0, frame+30);
-    	ConstructionTask ct =  new ConstructionTask(worker,radar,priority,constructionPriority, position);
+        worker.getUnit().build(porc, position, (short)0, (short) 0, frame+30);
+    	ConstructionTask ct =  new ConstructionTask(worker,porc,priority,constructionPriority, position);
     	workerTasks.add(ct);
     	return ct;
     }
@@ -698,36 +811,65 @@ public class EconomyManager extends Module {
     	// TODO: implement overdrive housekeeping in graphmanager, get buildpos from there 
     	
     	UnitDef solar = callback.getUnitDefByName("armsolar");
+		UnitDef fusion = callback.getUnitDefByName("armfus");
+		UnitDef singu = callback.getUnitDefByName("cafus");
     	AIFloat3 position = graphManager.getOverdriveSweetSpot(worker.getUnit().getPos());
 
-    	List<Unit>stuffNearby = callback.getFriendlyUnitsIn(position, 300);
+    	List<Unit>stuffNearby = callback.getFriendlyUnitsIn(position, 400);
     	for (Unit u:stuffNearby){
 			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
 				float distance = GraphManager.groundDistance(u.getPos(), position);
 				float extraDistance = Math.max(50,300-distance);
-				float vx = (position.x - u.getPos().x)/distance; 
-				float vz = (position.z - u.getPos().z)/distance; 
+				float vx = (position.x - u.getPos().x)/distance;
+				float vz = (position.z - u.getPos().z)/distance;
 				position.x = position.x+vx*extraDistance;
 				position.z = position.z+vz*extraDistance;
 			}
     	}
-    	
-    	position = callback.getMap().findClosestBuildSite(solar,position,600f, 3, 0);
 
+		boolean nearFac = false;
+		for(Worker w:workers) {
+			Unit u = w.getUnit();
+			if (u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size() > 0) {
+				float dist = GraphManager.groundDistance(worker.getUnit().getPos(), u.getPos());
+				if (dist < 1200 && dist > 450) {
+					nearFac = true;
+				}
+			}
+		}
+		ConstructionTask ct;
     	int priority = 100;
     	int constructionPriority = 3;
-        worker.getUnit().build(solar, position, (short) Math.floor(Math.random()*4), (short) 0, frame + 1000);
-    	ConstructionTask ct =  new ConstructionTask(worker,solar,priority,constructionPriority, position);
-    	energyQueued += 2;
-    	workerTasks.add(ct);
-    	return ct;
+
+		if (effectiveIncome > 25 && !buildingFusion && fusions.size() < 3 && nearFac){
+			position = callback.getMap().findClosestBuildSite(fusion,position,600f, 3, 0);
+			worker.getUnit().build(fusion, position, (short) Math.floor(Math.random() * 4), (short) 0, frame + 1000);
+			ct = new ConstructionTask(worker, solar, priority, constructionPriority, position);
+			workerTasks.add(ct);
+			buildingFusion = true;
+		}
+		else if (effectiveIncome > 30 && !buildingFusion && fusions.size() >= 3 && fusions.size() < 6 && nearFac){
+			position = callback.getMap().findClosestBuildSite(singu,position,600f, 3, 0);
+			worker.getUnit().build(singu, position, (short) Math.floor(Math.random() * 4), (short) 0, frame + 1000);
+			ct = new ConstructionTask(worker, solar, priority, constructionPriority, position);
+			workerTasks.add(ct);
+			buildingFusion = true;
+		}
+		else {
+			position = callback.getMap().findClosestBuildSite(solar,position,600f, 3, 0);
+			worker.getUnit().build(solar, position, (short) Math.floor(Math.random() * 4), (short) 0, frame + 1000);
+			ct = new ConstructionTask(worker, solar, priority, constructionPriority, position);
+			energyQueued += 2;
+			workerTasks.add(ct);
+		}
+		return ct;
     }
     
     ConstructionTask createNanoTurretTask(Worker worker, Unit target){ 	
     	UnitDef nano = callback.getUnitDefByName("armnanotc");
     	AIFloat3 position = target.getPos();
     	float buildDist = (float) (nano.getBuildDistance() * 0.9);
-    	double angle = Math.random()*2*Math.PI;
+		double angle = Math.random()*2*Math.PI;
     	
     	double vx = Math.cos(angle);
     	double vz = Math.sin(angle);
