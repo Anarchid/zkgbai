@@ -66,6 +66,9 @@ public class GraphManager extends Module {
 		// hardwired for now because of segfaults upon segfaults
 		pylonDefs = new java.util.HashMap<String, Integer>();
 		pylonDefs.put("armsolar", 100);
+		pylonDefs.put("armestor", 500);
+		pylonDefs.put("armfus", 150);
+		pylonDefs.put("cafus", 150);
 		
 		int width = parent.getCallback().getMap().getWidth();
 		int height = parent.getCallback().getMap().getHeight();
@@ -542,7 +545,8 @@ public class GraphManager extends Module {
     }
     
     public AIFloat3 getOverdriveSweetSpot(AIFloat3 position){
-    	float minWeight = Float.MAX_VALUE;  	
+    	float radius = 175;
+		float minWeight = Float.MAX_VALUE;
     	Link link = null;
     	for(Link l:links){
     		if(l.owned && !l.connected){
@@ -566,8 +570,8 @@ public class GraphManager extends Module {
 				float vx = (float) (dx/d);
 				float vz = (float) (dz/d);
 				
-				float x = p.position.x + vx*95;
-				float z = p.position.z + vz*95;
+				float x = p.position.x + vx*radius;
+				float z = p.position.z + vz*radius;
 				AIFloat3 newpos = new AIFloat3(x,p.position.y,z);
 				return newpos;
     		}
@@ -578,7 +582,7 @@ public class GraphManager extends Module {
     	MetalSpot spot = null;
     	for(MetalSpot ms:metalSpots){
     		if(ms.owned){
-	    		float weight = (float) (groundDistance(ms.position, position));
+	    		float weight = (groundDistance(ms.position, position));
 	    		weight += weight*Math.sqrt(ms.getPylonCount());
 	    		if (weight < minWeight){
 	    			spot = ms;
@@ -587,7 +591,7 @@ public class GraphManager extends Module {
     		}
     	}
     	if(spot != null){
-    		return spot.position;	
+			return spot.position;
     	}else{
     		return position;
     	}	
