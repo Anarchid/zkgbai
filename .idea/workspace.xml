@@ -5,12 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3940bc53-cd07-4f12-a4d6-590e361ab34f" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/zkgbai/economy/EconomyManager.class" afterPath="$PROJECT_DIR$/build/zkgbai/economy/EconomyManager.class" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/zkgbai/graph/GraphManager.class" afterPath="$PROJECT_DIR$/build/zkgbai/graph/GraphManager.class" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java" afterPath="$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/graph/GraphManager.java" afterPath="$PROJECT_DIR$/src/zkgbai/graph/GraphManager.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/codeStyleSettings.xml" afterPath="$PROJECT_DIR$/.idea/codeStyleSettings.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/graph/MetalSpot.java" afterPath="$PROJECT_DIR$/src/zkgbai/graph/MetalSpot.java" />
     </list>
     <ignored path="ZKGBAI.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -35,17 +31,17 @@
       <file leaf-file-name="EconomyManager.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.47812167">
-              <caret line="518" column="95" selection-start-line="518" selection-start-column="95" selection-end-line="518" selection-end-column="95" />
+            <state vertical-scroll-proportion="0.37673426">
+              <caret line="172" column="11" selection-start-line="172" selection-start-column="11" selection-end-line="172" selection-end-column="11" />
               <folding>
-                <element signature="e#6040#6041#0" expanded="true" />
-                <element signature="e#6064#6065#0" expanded="true" />
-                <element signature="e#6440#6447#0" expanded="true" />
-                <element signature="e#12001#12008#0" expanded="true" />
-                <element signature="e#28904#28905#0" expanded="true" />
-                <element signature="e#28944#28945#0" expanded="true" />
-                <element signature="e#29007#29008#0" expanded="true" />
-                <element signature="e#29046#29047#0" expanded="true" />
+                <element signature="e#6222#6223#0" expanded="true" />
+                <element signature="e#6246#6247#0" expanded="true" />
+                <element signature="e#6622#6629#0" expanded="true" />
+                <element signature="e#12270#12277#0" expanded="true" />
+                <element signature="e#29902#29903#0" expanded="true" />
+                <element signature="e#29942#29943#0" expanded="true" />
+                <element signature="e#30005#30006#0" expanded="true" />
+                <element signature="e#30044#30045#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -66,6 +62,7 @@
       <list>
         <option value="$PROJECT_DIR$/src/zkgbai/military/MilitaryManager.java" />
         <option value="$PROJECT_DIR$/src/zkgbai/graph/GraphManager.java" />
+        <option value="$PROJECT_DIR$/src/zkgbai/graph/MetalSpot.java" />
         <option value="$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java" />
       </list>
     </option>
@@ -553,14 +550,14 @@
         <state vertical-scroll-proportion="0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="e#6040#6041#0" expanded="true" />
-            <element signature="e#6064#6065#0" expanded="true" />
-            <element signature="e#6440#6447#0" expanded="true" />
-            <element signature="e#12001#12008#0" expanded="true" />
-            <element signature="e#28904#28905#0" expanded="true" />
-            <element signature="e#28944#28945#0" expanded="true" />
-            <element signature="e#29007#29008#0" expanded="true" />
-            <element signature="e#29046#29047#0" expanded="true" />
+            <element signature="e#6222#6223#0" expanded="true" />
+            <element signature="e#6246#6247#0" expanded="true" />
+            <element signature="e#6622#6629#0" expanded="true" />
+            <element signature="e#12270#12277#0" expanded="true" />
+            <element signature="e#29902#29903#0" expanded="true" />
+            <element signature="e#29942#29943#0" expanded="true" />
+            <element signature="e#30005#30006#0" expanded="true" />
+            <element signature="e#30044#30045#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -649,22 +646,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/ReclaimTask.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.07083333">
-          <caret line="9" column="13" selection-start-line="9" selection-start-column="13" selection-end-line="9" selection-end-column="13" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/zkgbai/graph/GraphManager.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="547" column="26" selection-start-line="547" selection-start-column="26" selection-end-line="547" selection-end-column="26" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/ProductionTask.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -681,19 +662,47 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/zkgbai/graph/GraphManager.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="228" column="40" selection-start-line="228" selection-start-column="40" selection-end-line="228" selection-end-column="40" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/zkgbai/graph/MetalSpot.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="79" column="24" selection-start-line="79" selection-start-column="24" selection-end-line="79" selection-end-column="24" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/ReclaimTask.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.07257204">
+          <caret line="9" column="13" selection-start-line="9" selection-start-column="13" selection-end-line="9" selection-end-column="13" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.47812167">
-          <caret line="518" column="95" selection-start-line="518" selection-start-column="95" selection-end-line="518" selection-end-column="95" />
+        <state vertical-scroll-proportion="0.37673426">
+          <caret line="172" column="11" selection-start-line="172" selection-start-column="11" selection-end-line="172" selection-end-column="11" />
           <folding>
-            <element signature="e#6040#6041#0" expanded="true" />
-            <element signature="e#6064#6065#0" expanded="true" />
-            <element signature="e#6440#6447#0" expanded="true" />
-            <element signature="e#12001#12008#0" expanded="true" />
-            <element signature="e#28904#28905#0" expanded="true" />
-            <element signature="e#28944#28945#0" expanded="true" />
-            <element signature="e#29007#29008#0" expanded="true" />
-            <element signature="e#29046#29047#0" expanded="true" />
+            <element signature="e#6222#6223#0" expanded="true" />
+            <element signature="e#6246#6247#0" expanded="true" />
+            <element signature="e#6622#6629#0" expanded="true" />
+            <element signature="e#12270#12277#0" expanded="true" />
+            <element signature="e#29902#29903#0" expanded="true" />
+            <element signature="e#29942#29943#0" expanded="true" />
+            <element signature="e#30005#30006#0" expanded="true" />
+            <element signature="e#30044#30045#0" expanded="true" />
           </folding>
         </state>
       </provider>

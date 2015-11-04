@@ -5,6 +5,7 @@ import java.util.HashMap;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
+import zkgbai.economy.Worker;
 
 public class MetalSpot {
 	AIFloat3 position;
@@ -17,7 +18,7 @@ public class MetalSpot {
 	boolean visible = false;
 
 	int lastSeen = 0;
-	ArrayList<Unit> colonizers; 
+	ArrayList<Worker> colonizers;
 	public ArrayList<Pylon> pylons;
 	public ArrayList<Link> links;
 	Unit extractor;
@@ -43,7 +44,7 @@ public class MetalSpot {
 	boolean isShadowCaptured = false;
 	
 	MetalSpot(float x, float y, float z, float m){
-		colonizers = new ArrayList<Unit>();
+		colonizers = new ArrayList<Worker>();
 		this.value = m;
 		this.position = new AIFloat3(x,y,z);
 		this.pylons = new ArrayList<Pylon>();
@@ -75,8 +76,8 @@ public class MetalSpot {
 		return position;
 	}
 	
-	public void addColonist(Unit u){
-		colonizers.add(u);
+	public void addColonist(Worker w){
+		colonizers.add(w);
 	}
 	
 	public void removeColonist(Unit u){
@@ -87,7 +88,7 @@ public class MetalSpot {
 		colonizers.clear();
 	}
 	
-	public ArrayList<Unit> getColonists(){
+	public ArrayList<Worker> getColonists(){
 		return colonizers;
 	}
 	

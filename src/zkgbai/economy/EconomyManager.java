@@ -166,6 +166,12 @@ public class EconomyManager extends Module {
 		// reset the idle list.
 		idlers = new ArrayList<>();
 
+		// randomly stop workers from walking to distant jobs
+		// so that they can find something more productive to do nearby.
+		/*if (effectiveIncome > 18){
+			stochasticWalk();
+		}*/
+
 		if (frame % 15 == 0) {
 			// assign workers to jobs.
 			for (Worker w : workers) {
@@ -239,7 +245,9 @@ public class EconomyManager extends Module {
     		unit.executeCustomCommand(CMD_PRIORITY, params, (short)0, parent.currentFrame);
     	}
 
-    	checkWorker(unit);
+    	if (unit.getMaxSpeed() > 0) {
+			checkWorker(unit);
+		}
     	
     	for (WorkerTask wt:workerTasks){
     		if(wt instanceof ConstructionTask){
@@ -248,7 +256,7 @@ public class EconomyManager extends Module {
 	    			if(ct.building.getUnitId() == unit.getUnitId()){
 	    				ct.setCompleted();
 						if(ct.buildType.getName().equals("cormex")){
-							graphManager.getClosestMetalSpot(ct.location).removeColonist(ct.getWorker().getUnit());
+							graphManager.getClosestMetalSpot(ct.location).clearColonists();
 						}
 	    			}
     			}
@@ -269,8 +277,7 @@ public class EconomyManager extends Module {
     
     @Override
     public int unitDestroyed(Unit unit, Unit attacker) {
-    	
-    	radars.remove(unit);
+		radars.remove(unit);
     	porcs.remove(unit);
 		nanos.remove(unit);
 		fusions.remove(unit);
@@ -325,7 +332,6 @@ public class EconomyManager extends Module {
 	    	}
 	    }
 	    radars.remove(unit);
-	    factories.remove(unit);
         return 0; // signaling: OK
     }
 
@@ -359,6 +365,10 @@ public class EconomyManager extends Module {
 					w.getTask().setCompleted();
 				}
 			}
+		}
+
+		if (unit.getMaxSpeed() == 0 && unit.getDef().getBuildOptions().size() > 0) {
+			checkWorker(unit);
 		}
 		String defName = unit.getDef().getName();
 
@@ -418,14 +428,14 @@ public class EconomyManager extends Module {
 			else if (rand > 0.2) {
 				return "armwar";
 			}
-			else if (rand > 0.1){
+			else if (rand > 0.05){
 				return "spherepole";
 			}
 			else if (fusions.size() > 0){
 				return "armsnipe";
 			}
 			else{
-				return "armpw";
+				return "spherepole";
 			}
 		}
 
@@ -623,7 +633,7 @@ public class EconomyManager extends Module {
 		if(minWeight<fMinWeight && spot != null){
 			task = createColonizeTask(worker, spot);
 			worker.setTask(task);
-			spot.addColonist(worker.getUnit());
+			spot.addColonist(worker);
 			return;
 		}else if(bestFeature != null){
 			ReclaimTask rtask = createReclaimTask(worker, bestFeature);
@@ -1010,6 +1020,31 @@ public class EconomyManager extends Module {
 		}
 		return target;
 	}
+
+	/*void stochasticWalk(){
+		for (Worker w: workers){
+			WorkerTask wt = w.getTask();
+			if (!wt.isCompleted()){
+				if (wt instanceof ConstructionTask){
+					ConstructionTask ct = (ConstructionTask) wt;
+					AIFloat3 pos1 = w.getUnit().getPos();
+					AIFloat3 pos2 = ct.location;
+					if (distance(pos1, pos2) > 600 && Math.random() > 0.99){
+						w.getUnit().stop((short) 0, frame+60);
+						ct.setCompleted();
+					}
+				} else if (wt instanceof ReclaimTask){
+					ReclaimTask rt = (ReclaimTask) wt;
+					AIFloat3 pos1 = w.getUnit().getPos();
+					AIFloat3 pos2 = rt.location;
+					if (distance(pos1, pos2) > 600 && Math.random() > 0.99){
+						w.getUnit().stop((short) 0, frame+60);
+						rt.setCompleted();
+					}
+				}
+			}
+		}
+	}*/
 
 	float distance(AIFloat3 pos1, AIFloat3 pos2){
 		float x1 = pos1.x;
