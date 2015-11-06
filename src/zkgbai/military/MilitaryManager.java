@@ -395,7 +395,7 @@ public class MilitaryManager extends Module {
     		unit.setMoveState(3, (short)0, parent.currentFrame);
     	}
     	
-    	if(unit.getMaxSpeed()>0 && (unit.getDef().getBuildOptions().size() > 0 || unit.getMaxHealth() > 1000)){
+    	if(unit.getMaxHealth() > 1000 && unit.getDef().getBuildOptions().size() == 0){
     		cowardUnits.add(unit);
     	}
         return 0; // signaling: OK

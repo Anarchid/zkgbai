@@ -1,47 +1,36 @@
 package zkgbai.economy.tasks;
 
+import com.springrts.ai.oo.AIFloat3;
 import zkgbai.economy.Worker;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class WorkerTask {
-	public int priority = 0;
-	boolean completed = true;
-	Worker worker;
-	
-	public WorkerTask(Worker worker){
-		this.worker = worker;
-	}
-	
-	
-	@Override
-	public String toString(){
-		return this.worker.getUnit().getDef().getName()+" to get a fresh assignment";
-	}
-	
-	@Override
-	public boolean equals(Object other){
-		if(other instanceof WorkerTask){
-			WorkerTask wt = (WorkerTask)other;
-			return (worker.getUnit().getUnitId() == wt.getWorker().getUnit().getUnitId());
-		}
-		return false;
-	}
-	
-	@Override
-	public int hashCode(){
-		return worker.getUnit().getUnitId()*43;
-	}
-	
-	public boolean isCompleted(){
-		return completed;
-	}
-	
-	public void setCompleted(){
-		completed = true;
-	}
-	
-	public Worker getWorker(){
-		return worker;
+	public List<Worker> assignedWorkers;
+	protected AIFloat3 position;
+
+	public WorkerTask() {
+		this.assignedWorkers = new ArrayList<Worker>();
+		this.position = new AIFloat3();
 	}
 
+	public AIFloat3 getPos(){
+		return this.position;
+	}
+
+	public void addWorker(Worker w){
+		this.assignedWorkers.add(w);
+	}
+
+	public void removeWorker(Worker w){
+		this.assignedWorkers.remove(w);
+	}
+
+	public void stopWorkers(int frame){
+		for (Worker w: assignedWorkers){
+			w.getUnit().stop((short) 0, frame+150);
+			w.clearTask();
+		}
+	}
 }

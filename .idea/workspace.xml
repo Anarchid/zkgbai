@@ -5,8 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3940bc53-cd07-4f12-a4d6-590e361ab34f" name="Default" comment="">
+      <change type="DELETED" beforePath="C:\Users\haplo\Desktop\AI\zkgbai\src\zkgbai\economy\Wreck.java" afterPath="" />
+      <change type="DELETED" beforePath="C:\Users\haplo\Desktop\AI\zkgbai\src\zkgbai\economy\tasks\ProductionTask.java" afterPath="" />
+      <change type="MOVED" beforePath="C:\Users\haplo\Desktop\AI\zkgbai\src\zkgbai\economy\tasks\TemporaryAssistTask.java" afterPath="$PROJECT_DIR$/src/zkgbai/economy/tasks/RepairTask.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/economy/tasks/ConstructionTask.java" afterPath="$PROJECT_DIR$/src/zkgbai/economy/tasks/ConstructionTask.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java" afterPath="$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/graph/MetalSpot.java" afterPath="$PROJECT_DIR$/src/zkgbai/graph/MetalSpot.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/military/MilitaryManager.java" afterPath="$PROJECT_DIR$/src/zkgbai/military/MilitaryManager.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/economy/tasks/ReclaimTask.java" afterPath="$PROJECT_DIR$/src/zkgbai/economy/tasks/ReclaimTask.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/economy/Worker.java" afterPath="$PROJECT_DIR$/src/zkgbai/economy/Worker.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zkgbai/economy/tasks/WorkerTask.java" afterPath="$PROJECT_DIR$/src/zkgbai/economy/tasks/WorkerTask.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="ZKGBAI.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -31,17 +39,46 @@
       <file leaf-file-name="EconomyManager.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.37673426">
-              <caret line="172" column="11" selection-start-line="172" selection-start-column="11" selection-end-line="172" selection-end-column="11" />
+            <state vertical-scroll-proportion="0.7070485">
+              <caret line="849" column="39" selection-start-line="849" selection-start-column="39" selection-end-line="849" selection-end-column="39" />
               <folding>
-                <element signature="e#6222#6223#0" expanded="true" />
-                <element signature="e#6246#6247#0" expanded="true" />
-                <element signature="e#6622#6629#0" expanded="true" />
-                <element signature="e#12270#12277#0" expanded="true" />
-                <element signature="e#29902#29903#0" expanded="true" />
-                <element signature="e#29942#29943#0" expanded="true" />
-                <element signature="e#30005#30006#0" expanded="true" />
-                <element signature="e#30044#30045#0" expanded="true" />
+                <element signature="imports" expanded="true" />
+                <element signature="e#4995#4996#0" expanded="true" />
+                <element signature="e#5019#5020#0" expanded="true" />
+                <element signature="e#5395#5402#0" expanded="true" />
+                <element signature="e#11195#11202#0" expanded="true" />
+                <element signature="e#11863#11871#0" expanded="true" />
+                <element signature="e#16325#16337#0" expanded="true" />
+                <element signature="e#16893#16901#0" expanded="true" />
+                <element signature="e#29772#29773#0" expanded="true" />
+                <element signature="e#29812#29813#0" expanded="true" />
+                <element signature="e#29875#29876#0" expanded="true" />
+                <element signature="e#29914#29915#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="WorkerTask.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/WorkerTask.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0">
+              <caret line="30" column="8" selection-start-line="30" selection-start-column="8" selection-end-line="30" selection-end-column="8" />
+              <folding>
+                <element signature="imports" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Worker.java" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/Worker.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0">
+              <caret line="17" column="31" selection-start-line="17" selection-start-column="31" selection-end-line="17" selection-end-column="31" />
+              <folding>
+                <element signature="e#557#558#0" expanded="true" />
+                <element signature="e#584#585#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -60,9 +97,15 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/src/zkgbai/military/MilitaryManager.java" />
         <option value="$PROJECT_DIR$/src/zkgbai/graph/GraphManager.java" />
         <option value="$PROJECT_DIR$/src/zkgbai/graph/MetalSpot.java" />
+        <option value="$PROJECT_DIR$/src/zkgbai/military/MilitaryManager.java" />
+        <option value="$PROJECT_DIR$/src/zkgbai/economy/tasks/TemporaryAssistTask.java" />
+        <option value="$PROJECT_DIR$/src/zkgbai/economy/tasks/ReclaimTask.java" />
+        <option value="$PROJECT_DIR$/src/zkgbai/economy/tasks/RepairTask.java" />
+        <option value="$PROJECT_DIR$/src/zkgbai/economy/tasks/ConstructionTask.java" />
+        <option value="$PROJECT_DIR$/src/zkgbai/economy/tasks/WorkerTask.java" />
+        <option value="$PROJECT_DIR$/src/zkgbai/economy/Worker.java" />
         <option value="$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java" />
       </list>
     </option>
@@ -83,7 +126,7 @@
     <OptionsSetting value="true" id="Update" />
     <OptionsSetting value="true" id="Status" />
     <OptionsSetting value="true" id="Edit" />
-    <ConfirmationsSetting value="0" id="Add" />
+    <ConfirmationsSetting value="1" id="Add" />
     <ConfirmationsSetting value="0" id="Remove" />
   </component>
   <component name="ProjectView">
@@ -492,7 +535,7 @@
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3299595" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32953367" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Palette&#9;" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Application Servers" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
@@ -500,9 +543,10 @@
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3299595" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.25586355" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.15405117" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32953367" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Ant Build" active="true" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.25586355" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Ant Build" active="true" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.06876332" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="UI Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -511,7 +555,6 @@
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.39979756" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3299595" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
     </layout>
   </component>
@@ -550,14 +593,18 @@
         <state vertical-scroll-proportion="0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="e#6222#6223#0" expanded="true" />
-            <element signature="e#6246#6247#0" expanded="true" />
-            <element signature="e#6622#6629#0" expanded="true" />
-            <element signature="e#12270#12277#0" expanded="true" />
-            <element signature="e#29902#29903#0" expanded="true" />
-            <element signature="e#29942#29943#0" expanded="true" />
-            <element signature="e#30005#30006#0" expanded="true" />
-            <element signature="e#30044#30045#0" expanded="true" />
+            <element signature="imports" expanded="true" />
+            <element signature="e#4995#4996#0" expanded="true" />
+            <element signature="e#5019#5020#0" expanded="true" />
+            <element signature="e#5395#5402#0" expanded="true" />
+            <element signature="e#11195#11202#0" expanded="true" />
+            <element signature="e#11863#11871#0" expanded="true" />
+            <element signature="e#16325#16337#0" expanded="true" />
+            <element signature="e#16893#16901#0" expanded="true" />
+            <element signature="e#29772#29773#0" expanded="true" />
+            <element signature="e#29812#29813#0" expanded="true" />
+            <element signature="e#29875#29876#0" expanded="true" />
+            <element signature="e#29914#29915#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -606,58 +653,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/zkgbai/military/MilitaryManager.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.81354165">
-          <caret line="414" column="51" selection-start-line="414" selection-start-column="51" selection-end-line="414" selection-end-column="51" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/zkgbai/ZKGraphBasedAI.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.54895836">
           <caret line="61" column="45" selection-start-line="61" selection-start-column="45" selection-end-line="61" selection-end-column="45" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/Worker.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.07083333">
-          <caret line="6" column="13" selection-start-line="6" selection-start-column="13" selection-end-line="6" selection-end-column="13" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/WorkerTask.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.6020833">
-          <caret line="46" column="1" selection-start-line="46" selection-start-column="1" selection-end-line="46" selection-end-column="1" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/TemporaryAssistTask.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.07083333">
-          <caret line="7" column="13" selection-start-line="7" selection-start-column="13" selection-end-line="7" selection-end-column="13" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/ProductionTask.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="27" column="5" selection-start-line="27" selection-start-column="5" selection-end-line="27" selection-end-column="5" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/ConstructionTask.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="7" column="13" selection-start-line="7" selection-start-column="13" selection-end-line="7" selection-end-column="13" />
           <folding />
         </state>
       </provider>
@@ -682,27 +681,88 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/RepairTask.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.09071505">
+          <caret line="8" column="11" selection-start-line="8" selection-start-column="11" selection-end-line="8" selection-end-column="11" />
+          <folding>
+            <element signature="e#235#236#0" expanded="true" />
+            <element signature="e#262#263#0" expanded="true" />
+            <element signature="e#302#303#0" expanded="true" />
+            <element signature="e#331#332#0" expanded="true" />
+            <element signature="e#574#575#0" expanded="true" />
+            <element signature="e#629#630#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/ReclaimTask.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.07257204">
-          <caret line="9" column="13" selection-start-line="9" selection-start-column="13" selection-end-line="9" selection-end-column="13" />
+        <state vertical-scroll-proportion="0.3810032">
+          <caret line="27" column="58" selection-start-line="25" selection-start-column="4" selection-end-line="27" selection-end-column="58" />
+          <folding>
+            <element signature="e#596#597#0" expanded="true" />
+            <element signature="e#635#636#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/ConstructionTask.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.27214515">
+          <caret line="15" column="24" selection-start-line="15" selection-start-column="24" selection-end-line="15" selection-end-column="24" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/zkgbai/military/MilitaryManager.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.45357525">
+          <caret line="47" column="0" selection-start-line="47" selection-start-column="0" selection-end-line="47" selection-end-column="0" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/tasks/WorkerTask.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="30" column="8" selection-start-line="30" selection-start-column="8" selection-end-line="30" selection-end-column="8" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/Worker.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="17" column="31" selection-start-line="17" selection-start-column="31" selection-end-line="17" selection-end-column="31" />
+          <folding>
+            <element signature="e#557#558#0" expanded="true" />
+            <element signature="e#584#585#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/zkgbai/economy/EconomyManager.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.37673426">
-          <caret line="172" column="11" selection-start-line="172" selection-start-column="11" selection-end-line="172" selection-end-column="11" />
+        <state vertical-scroll-proportion="0.7070485">
+          <caret line="849" column="39" selection-start-line="849" selection-start-column="39" selection-end-line="849" selection-end-column="39" />
           <folding>
-            <element signature="e#6222#6223#0" expanded="true" />
-            <element signature="e#6246#6247#0" expanded="true" />
-            <element signature="e#6622#6629#0" expanded="true" />
-            <element signature="e#12270#12277#0" expanded="true" />
-            <element signature="e#29902#29903#0" expanded="true" />
-            <element signature="e#29942#29943#0" expanded="true" />
-            <element signature="e#30005#30006#0" expanded="true" />
-            <element signature="e#30044#30045#0" expanded="true" />
+            <element signature="imports" expanded="true" />
+            <element signature="e#4995#4996#0" expanded="true" />
+            <element signature="e#5019#5020#0" expanded="true" />
+            <element signature="e#5395#5402#0" expanded="true" />
+            <element signature="e#11195#11202#0" expanded="true" />
+            <element signature="e#11863#11871#0" expanded="true" />
+            <element signature="e#16325#16337#0" expanded="true" />
+            <element signature="e#16893#16901#0" expanded="true" />
+            <element signature="e#29772#29773#0" expanded="true" />
+            <element signature="e#29812#29813#0" expanded="true" />
+            <element signature="e#29875#29876#0" expanded="true" />
+            <element signature="e#29914#29915#0" expanded="true" />
           </folding>
         </state>
       </provider>

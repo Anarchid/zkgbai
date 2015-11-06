@@ -1,33 +1,32 @@
 package zkgbai.economy.tasks;
 
-import zkgbai.economy.Worker;
-
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 
-public class ConstructionTask extends ProductionTask {
-	public AIFloat3 location;
-	public ConstructionTask(Worker who, UnitDef what, int taskPriority, int builderPriority, AIFloat3 location){
-		super(who, what, taskPriority, builderPriority);
-		this.location = location;
+public class ConstructionTask extends WorkerTask {
+	public UnitDef buildType;
+	public int facing;
+	public Unit target;
+
+	public ConstructionTask(UnitDef def, AIFloat3 pos, int h) {
+		super();
+		this.position = pos;
+		this.buildType = def;
+		this.facing = h;
 	}
-	
+
 	@Override
-	public boolean equals(Object other){
-		if(other instanceof ConstructionTask){
-			ConstructionTask wt = (ConstructionTask)other;
-			return (worker.getUnit().getUnitId() == wt.getWorker().getUnit().getUnitId() && buildType.getUnitDefId() == wt.buildType.getUnitDefId());
+	public boolean equals(Object other) {
+		if (other instanceof ConstructionTask) {
+			ConstructionTask wt = (ConstructionTask) other;
+			return (buildType.getUnitDefId() == wt.buildType.getUnitDefId() && position.x == wt.position.x && position.z == wt.position.z && facing == wt.facing);
 		}
 		return false;
 	}
 
 	@Override
-	public String toString(){
-		return this.worker.getUnit().getDef().getName()+" to construct "+buildType.getName();
-	}
-	
-	@Override
-	public int hashCode(){
-		return worker.getUnit().getUnitId()*43+buildType.getUnitDefId();
+	public String toString() {
+		return " to build "+this.buildType.getName() + " at " + "x:" + position.x + " z:" + position.z;
 	}
 }
