@@ -29,7 +29,7 @@ public class WorkerTask {
 
 	public void stopWorkers(int frame){
 		for (Worker w: assignedWorkers){
-			w.getUnit().stop((short) 0, frame+150);
+			//w.getUnit().stop((short) 0, frame+150);
 			w.clearTask();
 		}
 	}
