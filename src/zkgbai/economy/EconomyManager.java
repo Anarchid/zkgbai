@@ -14,13 +14,12 @@ import zkgbai.military.MilitaryManager;
 
 import com.springrts.ai.oo.AIFloat3;
 
-import javax.swing.plaf.FontUIResource;
-
 public class EconomyManager extends Module {
 	ZKGraphBasedAI parent;
 	List<Worker> workers;
 	List<Worker> factories;
 	List<Worker> assigned;
+	List<Worker> commanders;
 	List<ConstructionTask> factoryTasks; // for constructors building factories
 	List<ConstructionTask> radarTasks;
 	List<ConstructionTask> constructionTasks;
@@ -49,9 +48,12 @@ public class EconomyManager extends Module {
 	float energy = 0;
 
 	int numWorkers = 0;
+	int numFighters = 0;
 	
 	int frame = 0;
 	static int CMD_PRIORITY = 34220;
+	static int CMD_MORPH = 31210;
+	static int CMD_MISC_PRIORITY = 34221;
 	
 	Economy eco;
 	Resource m;
@@ -70,6 +72,7 @@ public class EconomyManager extends Module {
 		this.myTeamID = parent.teamID;
 		this.myAllyTeamID = parent.allyTeamID;
 		this.workers = new ArrayList<Worker>();
+		this.commanders = new ArrayList<Worker>();
 		this.factories = new ArrayList<Worker>();
 		this.assigned = new ArrayList<Worker>();
 		this.factoryTasks = new ArrayList<ConstructionTask>();
@@ -151,6 +154,20 @@ public class EconomyManager extends Module {
 			cleanWorkers();
 		}
 
+		//morph nullcom
+		if (effectiveIncome > 15 && frame % 300 == 0){
+			for (Worker c:commanders){
+				ArrayList<Float> params = new ArrayList<>();
+				c.getUnit().executeCustomCommand(CMD_MORPH, params, (short) 0, parent.currentFrame);
+				/*c.getUnit().executeCustomCommand(CMD_MORPH+1, params, (short) 0, parent.currentFrame);
+				c.getUnit().executeCustomCommand(CMD_MORPH+2, params, (short) 0, parent.currentFrame);
+				c.getUnit().executeCustomCommand(CMD_MORPH+3, params, (short) 0, parent.currentFrame);
+				c.getUnit().executeCustomCommand(CMD_MORPH+4, params, (short) 0, parent.currentFrame);*/
+				c.getTask().removeWorker(c);
+				c.clearTask();
+			}
+		}
+
 		if (frame % 15 == 0) {
 			// create new building tasks.
 			for ( Worker w : workers) {
@@ -169,8 +186,8 @@ public class EconomyManager extends Module {
 
 			// reduce worker priority to normal above 30 m/s income
 			if (effectiveIncome > 30) {
-				for ( Worker w : workers) {
-					 ArrayList<Float> params = new ArrayList<>();
+				for (Worker w : workers) {
+					ArrayList<Float> params = new ArrayList<>();
 					params.add((float) 1);
 					w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, parent.currentFrame);
 				}
@@ -243,9 +260,9 @@ public class EconomyManager extends Module {
 		 RepairTask rt = new RepairTask(unit);
 		repairTasks.remove(rt);
 
-		// debug
-		//int uid = unit.getUnitId();
-		//parent.debug("Dead Unit ID: "+uid);
+		if (unit.getMaxSpeed() > 0 && unit.getDef().isAbleToAttack()){
+			numFighters--;
+		}
 
 		// If it was a building under construction, reset the builder's target
 		if(unit.getMaxSpeed() == 0){
@@ -368,10 +385,11 @@ public class EconomyManager extends Module {
     }
     
     private String getCloaky(){
-		if((float) numWorkers < Math.floor(((effectiveIncome+2)/5))+ fusions.size()) {
+		if((float) numWorkers < Math.floor(((effectiveIncome)/3))+ fusions.size() && numFighters >= numWorkers) {
 			return "armrectr";
 		}
-		if (effectiveIncome < 18){
+
+		if (effectiveIncome < 20){
 			if (Math.random() > 0.9){
 				return "armwar";
 			}
@@ -402,8 +420,20 @@ public class EconomyManager extends Module {
 		}
     }
 
+	private String getShields() {
+		if ((float) numWorkers < Math.floor(((effectiveIncome) / 3)) + fusions.size() && numFighters >= numWorkers) {
+			return "cornecro";
+		}
+		double rand = Math.random();
+		if (rand > 0.1){
+			return "corak";
+		}else {
+			return "corstorm";
+		}
+	}
+
 	private String getGunship(){
-		if((float) numWorkers < Math.floor(((effectiveIncome+2)/5))+ fusions.size()) {
+		if((float) numWorkers < Math.floor(((effectiveIncome+2)/5))+ fusions.size() && numFighters >= numWorkers) {
 			return "armca";
 		}
 
@@ -417,6 +447,14 @@ public class EconomyManager extends Module {
 		}
 	}
 
+	private String getStrider(){
+		double rand = Math.random();
+		if (rand > 0.75){
+			return "scorpion";
+		}else{
+			return "dante";
+		}
+	}
 
     void checkWorker( Unit unit){
 		UnitDef def = unit.getDef();
@@ -426,14 +464,18 @@ public class EconomyManager extends Module {
 				unit.setMoveState(2, (short) 0, frame+10);
 			}
 			else if (unit.getMaxSpeed() > 0){
-				workers.add(new Worker(unit));
+				Worker w = new Worker(unit);
+				workers.add(w);
 				numWorkers++;
-				if (unit.getMaxSpeed() > 0 && effectiveIncome < 30) {
-					 ArrayList<Float> params = new ArrayList<Float>();
-					params.add((float) 2);
-					//unit.executeCustomCommand(CMD_PRIORITY, params, (short) 0, parent.currentFrame);
+				ArrayList<Float> params = new ArrayList<>();
+				params.add((float) 2);
+				w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, parent.currentFrame);
+				if (def.getBuildSpeed() > 8) {
+					commanders.add(w);
 				}
 			}
+		}else if (unit.getMaxSpeed() > 0){
+			numFighters++;
 		}
     }
 
@@ -445,7 +487,15 @@ public class EconomyManager extends Module {
 		}else if (fac.getUnit().getDef().getName().equals("factorygunship")){
 			unit = callback.getUnitDefByName(getGunship());
 			fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 1000);
+		}else if (fac.getUnit().getDef().getName().equals("factoryshield")){
+			unit = callback.getUnitDefByName(getShields());
+			fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 1000);
+		}else if (fac.getUnit().getDef().getName().equals("striderhub")){
+			unit = callback.getUnitDefByName(getStrider());
+			AIFloat3 pos = callback.getMap().findClosestBuildSite(unit, fac.getPos(), 250f, 3, 0);
+			fac.getUnit().build(unit, pos, (short) 0, (short) 0, frame+1000);
 		}
+
 	}
 
 	void assignWorkers() {
@@ -804,6 +854,8 @@ public class EconomyManager extends Module {
     void createFactoryTask( Worker worker){
 		UnitDef cloak = callback.getUnitDefByName("factorycloak");
 		UnitDef gunship = callback.getUnitDefByName("factorygunship");
+		UnitDef strider = callback.getUnitDefByName("striderhub");
+		UnitDef shields = callback.getUnitDefByName("factoryshield");
 		UnitDef factory;
 		AIFloat3 position = worker.getUnit().getPos();
 		position.x = position.x + 120;
@@ -816,7 +868,7 @@ public class EconomyManager extends Module {
 		if(factories.size() == 0){
 			factory = cloak;
 		}else{
-			factory = gunship;
+			factory = strider;
 		}
     	
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
@@ -951,8 +1003,7 @@ public class EconomyManager extends Module {
 	
 	Boolean canBuildFusion( AIFloat3 position){
 		 Worker nearestFac = getNearestFac(position);
-		if ((effectiveIncome > 30 && nearestFac != null && fusions.size() < 2 && fusionTasks.size() == 0)
-				|| (effectiveIncome > 40 && nearestFac != null && fusions.size() == 2 && fusionTasks.size() == 0)){
+		if ((effectiveIncome > 30 && nearestFac != null && fusions.size() < 6 && fusionTasks.size() == 0)){
 			return true;
 		}
 		return false;
@@ -1005,7 +1056,7 @@ public class EconomyManager extends Module {
 
 		ConstructionTask ct;
 
-		if (effectiveIncome > 30 && nearestFac != null && fusions.size() < 2 && fusionTasks.size() == 0){
+		if (effectiveIncome > 30 && nearestFac != null && fusions.size() < 6 && fusionTasks.size() == 0){
 			position = graphManager.getOverdriveSweetSpot(fpos);
 			position = callback.getMap().findClosestBuildSite(fusion,position,600f, 3, 0);
 			ct = new ConstructionTask(fusion, position, 0);
@@ -1014,7 +1065,7 @@ public class EconomyManager extends Module {
 				fusionTasks.add(ct);
 			}
 		}
-		else if (effectiveIncome > 40 && nearestFac != null && fusions.size() == 2 && fusionTasks.size() == 0){
+		/*else if (effectiveIncome > 40 && nearestFac != null && fusions.size() == 2 && fusionTasks.size() == 0){
 			position = graphManager.getOverdriveSweetSpot(fpos);
 			position = callback.getMap().findClosestBuildSite(singu,position,600f, 3, 0);
 			ct = new ConstructionTask(singu, position, 0);
@@ -1022,7 +1073,7 @@ public class EconomyManager extends Module {
 				constructionTasks.add(ct);
 				fusionTasks.add(ct);
 			}
-		}
+		}*/
 		else {
 			// we need to count nearby solars to avoid a solar parking lot.
 			List<Unit> nearUnits = callback.getFriendlyUnitsIn(worker.getUnit().getPos(), 600);
