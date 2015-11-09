@@ -143,26 +143,26 @@ public class EconomyManager extends Module {
 		effectiveExpenditure = Math.min(expendMetal, expendEnergy);
 
 		if (frame % 30 == 0) {
+			captureMexes();
 			if (effectiveIncome > 25) {
 				collectReclaimables();
 			}
 			if (effectiveIncome > 12){
 				defendMexes();
 			}
-			captureMexes();
 			cleanOrders();
 			cleanWorkers();
 		}
 
 		//morph nullcom
-		if (effectiveIncome > 30 && frame % 300 == 0){
+		/*if (effectiveIncome > 30 && frame % 300 == 0){
 			for (Worker c:commanders){
 				ArrayList<Float> params = new ArrayList<>();
 				c.getUnit().executeCustomCommand(CMD_MORPH, params, (short) 0, parent.currentFrame);
 				c.getTask().removeWorker(c);
 				c.clearTask();
 			}
-		}
+		}*/
 
 		assignWorkers(); // assign workers to tasks
 
@@ -381,9 +381,13 @@ public class EconomyManager extends Module {
 
         return 0;
     }
+
+	private Boolean needWorkers(){
+		return true;
+	}
     
     private String getCloaky(){
-		if((float) numWorkers < Math.floor(((effectiveIncome)/3))+ fusions.size() && numFighters >= numWorkers) {
+		if((float) numWorkers < Math.floor(((effectiveIncome)/3)) + fusions.size() && numFighters > numWorkers && effectiveIncome > 9) {
 			return "armrectr";
 		}
 
@@ -552,7 +556,7 @@ public class EconomyManager extends Module {
 
 		if (worker.getTask() != null){
 			task = worker.getTask();
-			cost = costOfJob(worker, task)-100;
+			cost = costOfJob(worker, task)-50;
 		}
 
 		for ( WorkerTask t: constructionTasks){
@@ -909,7 +913,7 @@ public class EconomyManager extends Module {
 
 	
 	void defendMexes(){
-		List<MetalSpot> spots = graphManager.getMetalSpots();
+		List<MetalSpot> spots = graphManager.getNeutralSpots();
 		UnitDef llt = callback.getUnitDefByName("corllt");
 
 		for (MetalSpot ms:spots) {
@@ -960,10 +964,9 @@ public class EconomyManager extends Module {
 		}
 
 		float minporcdist = 500;
-		if (effectiveIncome > 30){
-			minporcdist = minporcdist - 50;
+		if (effectiveIncome > 25) {
+			minporcdist = Math.max(100f, (minporcdist * (1 - warManager.getThreat(position))));
 		}
-		minporcdist = Math.max(350f, (minporcdist * (1 - warManager.getThreat(position))));
 
 		if(porcdist > minporcdist){
 			return true;
@@ -1240,9 +1243,12 @@ public class EconomyManager extends Module {
 		double angle = Math.random()*2*Math.PI;
 		double vx = Math.cos(angle);
 		double vz = Math.sin(angle);
-		position.x += radius*vx;
-		position.z += radius*vz;
-		return position;
+		double x = position.x + radius*vx;
+		double z = position.z + radius*vz;
+		AIFloat3 pos = new AIFloat3();
+		pos.x = (float) x;
+		pos.z = (float) z;
+		return pos;
 	}
 
 	
