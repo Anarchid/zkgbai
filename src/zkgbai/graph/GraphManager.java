@@ -596,6 +596,10 @@ public class GraphManager extends Module {
     		return position;
     	}	
     }
+
+	public List<MetalSpot> getMetalSpots(){
+		return metalSpots;
+	}
     
     public BufferedImage getGraphImage(){
     	return this.graphImage;

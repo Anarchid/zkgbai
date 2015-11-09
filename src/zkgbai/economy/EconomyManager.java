@@ -146,14 +146,16 @@ public class EconomyManager extends Module {
 			if (effectiveIncome > 25) {
 				collectReclaimables();
 			}
-
+			if (effectiveIncome > 12){
+				defendMexes();
+			}
 			captureMexes();
 			cleanOrders();
 			cleanWorkers();
 		}
 
 		//morph nullcom
-		if (effectiveIncome > 15 && frame % 300 == 0){
+		if (effectiveIncome > 30 && frame % 300 == 0){
 			for (Worker c:commanders){
 				ArrayList<Float> params = new ArrayList<>();
 				c.getUnit().executeCustomCommand(CMD_MORPH, params, (short) 0, parent.currentFrame);
@@ -385,6 +387,9 @@ public class EconomyManager extends Module {
 			return "armrectr";
 		}
 
+		if (effectiveIncome < 10){
+			return "armpw";
+		}
 		if (effectiveIncome < 20){
 			if (Math.random() > 0.9){
 				return "armwar";
@@ -446,7 +451,7 @@ public class EconomyManager extends Module {
 	private String getStrider(){
 		double rand = Math.random();
 		if (rand > 0.75){
-			return "scorpion";
+			return "armraven";
 		}else{
 			return "dante";
 		}
@@ -465,9 +470,12 @@ public class EconomyManager extends Module {
 				numWorkers++;
 				ArrayList<Float> params = new ArrayList<>();
 				params.add((float) 2);
-				w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, parent.currentFrame);
+				w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame+30);
 				if (def.getBuildSpeed() > 8) {
 					commanders.add(w);
+					params.clear();
+					params.add((float) 3);
+					w.getUnit().executeCustomCommand(CMD_MISC_PRIORITY, params, (short) 0, frame+30);
 				}
 			}
 		}else if (unit.getMaxSpeed() > 0){
@@ -576,6 +584,7 @@ public class EconomyManager extends Module {
 		float dist = (distance(worker.getPos(),task.getPos()));
 		boolean isExpensive = false;
 		boolean isMex = false;
+		boolean isPorc = false;
 
 		for ( Worker w: task.assignedWorkers){
 			float idist = distance(w.getPos(),task.getPos());
@@ -595,6 +604,8 @@ public class EconomyManager extends Module {
 				isExpensive = true;
 			}else if (ctask.buildType.getName().equals("cormex")){
 				isMex = true;
+			}else if (ctask.buildType.isAbleToAttack()){
+				isPorc = true;
 			}
 		}
 
@@ -614,6 +625,8 @@ public class EconomyManager extends Module {
 				return dist+400;
 			}else if (isMex){
 				return dist/2;
+			}else if (isPorc){
+				return dist-200;
 			}else{
 				return dist;
 			}
@@ -714,8 +727,8 @@ public class EconomyManager extends Module {
 		// fix workers that lost their orders due to interruption
 		for (Worker w: workers){
 			if (w.getUnit().getCurrentCommands().size() == 0 && w.getTask() != null){
-				w.getTask().removeWorker(w);
-				w.clearTask();
+					w.getTask().removeWorker(w);
+					w.clearTask();
 			}
 		}
 		// remove old com unit after morphs complete
@@ -753,12 +766,12 @@ public class EconomyManager extends Module {
 		}
 
 		// do we need defense?
-		if (needPorc(position) && effectiveIncome > 10 && !tooCloseToFac){
+		if (effectiveIncome > 12 && !tooCloseToFac){
 			createPorcTask(worker);
 		}
 
     	// is there sufficient energy to cover metal income?
-		if (mexes.size() * 1.5 > solars.size()+solarTasks.size()
+		if ((mexes.size() * 1.5) - 0.5 > solars.size()+solarTasks.size()
 				|| (effectiveIncome > 30 && (mexes.size()*2) > solars.size()+solarTasks.size())
 				|| (effectiveIncome > 50 && canBuildFusion(position))) {
 			createEnergyTask(worker);
@@ -791,7 +804,7 @@ public class EconomyManager extends Module {
 		if (distance(closest.getPosition(),position)<100){
     		AIFloat3 mexpos = closest.getPosition();
 			float distance = distance(mexpos, position);
-			float extraDistance = 100;
+			float extraDistance = 125;
 			float vx = (position.x - mexpos.x)/distance; 
 			float vz = (position.z - mexpos.z)/distance; 
 			position.x = position.x+vx*extraDistance;
@@ -807,36 +820,23 @@ public class EconomyManager extends Module {
 		}
     }
     
-    void createPorcTask( Worker worker){
-		UnitDef porc;
-		double rand = Math.random();
-		if (effectiveIncome > 25 && rand > 0.9){
-			porc = callback.getUnitDefByName("corhlt");
-		}
-		else if (rand > 0.5) {
-			porc = callback.getUnitDefByName("corrl");
-		}
-		else {
-			porc = callback.getUnitDefByName("corllt");
-		}
-
+    void createPorcTask(Worker worker){
 		AIFloat3 position = worker.getUnit().getPos();
-    	position = getRadialPoint(position, 150f);
+		UnitDef porc = null;
 
-    	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
-		if (distance(closest.getPosition(),position)<100){
-    		AIFloat3 mexpos = closest.getPosition();
-			float distance = distance(mexpos, position);
-			float extraDistance = 100;
-			float vx = (position.x - mexpos.x)/distance; 
-			float vz = (position.z - mexpos.z)/distance; 
-			position.x = position.x+vx*extraDistance;
-			position.z = position.z+vz*extraDistance;
-    	}
+		if (needDefender(position)){
+			position = getRadialPoint(position, 75f);
+			porc = callback.getUnitDefByName("corrl");
+		}else if (needHLT(position)){
+			position = getRadialPoint(position, 75f);
+			porc = callback.getUnitDefByName("corhlt");
+		}else{
+			return;
+		}
     	
     	position = callback.getMap().findClosestBuildSite(porc,position,600f, 3, 0);
 
-    	 ConstructionTask ct =  new ConstructionTask(porc, position, 0);
+		ConstructionTask ct =  new ConstructionTask(porc, position, 0);
     	if (buildCheck(ct) && !porcTasks.contains(ct)){
 			constructionTasks.add(ct);
 			porcTasks.add(ct);
@@ -866,7 +866,6 @@ public class EconomyManager extends Module {
 		}
     	
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
-
 		if (distance(closest.getPosition(),position)<100){
     		AIFloat3 mexpos = closest.getPosition();
 			float distance = distance(mexpos, position);
@@ -909,32 +908,54 @@ public class EconomyManager extends Module {
     }
 
 	
-	Boolean needPorc( AIFloat3 position){
+	void defendMexes(){
+		List<MetalSpot> spots = graphManager.getMetalSpots();
+		UnitDef llt = callback.getUnitDefByName("corllt");
+
+		for (MetalSpot ms:spots) {
+			AIFloat3 position = ms.getPosition();
+			boolean needsllt = true;
+			for(Unit u:porcs){
+				float dist = distance(position,u.getPos());
+				if (dist < 150){
+					needsllt = false;
+				}
+			}
+
+			for(ConstructionTask c:porcTasks){
+				float dist = distance(position, c.getPos());
+				if (dist < 150){
+					needsllt = false;
+				}
+			}
+
+			if (needsllt){
+				position = getRadialPoint(ms.getPosition(), 100f);
+				position = callback.getMap().findClosestBuildSite(llt,position,600f, 3, 0);
+
+				ConstructionTask ct =  new ConstructionTask(llt, position, 0);
+				if (buildCheck(ct) && !porcTasks.contains(ct)){
+					constructionTasks.add(ct);
+					porcTasks.add(ct);
+				}
+			}
+		}
+	}
+
+	boolean needDefender(AIFloat3 position){
 		float porcdist = Float.MAX_VALUE;
-		int porcCount = 0;
-		int mexCount = 0;
-		for( Unit u:porcs){
+
+		for(Unit u:porcs){
 			float dist = distance(position,u.getPos());
 			if (dist<porcdist){
 				porcdist = dist;
 			}
-			if (dist < 400){
-				porcCount++;
-			}
 		}
-		for( ConstructionTask c:porcTasks){
+
+		for(ConstructionTask c:porcTasks){
 			float dist = distance(position, c.getPos());
 			if (dist<porcdist){
 				porcdist = dist;
-			}
-			if (dist < 400){
-				porcCount++;
-			}
-		}
-		for( Unit u:mexes){
-			float dist = distance(position,u.getPos());
-			if (dist < 300){
-				mexCount++;
 			}
 		}
 
@@ -944,7 +965,38 @@ public class EconomyManager extends Module {
 		}
 		minporcdist = Math.max(350f, (minporcdist * (1 - warManager.getThreat(position))));
 
-		if(porcdist > minporcdist || Math.min(mexCount, 4) > porcCount){
+		if(porcdist > minporcdist){
+			return true;
+		}
+		return false;
+	}
+
+	boolean needHLT(AIFloat3 position){
+		float porcdist = Float.MAX_VALUE;
+
+		for( Unit u:porcs){
+			float dist = distance(position,u.getPos());
+			if (dist<porcdist){
+				porcdist = dist;
+			}
+		}
+
+		for( ConstructionTask c:porcTasks){
+			float dist = distance(position, c.getPos());
+			if (dist<porcdist){
+				porcdist = dist;
+			}
+		}
+
+		float minporcdist = 400;
+		if (effectiveIncome > 30){
+			minporcdist = minporcdist - 50;
+		}
+		minporcdist = Math.max(300f, (minporcdist * (1 - warManager.getThreat(position))));
+
+		List<Unit> enemies = callback.getEnemyUnitsIn(position, 1500f);
+
+		if(porcdist > minporcdist && enemies.size() > 4 && effectiveIncome > 25){
 			return true;
 		}
 		return false;
@@ -1095,6 +1147,19 @@ public class EconomyManager extends Module {
 		ConstructionTask ct;
 		UnitDef pylon = callback.getUnitDefByName("armestor");
 		AIFloat3 position = graphManager.getOverdriveSweetSpot(worker.getUnit().getPos());
+
+		// don't build pylons directly on top of metal spots
+		MetalSpot closest = graphManager.getClosestNeutralSpot(position);
+		if (distance(closest.getPosition(),position)<100){
+			AIFloat3 mexpos = closest.getPosition();
+			float distance = distance(mexpos, position);
+			float extraDistance = 100;
+			float vx = (position.x - mexpos.x)/distance;
+			float vz = (position.z - mexpos.z)/distance;
+			position.x = position.x+vx*extraDistance;
+			position.z = position.z+vz*extraDistance;
+		}
+
 		position = callback.getMap().findClosestBuildSite(pylon,position,600f, 3, 0);
 
 		// check the build site for existing pylons, since getOverdriveSweetSpot may cluster them.
