@@ -142,8 +142,6 @@ public class EconomyManager extends Module {
 		effectiveIncome = Math.min(effectiveIncomeMetal, effectiveIncomeEnergy);
 		effectiveExpenditure = Math.min(expendMetal, expendEnergy);
 
-		assignWorkers(); // assign workers to tasks
-
 		if (frame % 30 == 0) {
 			if (effectiveIncome > 25) {
 				collectReclaimables();
@@ -159,14 +157,12 @@ public class EconomyManager extends Module {
 			for (Worker c:commanders){
 				ArrayList<Float> params = new ArrayList<>();
 				c.getUnit().executeCustomCommand(CMD_MORPH, params, (short) 0, parent.currentFrame);
-				/*c.getUnit().executeCustomCommand(CMD_MORPH+1, params, (short) 0, parent.currentFrame);
-				c.getUnit().executeCustomCommand(CMD_MORPH+2, params, (short) 0, parent.currentFrame);
-				c.getUnit().executeCustomCommand(CMD_MORPH+3, params, (short) 0, parent.currentFrame);
-				c.getUnit().executeCustomCommand(CMD_MORPH+4, params, (short) 0, parent.currentFrame);*/
 				c.getTask().removeWorker(c);
 				c.clearTask();
 			}
 		}
+
+		assignWorkers(); // assign workers to tasks
 
 		if (frame % 15 == 0) {
 			// create new building tasks.
@@ -715,30 +711,26 @@ public class EconomyManager extends Module {
 	}
 
 	void cleanWorkers(){
-		/*List<Worker> badWorkers = new ArrayList<Worker>();
-		for (Worker w:workers){
-			parent.debug(w + " " + w.getUnit() + " " + w.getTask());
-			if (w.getUnit() == null){
-				badWorkers.add(w);
-				w.getTask().removeWorker(w);
-			}
-		}
-		for (Worker w:factories){
-			if (w.getUnit() == null){
-				badWorkers.add(w);
-			}
-		}
-		for (Worker w:badWorkers){
-			workers.remove(w);
-			factories.remove(w);
-		}
 		// fix workers that lost their orders due to interruption
 		for (Worker w: workers){
-			if (w.getUnit().getCurrentCommands().size() == 0){
+			if (w.getUnit().getCurrentCommands().size() == 0 && w.getTask() != null){
 				w.getTask().removeWorker(w);
 				w.clearTask();
 			}
-		}*/
+		}
+		// remove old com unit after morphs complete
+		Worker invalidcom = null;
+		for (Worker c:commanders){
+			if (c.getUnit().getDef() == null){
+				invalidcom = c;
+			}
+		}
+		if (invalidcom != null) {
+			invalidcom.getTask().removeWorker(invalidcom);
+			invalidcom.clearTask();
+			commanders.remove(invalidcom);
+			workers.remove(invalidcom);
+		}
 	}
 
     void createWorkerTask( Worker worker){
@@ -862,13 +854,15 @@ public class EconomyManager extends Module {
 		position.z = position.z + 120;
 		if (factories.size() > 0) {
 			position = getNearestFac(position).getPos();
-			position = getRadialPoint(position, 600f);
+			position = getRadialPoint(position, 800f);
 		}
 
 		if(factories.size() == 0){
 			factory = cloak;
-		}else{
+		}else if (factories.size() == 1){
 			factory = strider;
+		}else{
+			factory = gunship;
 		}
     	
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
@@ -1056,7 +1050,7 @@ public class EconomyManager extends Module {
 
 		ConstructionTask ct;
 
-		if (effectiveIncome > 30 && nearestFac != null && fusions.size() < 6 && fusionTasks.size() == 0){
+		if (effectiveIncome > 30 && nearestFac != null && fusions.size() < 4 && fusionTasks.size() == 0){
 			position = graphManager.getOverdriveSweetSpot(fpos);
 			position = callback.getMap().findClosestBuildSite(fusion,position,600f, 3, 0);
 			ct = new ConstructionTask(fusion, position, 0);
@@ -1065,7 +1059,7 @@ public class EconomyManager extends Module {
 				fusionTasks.add(ct);
 			}
 		}
-		/*else if (effectiveIncome > 40 && nearestFac != null && fusions.size() == 2 && fusionTasks.size() == 0){
+		else if (effectiveIncome > 80 && nearestFac != null && fusions.size() >= 4 && fusions.size() < 6 && fusionTasks.size() == 0){
 			position = graphManager.getOverdriveSweetSpot(fpos);
 			position = callback.getMap().findClosestBuildSite(singu,position,600f, 3, 0);
 			ct = new ConstructionTask(singu, position, 0);
@@ -1073,7 +1067,7 @@ public class EconomyManager extends Module {
 				constructionTasks.add(ct);
 				fusionTasks.add(ct);
 			}
-		}*/
+		}
 		else {
 			// we need to count nearby solars to avoid a solar parking lot.
 			List<Unit> nearUnits = callback.getFriendlyUnitsIn(worker.getUnit().getPos(), 600);
