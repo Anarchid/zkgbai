@@ -144,10 +144,10 @@ public class EconomyManager extends Module {
 
 		if (frame % 30 == 0) {
 			captureMexes();
-			if (effectiveIncome > 25) {
+			if (effectiveIncome > 22) {
 				collectReclaimables();
 			}
-			if (effectiveIncome > 12){
+			if (effectiveIncome > 9){
 				defendMexes();
 			}
 			cleanOrders();
@@ -764,20 +764,20 @@ public class EconomyManager extends Module {
 		for( Worker w:factories){
 			Unit u = w.getUnit();
 			float dist = distance(position,u.getPos());
-			if (dist<100){
+			if (dist<200){
 				tooCloseToFac = true;
 			}
 		}
 
 		// do we need defense?
-		if (effectiveIncome > 12 && !tooCloseToFac){
+		if (effectiveIncome > 10 && !tooCloseToFac){
 			createPorcTask(worker);
 		}
 
     	// is there sufficient energy to cover metal income?
 		if ((mexes.size() * 1.5) - 0.5 > solars.size()+solarTasks.size()
 				|| (effectiveIncome > 30 && (mexes.size()*2) > solars.size()+solarTasks.size())
-				|| (effectiveIncome > 50 && canBuildFusion(position))) {
+				|| (effectiveIncome > 30 && canBuildFusion(position))) {
 			createEnergyTask(worker);
 		}
 
@@ -964,8 +964,8 @@ public class EconomyManager extends Module {
 		}
 
 		float minporcdist = 500;
-		if (effectiveIncome > 25) {
-			minporcdist = Math.max(100f, (minporcdist * (1 - warManager.getThreat(position))));
+		if (effectiveIncome > 18) {
+			minporcdist = Math.max(175f, (minporcdist * (1 - warManager.getThreat(position))));
 		}
 
 		if(porcdist > minporcdist){
@@ -1146,10 +1146,10 @@ public class EconomyManager extends Module {
 		}
     }
 
-	void createGridTask( Worker worker){
+	void createGridTask(Worker worker){
 		ConstructionTask ct;
 		UnitDef pylon = callback.getUnitDefByName("armestor");
-		AIFloat3 position = graphManager.getOverdriveSweetSpot(worker.getUnit().getPos());
+		AIFloat3 position = graphManager.getOverdriveSweetSpot(worker.getPos());
 
 		// don't build pylons directly on top of metal spots
 		MetalSpot closest = graphManager.getClosestNeutralSpot(position);
@@ -1167,14 +1167,30 @@ public class EconomyManager extends Module {
 
 		// check the build site for existing pylons, since getOverdriveSweetSpot may cluster them.
 		float gdist = Float.MAX_VALUE;
-		for( Unit u:pylons){
+		for(Unit u:pylons){
 			float dist = distance(position,u.getPos());
 			if (dist<gdist){
 				gdist = dist;
 			}
 		}
 
+		for(ConstructionTask c:pylonTasks){
+			float dist = distance(position,c.getPos());
+			if (dist<gdist){
+				gdist = dist;
+			}
+		}
+
 		if(gdist > 500) {
+			ct = new ConstructionTask(pylon, position, 0);
+			if (buildCheck(ct) && !pylonTasks.contains(ct)){
+				constructionTasks.add(ct);
+				pylonTasks.add(ct);
+			}
+		}else{
+			// if "sweet spot" is too clustered, default to the worker's position,
+			// to cover gaps between mexes that are far apart.
+			position = callback.getMap().findClosestBuildSite(pylon, worker.getPos(), 600f, 3, 0);
 			ct = new ConstructionTask(pylon, position, 0);
 			if (buildCheck(ct) && !pylonTasks.contains(ct)){
 				constructionTasks.add(ct);
