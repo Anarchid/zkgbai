@@ -147,11 +147,13 @@ public class EconomyManager extends Module {
 			if (effectiveIncome > 22) {
 				collectReclaimables();
 			}
-			if (effectiveIncome > 9){
+			if (effectiveIncome > 10){
 				defendMexes();
 			}
 			cleanOrders();
 			cleanWorkers();
+			assignNanos();
+			setPriorities();
 		}
 
 		//morph nullcom
@@ -179,15 +181,6 @@ public class EconomyManager extends Module {
 				// the only way to know if they need reassignment.
 				if (orders == 0) {
 					assignFactoryTask(f);
-				}
-			}
-
-			// reduce worker priority to normal above 30 m/s income
-			if (effectiveIncome > 30) {
-				for (Worker w : workers) {
-					ArrayList<Float> params = new ArrayList<>();
-					params.add((float) 1);
-					w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, parent.currentFrame);
 				}
 			}
 		}
@@ -235,7 +228,7 @@ public class EconomyManager extends Module {
 
 	@Override
 	public int unitDamaged( Unit h, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed){
-		if (h.getAllyTeam() == myAllyTeamID && h.getMaxSpeed() == 0){
+		if (h.getMaxSpeed() == 0 || !h.getDef().isBuilder()){
 			 RepairTask task = new RepairTask(h);
 			if (!repairTasks.contains(task)){
 				repairTasks.add(task);
@@ -352,11 +345,11 @@ public class EconomyManager extends Module {
 
 		if (defName.equals("armnanotc")){
 			nanos.add(unit);
-			AIFloat3 shiftedPosition = unit.getPos();
-			shiftedPosition.x+=30;
-			shiftedPosition.z+=30;
-			unit.patrolTo(shiftedPosition, (short) 0, frame + 900000);
-			unit.setRepeat(true, (short) 0, 900000);
+			//AIFloat3 shiftedPosition = unit.getPos();
+			//shiftedPosition.x+=30;
+			//shiftedPosition.z+=30;
+			//unit.patrolTo(shiftedPosition, (short) 0, frame + 900000);
+			//unit.setRepeat(true, (short) 0, 900000);
 		}
 
 		if(defName.equals("cormex")){
@@ -382,12 +375,44 @@ public class EconomyManager extends Module {
         return 0;
     }
 
+	private void assignNanos(){
+		for (Unit n:nanos){
+			if (n.getCurrentCommands().size() == 0){
+				Worker fac = getNearestFac(n.getPos());
+				n.guard(fac.getUnit(), (short) 0, frame+9001);
+				n.setRepeat(true, (short) 0, 900000);
+			}
+		}
+	}
+
+	private void setPriorities(){
+		if (effectiveIncome < 30){
+			// set constructors at high prio at start, until 30 m/s income
+			for (Worker w:workers){
+				ArrayList<Float> params = new ArrayList<>();
+				params.add((float) 2);
+				w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame+30);
+			}
+		}else{
+			// above 30m/s, set workers to normal prio.
+			for (Worker w: workers){
+				ArrayList<Float> params = new ArrayList<>();
+				params.add((float) 1);
+				w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame+30);
+			}
+		}
+	}
+
 	private Boolean needWorkers(){
-		return true;
+		if (((float) numWorkers < Math.floor(((effectiveIncome)/3)) + fusions.size() && numFighters > numWorkers && effectiveIncome > 9 && effectiveIncome < 30)
+				|| effectiveIncome > 30 && numFighters > numWorkers) {
+			return true;
+		}
+		return false;
 	}
     
     private String getCloaky(){
-		if((float) numWorkers < Math.floor(((effectiveIncome)/3)) + fusions.size() && numFighters > numWorkers && effectiveIncome > 9) {
+		if(needWorkers()) {
 			return "armrectr";
 		}
 
@@ -426,7 +451,7 @@ public class EconomyManager extends Module {
     }
 
 	private String getShields() {
-		if ((float) numWorkers < Math.floor(((effectiveIncome) / 3)) + fusions.size() && numFighters >= numWorkers) {
+		if (needWorkers()) {
 			return "cornecro";
 		}
 		double rand = Math.random();
@@ -438,7 +463,7 @@ public class EconomyManager extends Module {
 	}
 
 	private String getGunship(){
-		if((float) numWorkers < Math.floor(((effectiveIncome+2)/5))+ fusions.size() && numFighters >= numWorkers) {
+		if(needWorkers()) {
 			return "armca";
 		}
 
@@ -454,8 +479,10 @@ public class EconomyManager extends Module {
 
 	private String getStrider(){
 		double rand = Math.random();
-		if (rand > 0.75){
+		if (rand > 0.9){
 			return "armraven";
+		}else if (rand > 0.6){
+			return "scorpion";
 		}else{
 			return "dante";
 		}
@@ -472,14 +499,8 @@ public class EconomyManager extends Module {
 				Worker w = new Worker(unit);
 				workers.add(w);
 				numWorkers++;
-				ArrayList<Float> params = new ArrayList<>();
-				params.add((float) 2);
-				w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame+30);
 				if (def.getBuildSpeed() > 8) {
 					commanders.add(w);
-					params.clear();
-					params.add((float) 3);
-					w.getUnit().executeCustomCommand(CMD_MISC_PRIORITY, params, (short) 0, frame+30);
 				}
 			}
 		}else if (unit.getMaxSpeed() > 0){
@@ -623,11 +644,19 @@ public class EconomyManager extends Module {
 			}
 		}
 
+		if (task instanceof RepairTask){
+			RepairTask rptask = (RepairTask) task;
+			UnitDef def = rptask.target.getDef();
+			if (def.getCost(m) > 700){
+				isExpensive = true;
+			}
+		}
+
 		if (costMod == 1){
 		//for starting new jobs
-			if (isExpensive || task instanceof ReclaimTask || task instanceof RepairTask){
+			if (isExpensive){
 				return dist+400;
-			}else if (isMex){
+			}else if (isMex || (task instanceof ReclaimTask && metal < 400)){
 				return dist/2;
 			}else if (isPorc){
 				return dist-200;
@@ -637,8 +666,10 @@ public class EconomyManager extends Module {
 
 		}else{
 		// for assisting other workers
-			if (isExpensive){
-				return dist+(600*(costMod-2));
+			if (isExpensive && ((task instanceof ReclaimTask && metal < 400) || task instanceof RepairTask) ){
+				return dist + (600*(costMod-2));
+			}else if (isExpensive){
+				return dist+(1000*(costMod-2));
 			}else{
 				return dist+(600*costMod);
 			}
@@ -750,7 +781,7 @@ public class EconomyManager extends Module {
 		}
 	}
 
-    void createWorkerTask( Worker worker){
+    void createWorkerTask(Worker worker){
     	AIFloat3 position = worker.getPos();
 		// do we need a factory?
 		if ((factories.size() == 0 && factoryTasks.size() == 0)
@@ -761,10 +792,10 @@ public class EconomyManager extends Module {
 
 		//Don't build crap right in front of the fac.
 		boolean tooCloseToFac = false;
-		for( Worker w:factories){
+		for(Worker w:factories){
 			Unit u = w.getUnit();
 			float dist = distance(position,u.getPos());
-			if (dist<200){
+			if (dist<300){
 				tooCloseToFac = true;
 			}
 		}
@@ -965,7 +996,7 @@ public class EconomyManager extends Module {
 
 		float minporcdist = 500;
 		if (effectiveIncome > 18) {
-			minporcdist = Math.max(175f, (minporcdist * (1 - warManager.getThreat(position))));
+			minporcdist = Math.max(250f, (minporcdist * (1 - warManager.getThreat(position))));
 		}
 
 		if(porcdist > minporcdist){
@@ -1188,13 +1219,30 @@ public class EconomyManager extends Module {
 				pylonTasks.add(ct);
 			}
 		}else{
-			// if "sweet spot" is too clustered, default to the worker's position,
-			// to cover gaps between mexes that are far apart.
+			// if "sweet spot" is too clustered, default to the worker's position and recheck the distance.
 			position = callback.getMap().findClosestBuildSite(pylon, worker.getPos(), 600f, 3, 0);
-			ct = new ConstructionTask(pylon, position, 0);
-			if (buildCheck(ct) && !pylonTasks.contains(ct)){
-				constructionTasks.add(ct);
-				pylonTasks.add(ct);
+			gdist = Float.MAX_VALUE;
+			for(Unit u:pylons){
+				float dist = distance(position,u.getPos());
+				if (dist<gdist){
+					gdist = dist;
+				}
+			}
+
+			for(ConstructionTask c:pylonTasks){
+				float dist = distance(position,c.getPos());
+				if (dist<gdist){
+					gdist = dist;
+				}
+			}
+
+			// use a larger distance for 'dumb' placement, else it tends to cram them together.
+			if(gdist > 750) {
+				ct = new ConstructionTask(pylon, position, 0);
+				if (buildCheck(ct) && !pylonTasks.contains(ct)){
+					constructionTasks.add(ct);
+					pylonTasks.add(ct);
+				}
 			}
 		}
 	}
@@ -1235,7 +1283,7 @@ public class EconomyManager extends Module {
 
 	void collectReclaimables(){
 		List<Feature> feats = callback.getFeatures();
-		for ( Feature f : feats) {
+		for (Feature f : feats) {
 			if (f.getDef().getContainedResource(m) > 0){
 				 ReclaimTask rt = new ReclaimTask(f);
 				if (!reclaimTasks.contains(rt)){
