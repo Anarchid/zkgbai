@@ -312,13 +312,22 @@ public class EconomyManager extends Module {
     }
     
     @Override
-    public int unitCreated( Unit unit,  Unit builder) {
+    public int unitCreated(Unit unit,  Unit builder) {
     	if(builder != null && unit.isBeingBuilt()){
 			if(unit.getMaxSpeed() == 0){
-		    	for ( Worker w:workers){
+		    	for (Worker w:workers){
 		    		if(w.id == builder.getUnitId()){
-						ConstructionTask ct = (ConstructionTask)w.getTask();
-						ct.target = unit;
+						if (w.getTask() != null){
+							ConstructionTask ct = (ConstructionTask) w.getTask();
+							ct.target = unit;
+						}else{
+							for (ConstructionTask ct:constructionTasks){
+								float dist = distance(ct.getPos(), unit.getPos());
+								if (dist < 25 && ct.buildType.getName().equals(unit.getDef().getName())){
+									ct.target = unit;
+								}
+							}
+						}
 		    		}
 		    	}
 			}
@@ -479,16 +488,18 @@ public class EconomyManager extends Module {
 
 	private String getStrider(){
 		double rand = Math.random();
-		if (rand > 0.9){
+		if (rand > 0.9) {
 			return "armraven";
+		}else if(rand > 0.75){
+			return  "scorpion";
 		}else if (rand > 0.6){
-			return "scorpion";
+			return "funnelweb";
 		}else{
 			return "dante";
 		}
 	}
 
-    void checkWorker( Unit unit){
+    void checkWorker(Unit unit){
 		UnitDef def = unit.getDef();
 		if (def.isBuilder()){
 			if(def.getName().contains("factory") || def.getName().contains("hub")){
@@ -641,6 +652,9 @@ public class EconomyManager extends Module {
 				if (fdef.getContainedResource(m) > 300) {
 					isExpensive = true;
 				}
+			}else{
+				//for reclaim tasks that go out of LOS or the target no longer exists.
+				return 100000;
 			}
 		}
 
@@ -654,7 +668,7 @@ public class EconomyManager extends Module {
 
 		if (costMod == 1){
 		//for starting new jobs
-			if (isExpensive){
+			if (isExpensive && !(task instanceof ReclaimTask)){
 				return dist+400;
 			}else if (isMex || (task instanceof ReclaimTask && metal < 400)){
 				return dist/2;
@@ -669,7 +683,7 @@ public class EconomyManager extends Module {
 			if (isExpensive && ((task instanceof ReclaimTask && metal < 400) || task instanceof RepairTask) ){
 				return dist + (600*(costMod-2));
 			}else if (isExpensive){
-				return dist+(1000*(costMod-2));
+				return dist+(1000*(costMod-3));
 			}else{
 				return dist+(600*costMod);
 			}
@@ -1114,18 +1128,6 @@ public class EconomyManager extends Module {
     	AIFloat3 position;
 		AIFloat3 fpos = new AIFloat3();
 
-    	/*List<Unit>stuffNearby = callback.getFriendlyUnitsIn(position, 400);
-    	for (Unit u:stuffNearby){
-			if(u.getMaxSpeed() == 0 && u.getDef().getBuildOptions().size()>0){
-				float distance = distance(u.getPos(), position);
-				float extraDistance = Math.max(50,300-distance);
-				float vx = (position.x - u.getPos().x)/distance;
-				float vz = (position.z - u.getPos().z)/distance;
-				position.x = position.x+vx*extraDistance;
-				position.z = position.z+vz*extraDistance;
-			}
-    	}*/
-
 		 Worker nearestFac = getNearestFac(worker.getPos());
 
 		if (nearestFac != null){
@@ -1136,7 +1138,7 @@ public class EconomyManager extends Module {
 
 		ConstructionTask ct;
 
-		if (effectiveIncome > 30 && nearestFac != null && fusions.size() < 4 && fusionTasks.size() == 0){
+		if (effectiveIncome > 30 && nearestFac != null && fusionTasks.size() == 0){
 			position = graphManager.getOverdriveSweetSpot(fpos);
 			position = callback.getMap().findClosestBuildSite(fusion,position,600f, 3, 0);
 			ct = new ConstructionTask(fusion, position, 0);
@@ -1145,7 +1147,7 @@ public class EconomyManager extends Module {
 				fusionTasks.add(ct);
 			}
 		}
-		else if (effectiveIncome > 80 && nearestFac != null && fusions.size() >= 4 && fusions.size() < 6 && fusionTasks.size() == 0){
+		/*else if (effectiveIncome > 80 && nearestFac != null && fusions.size() >= 4 && fusions.size() < 6 && fusionTasks.size() == 0){
 			position = graphManager.getOverdriveSweetSpot(fpos);
 			position = callback.getMap().findClosestBuildSite(singu,position,600f, 3, 0);
 			ct = new ConstructionTask(singu, position, 0);
@@ -1153,7 +1155,7 @@ public class EconomyManager extends Module {
 				constructionTasks.add(ct);
 				fusionTasks.add(ct);
 			}
-		}
+		}*/
 		else {
 			// we need to count nearby solars to avoid a solar parking lot.
 			List<Unit> nearUnits = callback.getFriendlyUnitsIn(worker.getUnit().getPos(), 600);
@@ -1220,7 +1222,17 @@ public class EconomyManager extends Module {
 			}
 		}else{
 			// if "sweet spot" is too clustered, default to the worker's position and recheck the distance.
+			//{debug
+			if (worker.getPos() == null){
+				parent.debug("createGridTask: worker position was null!");
+			}
+			//debug}
 			position = callback.getMap().findClosestBuildSite(pylon, worker.getPos(), 600f, 3, 0);
+			//{debug
+			if (position == null){
+				parent.debug("createGridTask: cloest build site was null!");
+			}
+			//debug}
 			gdist = Float.MAX_VALUE;
 			for(Unit u:pylons){
 				float dist = distance(position,u.getPos());
