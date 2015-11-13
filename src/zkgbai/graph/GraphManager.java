@@ -255,17 +255,19 @@ public class GraphManager extends Module {
     public int enemyDestroyed(Unit unit, Unit attacker) {  
     	if(unit.getDef().getUnitDefId() == mexDefID){
 	    	for(MetalSpot ms:metalSpots){
-	    		if(ms.extractor != null && ms.extractor == unit){
-	    			ms.owned = false;
-	    			ms.hostile = false;
-	    			ms.setExtractor(null);
-	    			ms.setShadowCaptured(false);
-	    			ms.setShadowInfluence(0);
-	    			for(Link l:ms.links){
-	    				if(!l.v0.hostile && !l.v1.hostile){
-	    					l.contested = false;
-	    				}
-	    			}
+	    		if(ms.extractor != null){
+					if (ms.extractor.getUnitId() == unit.getUnitId()) {
+						ms.owned = false;
+						ms.hostile = false;
+						ms.setExtractor(null);
+						ms.setShadowCaptured(false);
+						ms.setShadowInfluence(0);
+						for (Link l : ms.links) {
+							if (!l.v0.hostile && !l.v1.hostile) {
+								l.contested = false;
+							}
+						}
+					}
 	    		}
 	    	}
     	}
@@ -297,7 +299,7 @@ public class GraphManager extends Module {
     	    			ms.owned = false;
     	    			ms.hostile = false;
     	    			ms.setExtractor(null);
-    	    			ms.setShadowCaptured(false);
+    	    			ms.setShadowCaptured(true);
     	    			ms.setShadowInfluence(0);
     	    			for(Link l:ms.links){
     	    				if(!l.v0.hostile && !l.v1.hostile){
@@ -514,20 +516,6 @@ public class GraphManager extends Module {
     	return spots;
     }
     
-    public MetalSpot getClosestMetalSpot(AIFloat3 position){
-    	float minRange = Float.MAX_VALUE;
-    	MetalSpot bestMS = null;
-    	for(MetalSpot ms:metalSpots){
-			float dist = groundDistance(position,ms.position); 
-			if(dist < minRange){
-				bestMS = ms;
-				minRange = dist;
-			}
-    	}
-    	
-    	return bestMS;
-    }
-    
     public MetalSpot getClosestNeutralSpot(AIFloat3 position){
     	float minRange = Float.MAX_VALUE;
     	MetalSpot bestMS = null;
@@ -597,10 +585,6 @@ public class GraphManager extends Module {
     	}	
     }
 
-	public List<MetalSpot> getMetalSpots(){
-		return metalSpots;
-	}
-    
     public BufferedImage getGraphImage(){
     	return this.graphImage;
     }

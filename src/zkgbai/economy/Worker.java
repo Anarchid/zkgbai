@@ -10,12 +10,14 @@ public class Worker {
 	private WorkerTask task;
 	public int id;
 	public boolean isChicken;
+	public int chickenFrame;
 	
 	Worker(Unit unit){
 		this.unit = unit;
 		this.task = null;
 		this.id = unit.getUnitId();
 		this.isChicken = false;
+		this.chickenFrame = 0;
 	}
 	
 	public void setTask(WorkerTask task){
