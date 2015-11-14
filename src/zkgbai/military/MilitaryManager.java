@@ -192,7 +192,7 @@ public class MilitaryManager extends Module {
 		List<MetalSpot> unscouted = graphManager.getUnownedSpots();
 		for (MetalSpot ms: unscouted){
 			ScoutTask st = new ScoutTask(ms.getPos(), ms);
-			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 900 || ms.getLastSeen() == 0)){
+			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 450 || ms.getLastSeen() == 0)){
 				scoutTasks.add(st);
 			}
 		}
@@ -289,14 +289,14 @@ public class MilitaryManager extends Module {
 		// reduce cost relative to every 30 seconds since last seen
 		cost = cost/(1+((frame - task.spot.getLastSeen())/900));
 		if (task.spot.enemyShadowed){
-			cost /= 2;
+			cost /= 4;
 		}
 		return cost;
 	}
 
 	private float getRaidCost(RaidTask task, Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
-		cost /= 4;
+		cost /= 8;
 		return cost;
 	}
     
@@ -529,6 +529,7 @@ public class MilitaryManager extends Module {
     	if (unitTypes.raiders.contains(defName)){
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiders.add(r);
+			unit.setMoveState(2, (short) 0, frame+10);
 		}else if(unit.getMaxRange()>0 && unit.getMaxSpeed() > 0 && unit.getDef().getBuildOptions().isEmpty()){
     		soldiers.add(unit);
     		unit.setFireState(3, (short)0, parent.currentFrame);

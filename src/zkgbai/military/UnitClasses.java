@@ -8,14 +8,12 @@ import java.util.List;
  */
 public class UnitClasses {
     public List<String> raiders;
-    public List<String> riots;
     public List<String> assaults;
     public List<String> arties;
     public List<String> striders;
 
     public UnitClasses(){
         this.raiders = new ArrayList<String>();
-        this.riots = new ArrayList<String>();
         this.assaults = new ArrayList<String>();
         this.arties = new ArrayList<String>();
         this.striders = new ArrayList<String>();
@@ -23,5 +21,6 @@ public class UnitClasses {
         // raiders
         raiders.add("armpw");
         raiders.add("spherepole");
+        raiders.add("armkam");
     }
 }

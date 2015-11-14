@@ -884,6 +884,7 @@ public class EconomyManager extends Module {
     	// is there sufficient energy to cover metal income?
 		if ((mexes.size() * 1.5) - 1.5 > solars.size()+solarTasks.size()
 				|| (effectiveIncome > 30 && (mexes.size()*2) > solars.size()+solarTasks.size())
+				|| (effectiveIncome > 20 && metal > 200 && energy == 0)
 				|| (effectiveIncome > 30 && canBuildFusion(position))) {
 			createEnergyTask(worker);
 		}
