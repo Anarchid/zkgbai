@@ -8,18 +8,13 @@ import java.util.Queue;
 import com.springrts.ai.oo.AIFloat3;
 
 public class Link {
-		int id;
 		public ArrayList<Pylon> pylons;
-		boolean owned = false;
 		boolean connected = false;
-		boolean contested = false;
-		boolean populated = false;
 		float weight;
 		float length;
 		MetalSpot v0;
 		MetalSpot v1;
 		AIFloat3 centerPos;
-		int pathID=0;
 		
 		Link(MetalSpot v0,MetalSpot v1){
 			this.pylons = new ArrayList<Pylon>();
@@ -99,7 +94,7 @@ public class Link {
 		}
 		
 		public Pylon getConnectionHead(){
-			if(connected || !owned || pylons.size() == 0){
+			if(connected || pylons.size() == 0){
 				return null;
 			}
 			

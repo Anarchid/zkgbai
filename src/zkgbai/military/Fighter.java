@@ -8,7 +8,7 @@ public class Fighter {
     public float metalValue;
     public int id;
     public Squad squad;
-    private Unit unit;
+    protected Unit unit;
 
     public Fighter(Unit u, float metal){
         this.unit = u;
@@ -32,18 +32,24 @@ public class Fighter {
         return unit.getHealth();
     }
 
-    public void fight(AIFloat3 pos, int frame){
-        AIFloat3 target = getRadialPoint(pos, 300f);
+    public void fightTo(AIFloat3 pos, int frame){
+        AIFloat3 target = getRadialPoint(pos, 200f);
         unit.fight(target, (short) 0, frame+1000);
+    }
+
+    public void moveTo(AIFloat3 pos, int frame){
+        AIFloat3 target = getRadialPoint(pos, 200f);
+        unit.moveTo(target, (short) 0, frame+1000);
     }
 
     protected AIFloat3 getRadialPoint(AIFloat3 position, Float radius){
         // returns a random point lying on a circle around the given position.
+        AIFloat3 pos = new AIFloat3();
         double angle = Math.random()*2*Math.PI;
         double vx = Math.cos(angle);
         double vz = Math.sin(angle);
-        position.x += radius*vx;
-        position.z += radius*vz;
-        return position;
+        pos.x = (float) (position.x + radius*vx);
+        pos.z = (float) (position.z + radius*vz);
+        return pos;
     }
 }

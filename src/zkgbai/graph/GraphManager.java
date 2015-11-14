@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
+import com.springrts.ai.AICallback;
 import org.poly2tri.Poly2Tri;
 import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
@@ -36,10 +37,12 @@ import zkgbai.military.Enemy;
 
 public class GraphManager extends Module {
 	private ZKGraphBasedAI parent;
+	private OOAICallback callback;
 	private ArrayList<MetalSpot> metalSpots;
 	private ArrayList<Link> links;
 	private ArrayList<Pylon> pylons;
     public int myTeamID;
+	int frame = 0;
     private UnitDef mexDef;
     int mexDefID;
 	private LosManager losManager;
@@ -58,6 +61,7 @@ public class GraphManager extends Module {
 		this.links = new ArrayList<Link>();
 		this.pylons = new ArrayList<Pylon>();
 		this.parent = parent;
+		this.callback = parent.getCallback();
 		this.mexDef = parent.getCallback().getUnitDefByName("cormex");
 		this.mexDefID = mexDef.getUnitDefId();
 		this.m = parent.getCallback().getResourceByName("Metal");
@@ -104,11 +108,7 @@ public class GraphManager extends Module {
 					for (MetalSpot ms:metalSpots){
 						AIFloat3 pos = ms.position;
 						if(pos.z > box[3] && pos.z < box[0] && pos.x>box[1] && pos.x<box[2]){
-							ms.hostile = true;
-							ms.setShadowCaptured(true);
-							for(Link l:ms.links){
-								l.contested = true;
-							}
+							ms.enemyShadowed = true;
 						}
 					}
 				}
@@ -120,110 +120,43 @@ public class GraphManager extends Module {
     @Override
     public int unitFinished(Unit unit) {
     	UnitDef def = unit.getDef();
-    	if(def.getUnitDefId() == mexDefID){
-    		AIFloat3 unitpos = unit.getPos();
-	    	for(MetalSpot ms:metalSpots){
-	    		if(groundDistance(unitpos,ms.getPosition())<50){
-	    			ms.owned = true;
-	    			ms.hostile = false;
-	    			ms.setExtractor(unit);
-	    			ms.setShadowCaptured(false);
-	    			ms.setShadowInfluence(0);
+		Integer radius = pylonDefs.get(def.getName());
+		if(radius != null){
+			Pylon p = new Pylon(unit, radius.intValue());
 
-	    			for(Pylon p:pylons){
-		    			if(groundDistance(p.position,ms.position)<p.radius+50){
-		    				p.addSpot(ms);
-		    			}
-	    			}
-	    			
-	    			for(Link l:ms.links){
-	    				if(l.v0.owned && l.v1.owned){
-	    					l.owned = true;
-	    					if(l.pylons.size() > 0){
-	    						l.checkConnected();
-	    					}
-	    				}else{
-	    					l.owned = false;
-	    				}
-	    			}
-	    		}
-	    	}
-    	} else{
-    		Integer radius = pylonDefs.get(def.getName());
-    		if(radius != null){
-	    		Pylon p = new Pylon(unit, radius.intValue());
-	    		
-	    		for(MetalSpot m:metalSpots){
-	    			if(groundDistance(p.position,m.position)<p.radius+50){
-	    				m.addPylon(p);
-	    				p.addSpot(m);
-	    			}
-	    		}
-	    		
-	    		for(Link l:links){
-	    			if(GraphManager.groundDistance(p.position,l.centerPos) < l.length/2){
-	    				for(Pylon lp:l.pylons){
-	    					if(GraphManager.groundDistance(p.position,lp.position) < p.radius+lp.radius){
-	    						lp.addNeighbour(p);
-	    						p.addNeighbour(lp);
-	    					}
-	    				}
-	    				
-	    				l.addPylon(p);
-	    				if(l.checkConnected()){
-	    					
-	    				}
-	    			}
-	    		}
-	    		
-	    		pylons.add(p);
-    		}
-    	}
+			for(MetalSpot m:metalSpots){
+				if(groundDistance(p.position,m.position)<p.radius+50){
+					m.addPylon(p);
+					p.addSpot(m);
+				}
+			}
+
+			for(Link l:links){
+				if(GraphManager.groundDistance(p.position,l.centerPos) < l.length/2){
+					for(Pylon lp:l.pylons){
+						if(GraphManager.groundDistance(p.position,lp.position) < p.radius+lp.radius){
+							lp.addNeighbour(p);
+							p.addNeighbour(lp);
+						}
+					}
+
+					l.addPylon(p);
+					if(l.checkConnected()){
+
+					}
+				}
+			}
+
+			pylons.add(p);
+		}
+
     	return 0;
     }
-    
-    @Override
-    public int enemyEnterLOS(Unit unit) {
-    	UnitDef def = unit.getDef();
-    	
-    	if(def != null){
-	    	if(def.getUnitDefId() == mexDefID){
-	    		AIFloat3 unitpos = unit.getPos();
-		    	for(MetalSpot ms:metalSpots){
-		    		if(!ms.hostile && GraphManager.groundDistance(unitpos,ms.getPosition()) < 50){
-		    			ms.owned = false;
-		    			ms.hostile = true;
-		    			ms.setExtractor(unit);
-		    			ms.setShadowCaptured(false);
-		    			ms.setShadowInfluence(0);
-		    			
-		    			for(Link l:ms.links){
-		    				l.contested = true;
-		    			}
-		    		}
-		    	}
-	    	}
-    	}
-        return 0; // signaling: OK
-    }
-    
+
+	@Override
     public int unitDestroyed(Unit unit, Unit attacker) {
     	UnitDef def = unit.getDef();
-    	if(def.getUnitDefId() == mexDefID){
-	    	for(MetalSpot ms:metalSpots){
-	    		if(ms.extractor != null && ms.extractor.getUnitId() == unit.getUnitId()){
-	    			ms.owned = false;
-	    			ms.hostile = false;
-
-	    			ms.colonizers.clear();
-	    			for(Link link:ms.links){
-	    				link.owned = false;
-	    			}
-	    			
-	    			ms.setExtractor(null);
-	    		}
-	    	}
-    	} else if(!def.isBuilder() && def.getName().equals("armsolar")){
+		if(!def.isBuilder() && def.getName().equals("armsolar")){
     		Pylon deadPylon = null;
     		for(Pylon p:pylons){
     			if(p.unit.equals(unit)){
@@ -249,123 +182,132 @@ public class GraphManager extends Module {
     	}
         return 0; // signaling: OK
     }
-    
-    
-    @Override
-    public int enemyDestroyed(Unit unit, Unit attacker) {  
-    	if(unit.getDef().getUnitDefId() == mexDefID){
-	    	for(MetalSpot ms:metalSpots){
-	    		if(ms.extractor != null){
-					if (ms.extractor.getUnitId() == unit.getUnitId()) {
-						ms.owned = false;
-						ms.hostile = false;
-						ms.setExtractor(null);
-						ms.setShadowCaptured(false);
-						ms.setShadowInfluence(0);
-						for (Link l : ms.links) {
-							if (!l.v0.hostile && !l.v1.hostile) {
-								l.contested = false;
-							}
-						}
-					}
-	    		}
-	    	}
-    	}
-        return 0; // signaling: OK
-    }
+
+	@Override
+	public int enemyEnterLOS(Unit enemy){
+		// when enemy porc is seen, infer that the nearest metal spot is hostile
+		if (enemy.getMaxSpeed() == 0 && enemy.getDef().isAbleToAttack()){
+			MetalSpot spot = getClosestSpot(enemy.getPos());
+			// unless it's already owned by allies
+			if (!spot.hostile && !spot.owned){
+				setHostile(spot);
+			}
+		}
+		return 0;
+	}
     
     // TODO: move los stuff to a separate handler
 	@Override
-	public int update(int frame){
+	public int update(int uframe){
+		this.frame = uframe;
 		if (frame % 60 > 0){
 			return 0;
 		}
 
     	for(MetalSpot ms:metalSpots){
-    		if(losManager.isInLos(ms.getPosition())){
+    		if(losManager.isInLos(ms.getPos())){
 				ms.lastSeen = frame;
 				ms.visible = true;
-    			
-    			if(ms.hostile){
-    				boolean hasMex = false;
-    				List<Unit> hostiles = parent.getCallback().getEnemyUnitsIn(ms.getPosition(), 50f);
-    				for(Unit hostile:hostiles){
-    					if(hostile.getDef().getUnitDefId() == mexDefID){
-    						hasMex = true;
-    						break;
-    					}
-    				}
-    				if (!hasMex){
-    	    			ms.owned = false;
-    	    			ms.hostile = false;
-    	    			ms.setExtractor(null);
-    	    			ms.setShadowCaptured(true);
-    	    			ms.setShadowInfluence(0);
-    	    			for(Link l:ms.links){
-    	    				if(!l.v0.hostile && !l.v1.hostile){
-    	    					l.contested = false;
-    	    				}
-    	    			}
-    				}
-    			}
+
+				List<Unit> friendlies = callback.getFriendlyUnitsIn(ms.getPos(), 50f);
+				List<Unit> enemies = callback.getEnemyUnitsIn(ms.getPos(), 50f);
+
+				boolean hasMex = false;
+				for (Unit u:friendlies){
+					if (u.getDef().getUnitDefId() == mexDefID){
+						setOwned(ms);
+						hasMex = true;
+					}
+				}
+
+				for (Unit u: enemies){
+					if (u.getDef().getUnitDefId() == mexDefID){
+						setHostile(ms);
+						hasMex = true;
+					}
+				}
+
+				if (!hasMex){
+					setNeutral(ms);
+				}
+
+				cleanShadows(ms);
     		}else{
     			if(ms.visible){
     				ms.visible = false;
     			}
-    		}
-    		
-    		if(!ms.hostile && !ms.owned){
-				boolean hasMex = false;
-				Unit extractor = null;
-				List<Unit> allies = parent.getCallback().getFriendlyUnitsIn(ms.getPosition(), 50f);
-				for(Unit ally:allies){
-					if(ally.getDef().getUnitDefId() == mexDefID){
-						hasMex = true;
-						extractor = ally;
-						break;
-					}
-				}
-				if (hasMex){
-	    			ms.owned = true;
-	    			ms.hostile = false;
-	    			ms.setExtractor(extractor);
-	    			ms.setShadowCaptured(false);
-	    			ms.setShadowInfluence(0);
-	    			for(Link l:ms.links){
-	    				if(!l.v0.hostile && !l.v1.hostile){
-	    					l.contested = false;
-	    				}
-	    			}
+				if (ms.owned){
+					ms.owned = false;
 				}
     		}
     		
     	}
-    	
-    	for(MetalSpot ms:metalSpots){
-    		if(ms.hostile){
-    			for(Link l:ms.links){
-    				if(!l.v0.hostile){
-    					l.v0.shadowInfluence += l.weight;
-    					if(l.v0.shadowInfluence > 100){
-    						l.v0.hostile = true;
-    						l.v0.isShadowCaptured = true;
-    					}
-    				}
-    				if(!l.v1.hostile){
-    					l.v0.shadowInfluence += l.weight;
-    					if(l.v0.shadowInfluence > 100){
-    						l.v0.hostile = true;
-    						l.v0.isShadowCaptured = true;
-    					}
-    				}
-    			}
-    		}
-    	}
-
     	
     	paintGraph();
 
 		return 0;
+	}
+
+	private void setHostile(MetalSpot ms){
+		ms.hostile = true;
+		ms.owned = false;
+		ms.enemyShadowed = false;
+		// set adjacent spots as enemyShadowed if they aren't already hostile
+		for (Link l:ms.links){
+			if (!l.v0.hostile){
+				l.v0.enemyShadowed = true;
+			}
+			if (!l.v1.hostile){
+				l.v1.enemyShadowed = true;
+			}
+		}
+	}
+
+	private void setOwned(MetalSpot ms){
+		ms.hostile = false;
+		ms.owned = true;
+		ms.allyShadowed = false;
+		// set adjacent spots as allyShadowed if they aren't already owned
+		for (Link l:ms.links){
+			if (!l.v0.owned){
+				l.v0.allyShadowed = true;
+			}
+			if (!l.v1.owned){
+				l.v1.allyShadowed = true;
+			}
+		}
+	}
+
+	private void setNeutral(MetalSpot ms){
+		if (ms.owned){
+			ms.allyShadowed = true;
+		}
+		if (ms.hostile){
+			ms.enemyShadowed = true;
+		}
+		ms.hostile = false;
+		ms.owned = false;
+	}
+
+	private void cleanShadows(MetalSpot ms){
+		boolean hasAdjacentOwned = false;
+		boolean hasAdjacentHostile = false;
+		for (Link l:ms.links){
+			if (l.v0.hostile || l.v1.hostile){
+				hasAdjacentHostile = true;
+			}
+			if (l.v0.owned || l.v1.owned){
+				hasAdjacentOwned = true;
+			}
+		}
+
+		if ((!hasAdjacentHostile && frame - ms.lastSeen > 9001)
+				|| (!hasAdjacentHostile && ms.owned)){
+			ms.enemyShadowed = false;
+		}
+		if (!hasAdjacentOwned){
+			ms.allyShadowed = false;
+		}
 	}
 
     public static float groundDistance(AIFloat3 v0, AIFloat3 v1){
@@ -430,58 +372,58 @@ public class GraphManager extends Module {
 		graphGraphics.setStroke(new BasicStroke(2f));
 		
 		Color spotOwned = new Color(0,255,0,255);
-		Color spotLinked = new Color(0,255,255,255);
-		Color spotUnowned = new Color(255,255,0,255);
+		Color spotUnowned = new Color(255, 247, 90,255);
 		Color spotHostile = new Color(255,0,0,255);
-		
-		
-		Color linkOwned = new Color(0,255,0,100);
+		Color spotContested = new Color(239, 127, 11, 255);
+
 		Color linkLinked = new Color(0,255,255,100);
-		Color linkUnowned = new Color(255,255,0,100);
-		Color linkHostile = new Color(255,120,0,100);
+		Color linkUnlinked = new Color(255,255,0,100);
 		
 		for(MetalSpot ms:metalSpots){
 			AIFloat3 position = ms.position;
 			
 			int x = (int) (position.x / 8);
 			int y = (int) (position.z / 8);
-			
+
+			// draw solid dots for owned/hostile mexes
 			if(ms.owned){
 				graphGraphics.setColor(spotOwned);
-				paintCircle(x,y,4);
-				if(ms.connected){
-					graphGraphics.setColor(spotLinked);
-					paintCircle(x,y,6);
-				}		
+				paintCircle(x,y,6);
+			}else if (ms.hostile) {
+				graphGraphics.setColor(spotHostile);
+				paintCircle(x, y, 6);
 			}else{
 				graphGraphics.setColor(spotUnowned);
 				paintCircle(x,y,4);
+			}
 
-				if(ms.hostile){
-					graphGraphics.setColor(spotHostile);
-					paintCircle(x,y,6);
-				}
+			// draw hollow circles for shadow captured mexes
+			if(ms.allyShadowed && !(ms.enemyShadowed)){
+				graphGraphics.setColor(spotOwned);
+				paintCircleOutline(x, y, 8);
+			}else if (ms.enemyShadowed && !(ms.allyShadowed)) {
+				graphGraphics.setColor(spotHostile);
+				paintCircleOutline(x, y, 8);
+			}else if (ms.allyShadowed && ms.enemyShadowed){
+				graphGraphics.setColor(spotContested);
+				paintCircleOutline(x, y, 8);
 			}
 		}
-		final float[] dash = {10.0f};
-	
-		Color linkColor = null;
+
 		for (Link l:links){
 			
 			float phase = 0;
-			if(l.contested){
+			if(l.connected){
 				phase = parent.currentFrame/30;
 			}
-			
+
+			final float[] dash = {10.0f};
+			Color linkColor;
 			graphGraphics.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, dash, phase));
 			if(l.connected){
 				linkColor = linkLinked;
-			}else if(l.owned){
-				linkColor = linkOwned;
-			}else if (l.contested){
-				linkColor = linkHostile;
 			}else{
-				linkColor = linkUnowned;
+				linkColor = linkUnlinked;
 			}
 			
 			graphGraphics.setColor(linkColor);
@@ -496,8 +438,12 @@ public class GraphManager extends Module {
 		}
 	}
 	
-	private void paintCircle(int x, int y, int r){
+	private void paintCircleOutline(int x, int y, int r){
 		graphGraphics.drawOval(x-r, y-r, 2*r, 2*r);
+	}
+
+	private void paintCircle(int x, int y, int r){
+		graphGraphics.fillOval(x - r, y - r, 2 * r, 2 * r);
 	}
     
     public List<MetalSpot> getEnemySpots(){
@@ -507,6 +453,15 @@ public class GraphManager extends Module {
     	}
     	return spots;
     }
+
+	public List<MetalSpot> getUnownedSpots(){
+		// returns all metal spots not owned by allies.
+		List<MetalSpot> spots = new ArrayList<MetalSpot>();
+		for(MetalSpot ms:metalSpots){
+			if(!ms.owned) spots.add(ms);
+		}
+		return spots;
+	}
 
     public List<MetalSpot> getNeutralSpots(){
     	ArrayList<MetalSpot> spots = new ArrayList<MetalSpot>();
@@ -531,13 +486,27 @@ public class GraphManager extends Module {
     	
     	return bestMS;
     }
+
+	public MetalSpot getClosestSpot(AIFloat3 position){
+		float minRange = Float.MAX_VALUE;
+		MetalSpot bestMS = null;
+		for(MetalSpot ms:metalSpots){
+				float dist = groundDistance(position,ms.position);
+				if(dist < minRange){
+					bestMS = ms;
+					minRange = dist;
+				}
+		}
+
+		return bestMS;
+	}
     
     public AIFloat3 getOverdriveSweetSpot(AIFloat3 position){
     	float radius = 175;
 		float minWeight = Float.MAX_VALUE;
     	Link link = null;
     	for(Link l:links){
-    		if(l.owned && !l.connected){
+    		if(!l.connected){
     			float combinedValue = (float) (l.v0.value+l.v1.value+Math.sqrt(l.pylons.size())+0.001f);
     			float combinedCost = (float) (l.length + Math.pow(GraphManager.groundDistance(l.centerPos, position),2));
 	    		float weight = combinedCost/combinedValue;

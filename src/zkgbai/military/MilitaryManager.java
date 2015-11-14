@@ -12,17 +12,16 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.Map;
-import com.springrts.ai.oo.clb.Resource;
-import com.springrts.ai.oo.clb.Unit;
-import com.springrts.ai.oo.clb.UnitDef;
-import com.springrts.ai.oo.clb.WeaponDef;
+import com.springrts.ai.oo.clb.*;
 
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
 import zkgbai.los.LosManager;
+import zkgbai.military.tasks.FighterTask;
+import zkgbai.military.tasks.RaidTask;
+import zkgbai.military.tasks.ScoutTask;
 
 public class MilitaryManager extends Module {
 	
@@ -35,6 +34,11 @@ public class MilitaryManager extends Module {
 	List<Unit> retreatingUnits;
 	List<Unit> havens;
 	List<Squad> squads;
+	List<Raider> raiders;
+
+	List<ScoutTask> scoutTasks;
+	List<RaidTask> raidTasks;
+
 	RadarIdentifier radarID;
 	
 	int maxUnitPower = 0;
@@ -47,6 +51,12 @@ public class MilitaryManager extends Module {
 	int nano;
 
 	private LosManager losManager;
+	private OOAICallback callback;
+	private UnitClasses unitTypes;
+
+	private Resource m;
+
+	int frame = 0;
 	
 	@Override
 	public String getModuleName() {
@@ -63,13 +73,19 @@ public class MilitaryManager extends Module {
 	
 	public MilitaryManager(ZKGraphBasedAI parent){
 		this.parent = parent;
+		this.callback = parent.getCallback();
 		this.targets = new HashMap<Integer,Enemy>();
 		this.soldiers = new HashSet<Unit>();
+		this.raiders = new ArrayList<Raider>();
 		this.squads = new ArrayList<Squad>();
 		this.cowardUnits = new ArrayList<Unit>();
 		this.retreatingUnits = new ArrayList<Unit>();
 		this.havens = new ArrayList<Unit>();
+		this.scoutTasks = new ArrayList<ScoutTask>();
+		this.raidTasks = new ArrayList<RaidTask>();
 		this.nano = parent.getCallback().getUnitDefByName("armnanotc").getUnitDefId();
+		this.unitTypes = new UnitClasses();
+		this.m = callback.getResourceByName("Metal");
 		
 		targetMarkers = new ArrayList<TargetMarker>();
 		int width = parent.getCallback().getMap().getWidth();
@@ -171,8 +187,120 @@ public class MilitaryManager extends Module {
 		Color c = new Color(threatmap.getRGB(x,y));
 		return c.getRed();
 	}
+
+	private void createScoutTasks(){
+		List<MetalSpot> unscouted = graphManager.getUnownedSpots();
+		for (MetalSpot ms: unscouted){
+			ScoutTask st = new ScoutTask(ms.getPos(), ms);
+			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 900 || ms.getLastSeen() == 0)){
+				scoutTasks.add(st);
+			}
+		}
+	}
+
+	private void checkScoutTasks(){
+		List<ScoutTask> finished = new ArrayList<ScoutTask>();
+		for (ScoutTask st: scoutTasks){
+			if (st.spot.visible){
+				st.endTask(frame);
+				finished.add(st);
+			}
+		}
+		scoutTasks.removeAll(finished);
+	}
+
+	private void createRaidTasks(){
+		for (Enemy e:targets.values()){
+			if (e.isStatic && e.threatRadius == 0){
+				RaidTask rt = new RaidTask(e.position);
+				if (!raidTasks.contains(rt)){
+					raidTasks.add(rt);
+				}
+			}
+		}
+	}
+
+	private void checkRaidTasks(){
+		List<RaidTask> finished = new ArrayList<RaidTask>();
+		for (RaidTask rt: raidTasks){
+			if (losManager.isInLos(rt.target)){
+				List<Unit> enemies = callback.getEnemyUnitsIn(rt.target, 200f);
+				if (enemies.size() == 0 || getThreat(rt.target) > 0){
+					rt.endTask(frame);
+					finished.add(rt);
+				}
+			}
+		}
+		raidTasks.removeAll(finished);
+	}
+
+	private void assignRaiders(){
+		for (Raider r: raiders){
+			FighterTask bestTask = null;
+			float cost = Float.MAX_VALUE;
+
+			if (r.getTask() != null){
+				bestTask = r.getTask();
+				if (r.getTask() instanceof ScoutTask){
+					ScoutTask st = (ScoutTask) r.getTask();
+					cost = getScoutCost(st, r);
+				}
+				if (r.getTask() instanceof RaidTask){
+					RaidTask rt = (RaidTask) r.getTask();
+					cost = getRaidCost(rt, r);
+				}
+			}
+
+			for (ScoutTask s:scoutTasks){
+				// never assign more than one raider to scout the same mex spot!
+				if (s.assignedRaiders.size() == 0){
+					float tmpcost = getScoutCost(s, r);
+					if (tmpcost < cost){
+						cost = tmpcost;
+						bestTask = s;
+					}
+				}
+			}
+			for (RaidTask rt:raidTasks){
+				float tmpcost = getRaidCost(rt, r);
+				if (tmpcost < cost){
+					cost = tmpcost;
+					bestTask = rt;
+				}
+			}
+
+			if (bestTask != null && (!bestTask.equals(r.getTask()) || r.getUnit().getCurrentCommands().size() == 0)){
+				if (bestTask instanceof ScoutTask){
+					r.fightTo(bestTask.target, frame);
+					r.setTask(bestTask);
+					((ScoutTask) bestTask).addRaider(r);
+				}
+				if (bestTask instanceof RaidTask){
+					r.fightTo(bestTask.target, frame);
+					r.setTask(bestTask);
+					((RaidTask) bestTask).addRaider(r);
+				}
+			}
+		}
+	}
+
+	private float getScoutCost(ScoutTask task, Raider raider){
+		float cost = graphManager.groundDistance(task.target, raider.getPos());
+		// reduce cost relative to every 30 seconds since last seen
+		cost = cost/(1+((frame - task.spot.getLastSeen())/900));
+		if (task.spot.enemyShadowed){
+			cost /= 2;
+		}
+		return cost;
+	}
+
+	private float getRaidCost(RaidTask task, Raider raider){
+		float cost = graphManager.groundDistance(task.target, raider.getPos());
+		cost /= 4;
+		return cost;
+	}
     
-    public AIFloat3 getTarget(AIFloat3 origin){
+    private AIFloat3 getTarget(AIFloat3 origin){
     	List<MetalSpot> ms = graphManager.getEnemySpots();
     	AIFloat3 targetMex = null;
     	float bestMexScore = 0;
@@ -180,9 +308,9 @@ public class MilitaryManager extends Module {
     		for (MetalSpot m:ms){
     			//float score = (float) (1000 / 1+(getThreat(m.getPosition()) * Math.sqrt(GraphManager.groundDistance(origin, m.getPosition()))));
     			
-    			float score = 100 / GraphManager.groundDistance(m.getPosition(), origin);
+    			float score = 100 / GraphManager.groundDistance(m.getPos(), origin);
     			
-    			score /= getThreat(m.getPosition());
+    			score /= getThreat(m.getPos());
     			score += Math.sqrt(parent.currentFrame-m.getLastSeen());
     			
     			/*
@@ -197,7 +325,7 @@ public class MilitaryManager extends Module {
         		*/
     			
     			if (score > bestMexScore){
-    				targetMex = m.getPosition();
+    				targetMex = m.getPos();
     				bestMexScore = score;
     			}
     		}
@@ -211,7 +339,7 @@ public class MilitaryManager extends Module {
     			Enemy e = enemies.next();
     			float score = (float) Math.sqrt(e.value/5);
     			
-    			score /= this.getThreat(e.position);
+    			score /= getThreat(e.position);
 
     			score /= Math.pow(GraphManager.groundDistance(e.position, origin),4);
     			
@@ -250,7 +378,7 @@ public class MilitaryManager extends Module {
     	
     	ms = graphManager.getNeutralSpots();
     	if(!ms.isEmpty()){
-    		AIFloat3 target = ms.get((int) Math.floor(Math.random()*ms.size())).getPosition();
+    		AIFloat3 target = ms.get((int) Math.floor(Math.random()*ms.size())).getPos();
         	return target;
     	}
     	
@@ -264,8 +392,16 @@ public class MilitaryManager extends Module {
     
     @Override
     public int update(int frame) {
-    	if(frame%15 == 0){
-    		
+    	this.frame = frame;
+		if(frame%15 == 0){
+    		createRaidTasks();
+			createScoutTasks();
+
+			checkRaidTasks();
+			checkScoutTasks();
+
+			assignRaiders();
+
     		for(Enemy t:targets.values()){
     			AIFloat3 tpos = t.unit.getPos();
     			if(tpos != null && !tpos.equals(nullpos)){
@@ -289,7 +425,7 @@ public class MilitaryManager extends Module {
     		}
     		
     		for(Unit s:soldiers){
-    			if(s.getCurrentCommands().isEmpty() && (!(s.getMaxHealth() > 1000 && s.getHealth()/s.getMaxHealth() < 0.8))){
+    			if(s.getCurrentCommands().isEmpty() && (!(s.getMaxHealth() > 1000 && s.getHealth()/s.getMaxHealth() < 0.9))){
     				retreatingUnits.remove(s);
     				AIFloat3 t = getTarget(s.getPos());
     				if(t!=null){
@@ -388,8 +524,12 @@ public class MilitaryManager extends Module {
     	if(unit.getDef().getUnitDefId() == nano){
     		havens.add(unit);
     	}
-    	
-    	if(unit.getMaxRange()>0 && unit.getMaxSpeed() > 0 && unit.getDef().getBuildOptions().isEmpty()){
+
+		String defName = unit.getDef().getName();
+    	if (unitTypes.raiders.contains(defName)){
+			Raider r = new Raider(unit, unit.getDef().getCost(m));
+			raiders.add(r);
+		}else if(unit.getMaxRange()>0 && unit.getMaxSpeed() > 0 && unit.getDef().getBuildOptions().isEmpty()){
     		soldiers.add(unit);
     		unit.setFireState(3, (short)0, parent.currentFrame);
     		unit.setMoveState(3, (short)0, parent.currentFrame);
@@ -406,6 +546,22 @@ public class MilitaryManager extends Module {
         soldiers.remove(unit);
         cowardUnits.remove(unit);
         havens.remove(unit);
+
+		Fighter dead = null;
+		for (Raider r:raiders){
+			if (r.id == unit.getUnitId()){
+				dead = r;
+				if (r.getTask() instanceof ScoutTask){
+					ScoutTask st = (ScoutTask) r.getTask();
+					st.removeRaider(r);
+				}
+				if (r.getTask() instanceof RaidTask){
+					RaidTask st = (RaidTask) r.getTask();
+					st.removeRaider(r);
+				}
+			}
+		}
+		raiders.remove(dead);
         return 0; // signaling: OK
     }
     

@@ -33,7 +33,7 @@ public class Squad {
 	public void setTarget(AIFloat3 pos, int frame){
 		// set a target for the squad to attack.
 		for (Fighter f:fighters){
-			f.fight(pos, frame);
+			f.fightTo(pos, frame);
 		}
 	}
 

@@ -511,7 +511,7 @@ public class EconomyManager extends Module {
 		double rand = Math.random();
 		if (rand > 0.25){
 			return "gunshipsupport";
-		}else if (rand > 0.1) {
+		}else if (rand > 0.01) {
 			return "armbrawl";
 		}else{
 			return "blackdawn";
@@ -912,8 +912,8 @@ public class EconomyManager extends Module {
     	
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
 
-		if (distance(closest.getPosition(),position)<100){
-    		AIFloat3 mexpos = closest.getPosition();
+		if (distance(closest.getPos(),position)<100){
+    		AIFloat3 mexpos = closest.getPos();
 			float distance = distance(mexpos, position);
 			float extraDistance = 125;
 			float vx = (position.x - mexpos.x)/distance; 
@@ -990,8 +990,8 @@ public class EconomyManager extends Module {
 		}
     	
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
-		if (distance(closest.getPosition(),position)<100){
-    		AIFloat3 mexpos = closest.getPosition();
+		if (distance(closest.getPos(),position)<100){
+    		AIFloat3 mexpos = closest.getPos();
 			float distance = distance(mexpos, position);
 			float extraDistance = 100;
 			float vx = (position.x - mexpos.x)/distance; 
@@ -1037,7 +1037,7 @@ public class EconomyManager extends Module {
 		UnitDef llt = callback.getUnitDefByName("corllt");
 
 		for (MetalSpot ms:spots) {
-			AIFloat3 position = ms.getPosition();
+			AIFloat3 position = ms.getPos();
 			boolean needsllt = true;
 			for(Unit u:porcs){
 				float dist = distance(position,u.getPos());
@@ -1054,7 +1054,7 @@ public class EconomyManager extends Module {
 			}
 
 			if (needsllt){
-				position = getRadialPoint(ms.getPosition(), 100f);
+				position = getRadialPoint(ms.getPos(), 100f);
 				position = callback.getMap().findClosestBuildSite(llt,position,600f, 3, 0);
 
 				ConstructionTask ct =  new ConstructionTask(llt, position, 0);
@@ -1212,7 +1212,7 @@ public class EconomyManager extends Module {
 		List<MetalSpot> metalSpots = graphManager.getNeutralSpots();
 
 		for ( MetalSpot ms: metalSpots){
-			AIFloat3 position = ms.getPosition();
+			AIFloat3 position = ms.getPos();
 			if (callback.getMap().isPossibleToBuildAt(mex, position, 0)){
 				 ConstructionTask ct =  new ConstructionTask(mex, position, 0);
 				if (!constructionTasks.contains(ct)){
@@ -1288,10 +1288,23 @@ public class EconomyManager extends Module {
 		UnitDef pylon = callback.getUnitDefByName("armestor");
 		AIFloat3 position = graphManager.getOverdriveSweetSpot(worker.getPos());
 
+		//{debug
+		if (position == null){
+			parent.debug("createGridTask: overdrivesweetspot returned null!");
+		}
+		//debug}
+
 		// don't build pylons directly on top of metal spots
 		MetalSpot closest = graphManager.getClosestNeutralSpot(position);
-		if (distance(closest.getPosition(),position)<100){
-			AIFloat3 mexpos = closest.getPosition();
+
+		//{debug
+		if (closest == null){
+			parent.debug("createGridTask: closest neutral mex was null!");
+		}
+		//debug}
+
+		if (distance(closest.getPos(),position)<100){
+			AIFloat3 mexpos = closest.getPos();
 			float distance = distance(mexpos, position);
 			float extraDistance = 100;
 			float vx = (position.x - mexpos.x)/distance;
@@ -1326,18 +1339,9 @@ public class EconomyManager extends Module {
 			}
 		}else{
 			// if "sweet spot" is too clustered, default to the worker's position and recheck the distance.
-			//{debug
-			if (worker.getPos() == null){
-				parent.debug("createGridTask: worker position was null!");
-			}
-			//debug}
 			position = callback.getMap().findClosestBuildSite(pylon, worker.getPos(), 600f, 3, 0);
-			//{debug
-			if (position == null){
-				parent.debug("createGridTask: cloest build site was null!");
-			}
-			//debug}
 			gdist = Float.MAX_VALUE;
+
 			for(Unit u:pylons){
 				float dist = distance(position,u.getPos());
 				if (dist<gdist){
