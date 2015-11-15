@@ -21,6 +21,11 @@ public class UnitClasses {
         // raiders
         raiders.add("armpw");
         raiders.add("spherepole");
+        raiders.add("corak");
         raiders.add("armkam");
+
+        // striders
+        striders.add("dante");
+        striders.add("scorpion");
     }
 }

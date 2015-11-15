@@ -476,7 +476,7 @@ public class EconomyManager extends Module {
 			if (rand > 0.9){
 				return "armpw";
 			}else if (rand > 0.6){
-				return "armham";
+				return "armrock";
 			}else if (rand > 0.4){
 				return "armzeus";
 			}else if (rand > 0.2) {
@@ -520,9 +520,7 @@ public class EconomyManager extends Module {
 
 	private String getStrider(){
 		double rand = Math.random();
-		if (rand > 0.9) {
-			return "armraven";
-		}else if(rand > 0.75){
+		if(rand > 0.75){
 			return  "scorpion";
 		}else{
 			return "dante";
@@ -884,7 +882,7 @@ public class EconomyManager extends Module {
     	// is there sufficient energy to cover metal income?
 		if ((mexes.size() * 1.5) - 1.5 > solars.size()+solarTasks.size()
 				|| (effectiveIncome > 30 && (mexes.size()*2) > solars.size()+solarTasks.size())
-				|| (effectiveIncome > 20 && metal > 200 && energy == 0)
+				|| (effectiveIncome > 15 && energy < 5 && solarTasks.size() < numWorkers)
 				|| (effectiveIncome > 30 && canBuildFusion(position))) {
 			createEnergyTask(worker);
 		}
@@ -978,8 +976,14 @@ public class EconomyManager extends Module {
 		position.x = position.x + 120;
 		position.z = position.z + 120;
 		if (factories.size() > 0) {
-			position = getNearestFac(position).getPos();
-			position = getRadialPoint(position, 800f);
+			boolean good = false;
+			AIFloat3 facpos = getNearestFac(position).getPos();
+			while (!good) {
+				position = getRadialPoint(facpos, 800f);
+				if (distance(facpos, position) > 500){
+					good = true;
+				}
+			}
 		}
 
 		if(factories.size() == 0){

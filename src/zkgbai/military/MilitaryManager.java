@@ -35,6 +35,7 @@ public class MilitaryManager extends Module {
 	List<Unit> havens;
 	List<Squad> squads;
 	List<Raider> raiders;
+	List<Strider> striders;
 
 	List<ScoutTask> scoutTasks;
 	List<RaidTask> raidTasks;
@@ -57,6 +58,8 @@ public class MilitaryManager extends Module {
 	private Resource m;
 
 	int frame = 0;
+
+	static int CMD_DONT_FIRE_AT_RADAR = 38372;
 	
 	@Override
 	public String getModuleName() {
@@ -77,6 +80,7 @@ public class MilitaryManager extends Module {
 		this.targets = new HashMap<Integer,Enemy>();
 		this.soldiers = new HashSet<Unit>();
 		this.raiders = new ArrayList<Raider>();
+		this.striders = new ArrayList<Strider>();
 		this.squads = new ArrayList<Squad>();
 		this.cowardUnits = new ArrayList<Unit>();
 		this.retreatingUnits = new ArrayList<Unit>();
@@ -192,7 +196,7 @@ public class MilitaryManager extends Module {
 		List<MetalSpot> unscouted = graphManager.getUnownedSpots();
 		for (MetalSpot ms: unscouted){
 			ScoutTask st = new ScoutTask(ms.getPos(), ms);
-			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 450 || ms.getLastSeen() == 0)){
+			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 240 || ms.getLastSeen() == 0)){
 				scoutTasks.add(st);
 			}
 		}
@@ -211,7 +215,7 @@ public class MilitaryManager extends Module {
 
 	private void createRaidTasks(){
 		for (Enemy e:targets.values()){
-			if (e.isStatic && e.threatRadius == 0){
+			if (e.isStatic && e.threatRadius == 0 && getThreat(e.position) < 0.5){
 				RaidTask rt = new RaidTask(e.position);
 				if (!raidTasks.contains(rt)){
 					raidTasks.add(rt);
@@ -225,7 +229,7 @@ public class MilitaryManager extends Module {
 		for (RaidTask rt: raidTasks){
 			if (losManager.isInLos(rt.target)){
 				List<Unit> enemies = callback.getEnemyUnitsIn(rt.target, 200f);
-				if (enemies.size() == 0 || getThreat(rt.target) > 0){
+				if (enemies.size() == 0 || getThreat(rt.target) > 0.5){
 					rt.endTask(frame);
 					finished.add(rt);
 				}
@@ -252,13 +256,10 @@ public class MilitaryManager extends Module {
 			}
 
 			for (ScoutTask s:scoutTasks){
-				// never assign more than one raider to scout the same mex spot!
-				if (s.assignedRaiders.size() == 0){
-					float tmpcost = getScoutCost(s, r);
-					if (tmpcost < cost){
-						cost = tmpcost;
-						bestTask = s;
-					}
+				float tmpcost = getScoutCost(s, r);
+				if (tmpcost < cost){
+					cost = tmpcost;
+					bestTask = s;
 				}
 			}
 			for (RaidTask rt:raidTasks){
@@ -286,8 +287,8 @@ public class MilitaryManager extends Module {
 
 	private float getScoutCost(ScoutTask task, Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
-		// reduce cost relative to every 30 seconds since last seen
-		cost = cost/(1+((frame - task.spot.getLastSeen())/900));
+		// reduce cost relative to every 15 seconds since last seen
+		cost = cost/(1+((frame - task.spot.getLastSeen())/450));
 		if (task.spot.enemyShadowed){
 			cost /= 4;
 		}
@@ -302,99 +303,107 @@ public class MilitaryManager extends Module {
     
     private AIFloat3 getTarget(AIFloat3 origin){
     	List<MetalSpot> ms = graphManager.getEnemySpots();
-    	AIFloat3 targetMex = null;
-    	float bestMexScore = 0;
+    	AIFloat3 target = null;
+    	float cost = Float.MAX_VALUE;
     	if(ms.size() > 0){
     		for (MetalSpot m:ms){
-    			//float score = (float) (1000 / 1+(getThreat(m.getPosition()) * Math.sqrt(GraphManager.groundDistance(origin, m.getPosition()))));
+    			float tmpcost = GraphManager.groundDistance(m.getPos(), origin);
+				tmpcost *= 1+getThreat(m.getPos());
+    			tmpcost /= (frame-m.getLastSeen())/600;
+				if (m.allyShadowed) {
+					tmpcost /= 4;
+				}
     			
-    			float score = 100 / GraphManager.groundDistance(m.getPos(), origin);
-    			
-    			score /= getThreat(m.getPos());
-    			score += Math.sqrt(parent.currentFrame-m.getLastSeen());
-    			
-    			/*
-        		Iterator<Enemy> enemies = targets.values().iterator();
-        		while(enemies.hasNext()){
-        			Enemy e = enemies.next();
-
-        			if(GraphManager.groundDistance(e.position, origin)<600 && e.danger == 0){
-        				score += e.value;
-        			}
-        		}
-        		*/
-    			
-    			if (score > bestMexScore){
-    				targetMex = m.getPos();
-    				bestMexScore = score;
+    			if (tmpcost < cost){
+    				target = m.getPos();
+    				cost = tmpcost;
     			}
     		}
     	}
-    	AIFloat3 enemyTarget = null;
-    	float bestEnemyScore = 0;
+
     	if(targets.size() > 0){
-    		bestEnemyScore = 0;
     		Iterator<Enemy> enemies = targets.values().iterator();
     		while(enemies.hasNext()){
     			Enemy e = enemies.next();
-    			float score = (float) Math.sqrt(e.value/5);
+    			float tmpcost = graphManager.groundDistance(origin, e.position);
+				tmpcost /= getThreat(e.position);
+				tmpcost /= 1+(e.value/250);
     			
-    			score /= getThreat(e.position);
+    			if(tmpcost < cost){
+    				cost = tmpcost;
+    				target = e.position;
+    			}
+    		}
+    	}
+    	
+    	if (target != null){
+			TargetMarker tm = new TargetMarker(target, frame);
+			targetMarkers.add(tm);
+			return target;
+		}
 
-    			score /= Math.pow(GraphManager.groundDistance(e.position, origin),4);
-    			
-    			score /= getThreat(e.position);
-    			
-    			if(score>bestEnemyScore){
-    				bestEnemyScore = score;
-    				enemyTarget = e.position;
-    			}
-    		}
-    	}
-    	
-    	AIFloat3 result = null;
-    	
-    	if(targetMex != null){
-    		if(enemyTarget== null){
-    			result = targetMex;
-    		}else{
-    			if (bestMexScore > bestEnemyScore){
-    				result = targetMex;
-    			}else{
-    				result = enemyTarget;
-    			}
-    		}
-    	}else{
-    		if(enemyTarget!= null){
-    			result = enemyTarget;
-    		}
-    	}
-    	
-    	if(result != null){
-    		TargetMarker tm = new TargetMarker(result, parent.currentFrame);
-    		targetMarkers.add(tm);
-    		return result;
-    	}
-    	
-    	ms = graphManager.getNeutralSpots();
-    	if(!ms.isEmpty()){
-    		AIFloat3 target = ms.get((int) Math.floor(Math.random()*ms.size())).getPos();
-        	return target;
-    	}
-    	
-    	float x = (float) (parent.getCallback().getMap().getWidth()*8 * Math.random());
-    	float z = (float) (parent.getCallback().getMap().getWidth()*8 * Math.random());
-    	
-    	AIFloat3 target = new AIFloat3(x,0,z);
-    	
-    	return target;
+		// if no targets are available
+    	ms = graphManager.getUnownedSpots();
+    	for (MetalSpot m:ms){
+			if (m.enemyShadowed){
+				float tmpcost = GraphManager.groundDistance(m.getPos(), origin);
+				tmpcost /= 1+getThreat(m.getPos());
+				tmpcost /= (frame-m.getLastSeen())/600;
+
+				if (tmpcost < cost) {
+					target = m.getPos();
+					cost = tmpcost;
+				}
+			}
+		}
+		return target;
     }
+
+	private void dgunStriders(){
+		for (Strider s:striders){
+			List<Unit> enemies = callback.getEnemyUnitsIn(s.getPos(), 450f);
+			if (enemies.size() > 0 && frame > s.lastDgunFrame + s.dgunReload){
+				s.getUnit().dGunPosition(enemies.get(0).getPos(), (short) 0, frame + 300);
+				s.lastDgunFrame = frame;
+			}
+		}
+	}
+
+	private void retreatCowards(){
+		for (Unit u: retreatingUnits){
+			float distance = Float.MAX_VALUE;
+			AIFloat3 position = null;
+			for(Unit thing:havens){
+				if(thing.getDef().getUnitDefId() == nano){
+					AIFloat3 pos = thing.getPos();
+					float dist = GraphManager.groundDistance(pos, u.getPos());
+					if(dist < distance){
+						distance = dist;
+						position = pos;
+					}
+				}
+			}
+			if(position != null){
+				float buildDist = 200;
+				double angle = Math.random()*2*Math.PI;
+
+				double vx = Math.cos(angle);
+				double vz = Math.sin(angle);
+
+				position.x += buildDist*vx;
+				position.z += buildDist*vz;
+
+				u.moveTo(position, (short)0, frame+300);
+			}
+		}
+	}
     
     @Override
     public int update(int frame) {
     	this.frame = frame;
-		if(frame%15 == 0){
-    		createRaidTasks();
+
+		if(frame%15 == 0) {
+			createRaidTasks();
 			createScoutTasks();
 
 			checkRaidTasks();
@@ -402,57 +411,72 @@ public class MilitaryManager extends Module {
 
 			assignRaiders();
 
-    		for(Enemy t:targets.values()){
-    			AIFloat3 tpos = t.unit.getPos();
-    			if(tpos != null && !tpos.equals(nullpos)){
-    				if(!t.getIdentified()){
-    					
-    					float speed = GraphManager.groundDistance(t.position, tpos) / 30;
-    	    			
-    					if(speed > t.maxObservedSpeed){
-    						RadarDef rd = radarID.getDefBySpeed(speed);
-    						t.maxObservedSpeed = speed;
-    						if(rd != null){
-	    						t.danger = rd.getDanger();
-	    						t.speed = speed;
-	    						t.threatRadius = rd.getRange();
-	    						t.value = rd.getValue();
-    						}
-    					}
-    				}
-    				t.position = tpos;
-    			}
-    		}
-    		
-    		for(Unit s:soldiers){
-    			if(s.getCurrentCommands().isEmpty() && (!(s.getMaxHealth() > 1000 && s.getHealth()/s.getMaxHealth() < 0.9))){
-    				retreatingUnits.remove(s);
-    				AIFloat3 t = getTarget(s.getPos());
-    				if(t!=null){
-    					s.fight(getTarget(s.getPos()), (short)0, frame+5);
-    				}
-    			}
-    		}
-    		
-    		ArrayList<Integer> deadEnemies = new ArrayList<Integer>();
-    		for(Enemy e:targets.values()){
-    			if(!e.visible){
-    				if(e.isStatic){
-    					if (losManager.isInLos(e.position,1) && frame-e.lastSeen>300){
-    						deadEnemies.add(e.unitID);
-    					}
-    				}else{ 
-	    				if(losManager.isInLos(e.position,1) && frame - e.lastSeen > 300){
-	    					deadEnemies.add(e.unitID);
-	    				}
-    				}
-    			}
-    		}
-    		for(int i:deadEnemies){
-    			targets.remove(i);
-    		}
-    		paintThreatMap();	
-    	}
+			for (Enemy t : targets.values()) {
+				AIFloat3 tpos = t.unit.getPos();
+				if (tpos != null && !tpos.equals(nullpos)) {
+					if (!t.getIdentified()) {
+
+						float speed = GraphManager.groundDistance(t.position, tpos) / 30;
+
+						if (speed > t.maxObservedSpeed) {
+							RadarDef rd = radarID.getDefBySpeed(speed);
+							t.maxObservedSpeed = speed;
+							if (rd != null) {
+								t.danger = rd.getDanger();
+								t.speed = speed;
+								t.threatRadius = rd.getRange();
+								t.value = rd.getValue();
+							}
+						}
+					}
+					t.position = tpos;
+				}
+			}
+
+			retreatCowards();
+
+			for (Unit s : soldiers) {
+				if ((!(retreatingUnits.contains(s) && s.getHealth() / s.getMaxHealth() < 0.9))) {
+					retreatingUnits.remove(s);
+					AIFloat3 t = getTarget(s.getPos());
+					if (t != null) {
+						s.fight(t, (short) 0, frame + 300);
+					}
+				}
+			}
+
+			for (Strider st : striders) {
+				Unit s = st.getUnit();
+				if (!(retreatingUnits.contains(s) && s.getHealth() / s.getMaxHealth() < 0.9)) {
+					retreatingUnits.remove(s);
+					AIFloat3 t = getTarget(s.getPos());
+					if (t != null) {
+						s.moveTo(t, (short) 0, frame + 300);
+					}
+				}
+			}
+
+			dgunStriders();
+
+			ArrayList<Integer> deadEnemies = new ArrayList<Integer>();
+			for (Enemy e : targets.values()) {
+				if (!e.visible) {
+					if (e.isStatic) {
+						if (losManager.isInLos(e.position, 1) && frame - e.lastSeen > 300) {
+							deadEnemies.add(e.unitID);
+						}
+					} else {
+						if (losManager.isInLos(e.position, 1) && frame - e.lastSeen > 300) {
+							deadEnemies.add(e.unitID);
+						}
+					}
+				}
+			}
+			for (int i : deadEnemies) {
+				targets.remove(i);
+			}
+			paintThreatMap();
+		}
         return 0; // signaling: OK
     }
 	
@@ -526,7 +550,18 @@ public class MilitaryManager extends Module {
     	}
 
 		String defName = unit.getDef().getName();
-    	if (unitTypes.raiders.contains(defName)){
+
+		// enable snipers to shoot radar dots
+		if (defName.equals("armsnipe")){
+			ArrayList<Float> params = new ArrayList<>();
+			params.add((float) 0);
+			unit.executeCustomCommand(CMD_DONT_FIRE_AT_RADAR, params, (short) 0, frame+60);
+		}
+
+		if (unitTypes.striders.contains(defName)){
+			Strider st = new Strider(unit, unit.getDef().getCost(m));
+			striders.add(st);
+		}else if (unitTypes.raiders.contains(defName)){
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiders.add(r);
 			unit.setMoveState(2, (short) 0, frame+10);
@@ -536,7 +571,7 @@ public class MilitaryManager extends Module {
     		unit.setMoveState(3, (short)0, parent.currentFrame);
     	}
     	
-    	if(unit.getMaxHealth() > 1000 && unit.getDef().getBuildOptions().size() == 0){
+    	if(unit.getMaxHealth() > 3000 && unit.getDef().getBuildOptions().size() == 0){
     		cowardUnits.add(unit);
     	}
         return 0; // signaling: OK
@@ -562,42 +597,22 @@ public class MilitaryManager extends Module {
 				}
 			}
 		}
+		for (Strider s:striders){
+			if (s.id == unit.getUnitId()){
+				dead = s;
+			}
+		}
 		raiders.remove(dead);
+		striders.remove(dead);
         return 0; // signaling: OK
     }
     
     @Override
     public int unitDamaged(Unit h, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {
     	if(cowardUnits.contains(h)){
-			if(h.getHealth()/h.getMaxHealth() < 0.3){
+			if(h.getHealth()/h.getMaxHealth() < 0.35){
 				if(!retreatingUnits.contains(h)){
-					if(!h.getDef().isBuilder()){
-						retreatingUnits.add(h);	
-					}
-	            	float distance = Float.MAX_VALUE;
-	            	AIFloat3 position = null;
-	            	for(Unit thing:havens){
-	            		if(thing.getDef().getUnitDefId() == nano){
-	            			AIFloat3 pos = thing.getPos();
-	            			float dist = GraphManager.groundDistance(pos, h.getPos()); 
-	            			if(dist < distance){
-	            				distance = dist; 
-	            				position = pos;
-	            			}
-	            		}
-	            	}
-	            	if(position != null){
-	                	float buildDist = 200;
-	                	double angle = Math.random()*2*Math.PI;
-	                	
-	                	double vx = Math.cos(angle);
-	                	double vz = Math.sin(angle);
-	                	
-	                	position.x += buildDist*vx;
-	                	position.z += buildDist*vz;
-	            		
-	            		h.moveTo(position, (short)0, parent.currentFrame);
-	            	}
+					retreatingUnits.add(h);
 				}
 			}
 		}
