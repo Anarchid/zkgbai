@@ -43,7 +43,7 @@ public class EconomyManager extends Module {
 	float effectiveIncomeMetal = 0;
 	float effectiveIncomeEnergy = 0;
 	
-	float effectiveIncome = 0;
+	public float effectiveIncome = 0;
 	float effectiveExpenditure = 0;
 	
 	float metal = 0;
@@ -294,7 +294,7 @@ public class EconomyManager extends Module {
 
 		// if we have a dead worker or factory, remove them and their tasks.
     	 Worker deadWorker = null;
-	    for ( Worker worker : workers) {
+	    for (Worker worker : workers) {
 	    	if(worker.id == unit.getUnitId()){
 	    		deadWorker = worker;
 	    		WorkerTask wt = worker.getTask();
@@ -463,32 +463,26 @@ public class EconomyManager extends Module {
 		if (effectiveIncome < 10){
 			return "armpw";
 		}
-		if (effectiveIncome < 20){
-			if (Math.random() > 0.9){
-				return "armwar";
-			}
-			else{
-				return "armpw";
-			}
-		}
-		else{
-			double rand = Math.random();
-			if (rand > 0.9){
-				return "armpw";
-			}else if (rand > 0.6){
-				return "armrock";
-			}else if (rand > 0.4){
-				return "armzeus";
-			}else if (rand > 0.2) {
-				return "armwar";
-			}else if (rand > 0.05){
+
+		if (warManager.raiders.size() < 6 || Math.random() > 0.9){
+			if (Math.random() > 0.75 && effectiveIncome > 20) {
 				return "spherepole";
-			}else if (fusions.size() > 0){
-				return "armsnipe";
 			}else{
-				return "spherepole";
+				return "armpw";
 			}
 		}
+
+		double rand = Math.random();
+		if (rand > 0.55){
+			return "armzeus";
+		}else if (rand > 0.1){
+			return "armwar";
+		}else if (fusions.size() > 0){
+			return "armsnipe";
+		}else{
+			return "armham";
+		}
+
     }
 
 	private String getShields() {
@@ -654,11 +648,11 @@ public class EconomyManager extends Module {
 		boolean isMex = false;
 		boolean isPorc = false;
 
-		for ( Worker w: task.assignedWorkers){
+		for (Worker w: task.assignedWorkers){
 			float idist = distance(w.getPos(),task.getPos());
 			float rdist = Math.max(idist, 200);
 			float deltadist = Math.abs(idist - dist);
-			if (!w.equals(worker) && idist < rdist){
+			if (!w.equals(worker) && (rdist < dist || deltadist < 100)){
 				costMod++;
 			}
 		}
@@ -721,7 +715,7 @@ public class EconomyManager extends Module {
 			if (isExpensive && task instanceof ReclaimTask && metal < 300){
 				return dist + (600*(costMod-2));
 			}else if (isExpensive){
-				return dist+(1000*(costMod-3));
+				return dist+(300*costMod);
 			}else{
 				return dist+(600*costMod);
 			}
@@ -980,7 +974,8 @@ public class EconomyManager extends Module {
 			AIFloat3 facpos = getNearestFac(position).getPos();
 			while (!good) {
 				position = getRadialPoint(facpos, 800f);
-				if (distance(facpos, position) > 500){
+				position = callback.getMap().findClosestBuildSite(gunship,position,600f, 3, 0);
+				if (distance(facpos, position) > 700){
 					good = true;
 				}
 			}
@@ -1092,7 +1087,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		float minaadist = 400;
+		float minaadist = 800;
 
 		if(aadist > minaadist){
 			return true;

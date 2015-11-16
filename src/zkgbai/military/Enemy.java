@@ -6,6 +6,7 @@ import com.springrts.ai.oo.clb.UnitDef;
 
 public class Enemy {
 	Unit unit;
+	UnitDef ud;
 	int unitID;
 	AIFloat3 position;
 	float threatRadius = 0;
@@ -69,7 +70,8 @@ public class Enemy {
 	public void updateFromUnitDef(UnitDef u, float cost){
 		this.identified = true;
 		this.value = cost;
-		this.isStatic = u.getSpeed() > 0;
+		this.isStatic = (u.getSpeed() == 0);
+		this.ud = u;
 		
 		if(u.getWeaponMounts().size() > 0){
 			this.danger =  u.getPower();
@@ -81,7 +83,7 @@ public class Enemy {
 	public void updateFromRadarDef(RadarDef rd){
 		this.identified = true;
 		this.value = rd.getValue();
-		this.isStatic = rd.getSpeed() > 0;	
+		this.isStatic = (rd.getSpeed() == 0);
 		this.speed = rd.getSpeed();	
 		this.danger = rd.getDanger();
 		this.threatRadius = rd.getRange();

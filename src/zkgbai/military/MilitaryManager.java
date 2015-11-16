@@ -34,7 +34,7 @@ public class MilitaryManager extends Module {
 	List<Unit> retreatingUnits;
 	List<Unit> havens;
 	List<Squad> squads;
-	List<Raider> raiders;
+	public List<Raider> raiders;
 	List<Strider> striders;
 
 	List<ScoutTask> scoutTasks;
@@ -288,8 +288,8 @@ public class MilitaryManager extends Module {
 	private float getScoutCost(ScoutTask task, Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
 		// reduce cost relative to every 15 seconds since last seen
-		cost = cost/(1+((frame - task.spot.getLastSeen())/450));
-		if (task.spot.enemyShadowed){
+		cost = cost/(1+((frame - task.spot.getLastSeen())/900));
+		if (task.spot.enemyShadowed || task.spot.hostile){
 			cost /= 4;
 		}
 		return cost;
@@ -327,7 +327,7 @@ public class MilitaryManager extends Module {
     			Enemy e = enemies.next();
     			float tmpcost = graphManager.groundDistance(origin, e.position);
 				tmpcost /= getThreat(e.position);
-				tmpcost /= 1+(e.value/250);
+				tmpcost /= e.value/250;
     			
     			if(tmpcost < cost){
     				cost = tmpcost;
@@ -384,15 +384,8 @@ public class MilitaryManager extends Module {
 				}
 			}
 			if(position != null){
-				float buildDist = 200;
-				double angle = Math.random()*2*Math.PI;
-
-				double vx = Math.cos(angle);
-				double vz = Math.sin(angle);
-
-				position.x += buildDist*vx;
-				position.z += buildDist*vz;
-
+				UnitDef building = callback.getUnitDefByName("factorygunship");
+				position = callback.getMap().findClosestBuildSite(building, position, 600f, 3, 0);
 				u.moveTo(position, (short)0, frame+300);
 			}
 		}
@@ -582,6 +575,7 @@ public class MilitaryManager extends Module {
         soldiers.remove(unit);
         cowardUnits.remove(unit);
         havens.remove(unit);
+		retreatingUnits.remove(unit);
 
 		Fighter dead = null;
 		for (Raider r:raiders){

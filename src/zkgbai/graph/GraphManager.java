@@ -239,6 +239,9 @@ public class GraphManager extends Module {
 				if (ms.owned){
 					ms.owned = false;
 				}
+				if (frame - ms.lastSeen > 3600){
+					ms.lastSeen = frame-1800;
+				}
     		}
     		
     	}

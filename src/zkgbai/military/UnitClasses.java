@@ -23,6 +23,11 @@ public class UnitClasses {
         raiders.add("spherepole");
         raiders.add("corak");
         raiders.add("armkam");
+        raiders.add("armham");
+
+        // assaults; stuff that attacks in mobs
+        assaults.add("armzeus");
+        assaults.add("armwar");
 
         // striders
         striders.add("dante");
