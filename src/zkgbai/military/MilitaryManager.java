@@ -62,6 +62,7 @@ public class MilitaryManager extends Module {
 	private Resource m;
 
 	int frame = 0;
+	int lastReinforcementFrame = 0;
 
 	static int CMD_DONT_FIRE_AT_RADAR = 38372;
 	
@@ -413,18 +414,32 @@ public class MilitaryManager extends Module {
 
 	private AIFloat3 getRallyPoint(AIFloat3 pos){
 		List<MetalSpot> mexes = graphManager.getOwnedSpots();
-		AIFloat3 bestMex = null;
-		float bestScore = 0;
+		AIFloat3 position = new AIFloat3();
 
-		for (MetalSpot ms: mexes){
-			float score = graphManager.groundDistance(pos, ms.getPos());
-			score *= 2*(1+getThreat(ms.getPos()));
-			if (score > bestScore){
-				bestScore = score;
-				bestMex = ms.getPos();
+		if (mexes.size() > 0) {
+			int count = mexes.size();
+			float x = 0;
+			float z = 0;
+			for (MetalSpot ms : mexes) {
+				x += (ms.getPos().x) / count;
+				z += (ms.getPos().z) / count;
 			}
+			position.x = x;
+			position.z = z;
+			UnitDef factory = callback.getUnitDefByName("factorygunship");
+			position = callback.getMap().findClosestBuildSite(factory, position, 600f, 3, 0);
+		}else{
+			position = graphManager.getClosestNeutralSpot(pos).getPos();
 		}
-		return bestMex;
+
+		return position;
+	}
+
+	public void requestReinforcements(AIFloat3 position){
+		if (frame-lastReinforcementFrame > 1800 && nextSquad != null){
+			lastReinforcementFrame = frame;
+			nextSquad.setTarget(position, frame);
+		}
 	}
 
 	private void retreatCowards(){
@@ -485,6 +500,13 @@ public class MilitaryManager extends Module {
 				}
 			}
 
+			for (Strider st:striders){
+				Unit u = st.getUnit();
+				if (!retreatingUnits.contains(u)){
+					st.fightTo(getTarget(st.getPos()), frame);
+				}
+			}
+
 			retreatCowards();
 
 			Iterator<Fighter> iter = fighters.values().iterator();
@@ -493,7 +515,9 @@ public class MilitaryManager extends Module {
 				Unit u = f.getUnit();
 				if (retreatingUnits.contains(u) && u.getHealth() / u.getMaxHealth() > 0.95) {
 					retreatingUnits.remove(u);
-					addToSquad(f);
+					if (!striders.contains(f)) {
+						addToSquad(f);
+					}
 				}
 			}
 
@@ -602,8 +626,7 @@ public class MilitaryManager extends Module {
 		if (unitTypes.striders.contains(defName)){
 			Strider st = new Strider(unit, unit.getDef().getCost(m));
 			striders.add(st);
-			fighters.put(st.id ,st);
-			addToSquad(st);
+			fighters.put(st.id, st);
 		}else if (unitTypes.raiders.contains(defName)) {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiders.add(r);

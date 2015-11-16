@@ -257,6 +257,7 @@ public class EconomyManager extends Module {
 			h.moveTo(pos, (short) 0, frame+240);
 			w.isChicken = true;
 			w.chickenFrame = frame;
+			warManager.requestReinforcements(w.getPos());
 		}
 		return 0;
 	}
@@ -449,7 +450,7 @@ public class EconomyManager extends Module {
 
 	private Boolean needWorkers(){
 		if (((float) numWorkers < Math.floor(((effectiveIncome)/3)) + fusions.size() && numFighters > numWorkers && effectiveIncome > 9 && effectiveIncome < 30)
-				|| effectiveIncome > 30 && numFighters > numWorkers) {
+				|| effectiveIncome > 30 && numFighters > numWorkers*1.5) {
 			return true;
 		}
 		return false;
@@ -526,7 +527,7 @@ public class EconomyManager extends Module {
 		if (def.isBuilder()){
 			if(def.getName().contains("factory") || def.getName().contains("hub")){
 				factories.add(new Worker(unit));
-				unit.setMoveState(1, (short) 0, frame+10);
+				unit.setMoveState(2, (short) 0, frame+10);
 			}
 			else if (unit.getMaxSpeed() > 0){
 				Worker w = new Worker(unit);

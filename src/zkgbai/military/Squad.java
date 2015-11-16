@@ -63,8 +63,8 @@ public class Squad {
 		AIFloat3 pos = getPos();
 		boolean rallied = true;
 		for (Fighter f: fighters){
-			f.moveTo(target, frame);
-			if (distance(pos, f.getPos()) > 300){
+			f.fightTo(target, frame);
+			if (distance(pos, f.getPos()) > 200){
 				rallied = false;
 			}
 		}

@@ -38,7 +38,7 @@ public class Fighter {
     }
 
     public void moveTo(AIFloat3 pos, int frame){
-        AIFloat3 target = getRadialPoint(pos, 200f);
+        AIFloat3 target = getRadialPoint(pos, 100f);
         unit.moveTo(target, (short) 0, frame+1000);
     }
 
