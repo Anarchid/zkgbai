@@ -13,7 +13,7 @@ public class Enemy {
 	float value = 0;
 	float danger = 0;
 	float speed = 0;
-	int lastSeen = 0;
+	public int lastSeen = 0;
 	boolean visible = false;
 	boolean isStatic = false;
 	boolean isRadarOnly = true;
@@ -51,20 +51,12 @@ public class Enemy {
 		return unitID;
 	}
 	
-	void setLastSeen(int f){
-		this.lastSeen = f;
-	}
-	
 	void setIdentified(){
 		this.identified = true;
 	}
 	
 	boolean getIdentified(){
 		return this.identified;
-	}
-	
-	int getLastSeen(){
-		return lastSeen;
 	}
 
 	public void updateFromUnitDef(UnitDef u, float cost){

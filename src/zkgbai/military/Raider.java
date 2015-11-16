@@ -16,7 +16,7 @@ public class Raider extends Fighter {
         task = t;
     }
 
-    public void clearTask(int frame){
+    public void clearTask(){
         task = null;
     }
 

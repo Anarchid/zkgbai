@@ -457,6 +457,15 @@ public class GraphManager extends Module {
     	return spots;
     }
 
+	public List<MetalSpot> getOwnedSpots(){
+		// returns all metal spots not owned by allies.
+		List<MetalSpot> spots = new ArrayList<MetalSpot>();
+		for(MetalSpot ms:metalSpots){
+			if(ms.owned) spots.add(ms);
+		}
+		return spots;
+	}
+
 	public List<MetalSpot> getUnownedSpots(){
 		// returns all metal spots not owned by allies.
 		List<MetalSpot> spots = new ArrayList<MetalSpot>();

@@ -220,7 +220,7 @@ public class EconomyManager extends Module {
 			if (ct.target != null){
 				if(ct.target.getUnitId() == unit.getUnitId()){
 					finished = ct;
-					ct.stopWorkers(frame);
+					ct.stopWorkers();
 				}
 			}
 		}
@@ -286,7 +286,7 @@ public class EconomyManager extends Module {
 				if (ct.target != null) {
 					if (ct.target.getUnitId() == unit.getUnitId()) {
 						ct.target = null;
-						ct.stopWorkers(frame);
+						ct.stopWorkers();
 					}
 				}
 			}
@@ -322,11 +322,11 @@ public class EconomyManager extends Module {
 	    	if(worker.id == unit.getUnitId()){
 				if (worker.getTask() instanceof ReclaimTask){
 					 ReclaimTask task = (ReclaimTask) worker.getTask();
-					task.stopWorkers(frame);
+					task.stopWorkers();
 					reclaimTasks.remove(task);
 	    		}else if (worker.id == unit.getUnitId() && worker.getTask() instanceof RepairTask){
 					 RepairTask task = (RepairTask) worker.getTask();
-					task.stopWorkers(frame);
+					task.stopWorkers();
 					repairTasks.remove(task);
 				}else if (worker.isChicken){
 					worker.isChicken = false;
@@ -464,7 +464,7 @@ public class EconomyManager extends Module {
 			return "armpw";
 		}
 
-		if (warManager.raiders.size() < 6 || Math.random() > 0.9){
+		if (warManager.raiders.size() < 4 || Math.random() > 0.9){
 			if (Math.random() > 0.75 && effectiveIncome > 20) {
 				return "spherepole";
 			}else{
@@ -480,7 +480,7 @@ public class EconomyManager extends Module {
 		}else if (fusions.size() > 0){
 			return "armsnipe";
 		}else{
-			return "armham";
+			return "armzeus";
 		}
 
     }
@@ -526,7 +526,7 @@ public class EconomyManager extends Module {
 		if (def.isBuilder()){
 			if(def.getName().contains("factory") || def.getName().contains("hub")){
 				factories.add(new Worker(unit));
-				unit.setMoveState(2, (short) 0, frame+10);
+				unit.setMoveState(1, (short) 0, frame+10);
 			}
 			else if (unit.getMaxSpeed() > 0){
 				Worker w = new Worker(unit);
@@ -779,7 +779,7 @@ public class EconomyManager extends Module {
 				}
 				if (!isNano) {
 					// if a construction job is blocked and it isn't our own nanoframe, remove it
-					t.stopWorkers(frame);
+					t.stopWorkers();
 					invalidtasks.add(t);
 				}
 			}
@@ -798,7 +798,7 @@ public class EconomyManager extends Module {
 		for (ReclaimTask r: reclaimTasks){
 			if (r.target.getDef() == null){
 				// if a reclaimable feature falls out of LOS or is destroyed, remove its task
-				r.stopWorkers(frame);
+				r.stopWorkers();
 				invalidtasks.add(r);
 			}
 		}

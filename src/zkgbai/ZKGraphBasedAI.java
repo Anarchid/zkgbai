@@ -65,6 +65,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         warManager.setGraphManager(graphManager);
         
         ecoManager.setMilitaryManager(warManager);
+
+		warManager.setEcoManager(ecoManager);
         
         modules.add(losManager);
         modules.add(graphManager);

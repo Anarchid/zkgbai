@@ -27,9 +27,8 @@ public class WorkerTask {
 		this.assignedWorkers.remove(w);
 	}
 
-	public void stopWorkers(int frame){
+	public void stopWorkers(){
 		for (Worker w: assignedWorkers){
-			//w.getUnit().stop((short) 0, frame+150);
 			w.clearTask();
 		}
 	}

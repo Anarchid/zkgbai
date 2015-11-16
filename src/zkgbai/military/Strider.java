@@ -1,5 +1,6 @@
 package zkgbai.military;
 
+import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 
 /**
@@ -15,5 +16,11 @@ public class Strider extends Fighter{
         }else{
             this.dgunReload = 200;
         }
+    }
+
+    @Override
+    public void fightTo(AIFloat3 pos, int frame){
+        AIFloat3 target = getRadialPoint(pos, 200f);
+        unit.moveTo(target, (short) 0, frame+1000);
     }
 }
