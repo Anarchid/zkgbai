@@ -27,6 +27,7 @@ public class UnitClasses {
         // assaults; stuff that attacks in mobs
         assaults.add("armzeus");
         assaults.add("armwar");
+        assaults.add("armrock");
         assaults.add("armsnipe");
         assaults.add("gunshipsupport");
         assaults.add("armbrawl");

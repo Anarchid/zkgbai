@@ -23,4 +23,8 @@ public class Raider extends Fighter {
     public FighterTask getTask(){
         return task;
     }
+
+    public void raid(AIFloat3 pos, int frame){
+        unit.fight(pos, (short) 0, frame);
+    }
 }

@@ -52,4 +52,13 @@ public class Fighter {
         pos.z = (float) (position.z + radius*vz);
         return pos;
     }
+
+    @Override
+    public boolean equals(Object o){
+        if (o instanceof Fighter){
+            Fighter f = (Fighter) o;
+            return (f.id == id);
+        }
+        return false;
+    }
 }

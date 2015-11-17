@@ -184,14 +184,14 @@ public class EconomyManager extends Module {
 			}
 
 			//assign factories to produce units
-			for ( Worker f:factories){
+			/*for ( Worker f:factories){
 				int orders = f.getUnit().getCurrentCommands().size();
 				// facs don't seem to idle, so checking their orders is
 				// the only way to know if they need reassignment.
 				if (orders == 0) {
 					assignFactoryTask(f);
 				}
-			}
+			}*/
 		}
 		return 0;
 	}
@@ -263,7 +263,11 @@ public class EconomyManager extends Module {
 	}
     
     @Override
-    public int unitDestroyed( Unit unit, Unit attacker) {
+    public int unitDestroyed(Unit unit, Unit attacker) {
+		if (porcs.contains(unit) || mexes.contains(unit) || solars.contains(unit)){
+			warManager.requestReinforcements(unit.getPos());
+		}
+
 		radars.remove(unit);
     	porcs.remove(unit);
 		nanos.remove(unit);
@@ -318,8 +322,8 @@ public class EconomyManager extends Module {
     }
 
     @Override
-    public int unitIdle( Unit unit) {
-	    for ( Worker worker : workers) {
+    public int unitIdle(Unit unit) {
+	    for (Worker worker : workers) {
 	    	if(worker.id == unit.getUnitId()){
 				if (worker.getTask() instanceof ReclaimTask){
 					 ReclaimTask task = (ReclaimTask) worker.getTask();
@@ -333,7 +337,13 @@ public class EconomyManager extends Module {
 					worker.isChicken = false;
 				}
 			}
-	    } 
+	    }
+
+		for (Worker f: factories){
+			if (f.id == unit.getUnitId()){
+				assignFactoryTask(f);
+			}
+		}
         return 0; // signaling: OK
     }
     
@@ -456,25 +466,27 @@ public class EconomyManager extends Module {
 		return false;
 	}
     
-    private String getCloaky(){
-		if(needWorkers()) {
+    private String getCloaky() {
+		if (needWorkers()) {
 			return "armrectr";
 		}
 
-		if (effectiveIncome < 10){
+		if (effectiveIncome < 10) {
 			return "armpw";
 		}
 
-		if (warManager.raiders.size() < 4 || Math.random() > 0.9){
+		if (warManager.raiders.size() < 4 || Math.random() > 0.9) {
 			if (Math.random() > 0.75 && effectiveIncome > 20) {
 				return "spherepole";
-			}else{
+			} else {
 				return "armpw";
 			}
 		}
 
 		double rand = Math.random();
-		if (rand > 0.55){
+		if (rand > 0.5){
+			return "armrock";
+		}else if(rand > 0.25){
 			return "armzeus";
 		}else if (rand > 0.1){
 			return "armwar";
@@ -526,7 +538,9 @@ public class EconomyManager extends Module {
 		UnitDef def = unit.getDef();
 		if (def.isBuilder()){
 			if(def.getName().contains("factory") || def.getName().contains("hub")){
-				factories.add(new Worker(unit));
+				Worker fac = new Worker(unit);
+				factories.add(fac);
+				assignFactoryTask(fac);
 				unit.setMoveState(2, (short) 0, frame+10);
 			}
 			else if (unit.getMaxSpeed() > 0){

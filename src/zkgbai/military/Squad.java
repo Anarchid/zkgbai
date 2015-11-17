@@ -11,7 +11,7 @@ public class Squad {
 	public float metalValue;
 	public char status;
 	public float income;
-	AIFloat3 target;
+	public AIFloat3 target;
 	
 	public Squad(){
 		this.fighters = new ArrayList<Fighter>();
@@ -64,7 +64,7 @@ public class Squad {
 		boolean rallied = true;
 		for (Fighter f: fighters){
 			f.fightTo(target, frame);
-			if (distance(pos, f.getPos()) > 200){
+			if (distance(pos, f.getPos()) > 300){
 				rallied = false;
 			}
 		}
