@@ -370,7 +370,7 @@ public class GraphManager extends Module {
 		int w = graphImage.getWidth();
 		int h = graphImage.getHeight();
 		
-		graphGraphics.setBackground(new Color(255, 255, 255, 0));
+		graphGraphics.setBackground(new Color(0, 0, 0, 0));
 		graphGraphics.clearRect(0,0, w,h);
 		graphGraphics.setStroke(new BasicStroke(2f));
 		
@@ -457,6 +457,14 @@ public class GraphManager extends Module {
     	return spots;
     }
 
+	public List<MetalSpot> getEnemyTerritory(){
+		ArrayList<MetalSpot> spots = new ArrayList<MetalSpot>();
+		for(MetalSpot ms:metalSpots){
+			if(ms.hostile || ms.enemyShadowed) spots.add(ms);
+		}
+		return spots;
+	}
+
 	public List<MetalSpot> getOwnedSpots(){
 		// returns all metal spots not owned by allies.
 		List<MetalSpot> spots = new ArrayList<MetalSpot>();
@@ -512,9 +520,39 @@ public class GraphManager extends Module {
 
 		return bestMS;
 	}
+
+	public AIFloat3 getNearestUnconnectedLink(AIFloat3 position){
+		AIFloat3 closest = null;
+		float distance = Float.MAX_VALUE;
+		for (Link l:links){
+			if (!l.connected && l.length < 1500){
+				float dist = groundDistance(position, l.getPos());
+				if (dist < distance){
+					distance = dist;
+					closest = l.getPos();
+				}
+			}
+		}
+		return closest;
+	}
+
+	public AIFloat3 getNearestPylonSpot(AIFloat3 position){
+		AIFloat3 closest = null;
+		float distance = Float.MAX_VALUE;
+		for (Link l:links){
+			if (!l.connected && l.length > 900 && l.length < 1500){
+				float dist = groundDistance(position, l.getPos());
+				if (dist < distance){
+					distance = dist;
+					closest = l.getPos();
+				}
+			}
+		}
+		return closest;
+	}
     
     public AIFloat3 getOverdriveSweetSpot(AIFloat3 position){
-    	float radius = 175;
+    	float radius = 190;
 		float minWeight = Float.MAX_VALUE;
     	Link link = null;
     	for(Link l:links){

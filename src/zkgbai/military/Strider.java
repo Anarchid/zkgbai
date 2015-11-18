@@ -9,7 +9,6 @@ import com.springrts.ai.oo.clb.Unit;
 public class Strider extends Fighter{
     public int dgunReload;
     public int lastDgunFrame = 0;
-    public AIFloat3 target;
     public Strider(Unit u, Float metal){
         super(u, metal);
         if (u.getDef().getName().equals("dante")) {
@@ -17,7 +16,6 @@ public class Strider extends Fighter{
         }else{
             this.dgunReload = 200;
         }
-        this.target = new AIFloat3();
     }
 
     @Override

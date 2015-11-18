@@ -22,6 +22,7 @@ public class DebugView extends JFrame {
 	ZKGraphBasedAI ai;
 	BufferedImage losImage;
 	BufferedImage threatImage;
+	BufferedImage valueImage;
 	BufferedImage mapTexture;
 	BufferedImage backbuffer;
 	Graphics2D bufferGraphics;
@@ -44,13 +45,20 @@ public class DebugView extends JFrame {
 	
 	@Override
 	public void paint(Graphics g){
-		AlphaComposite losComposite = AlphaComposite.getInstance (AlphaComposite.SRC_OVER,(float) (0.5));
+		AlphaComposite losComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.8f);
+		AlphaComposite valueComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f);
+		AlphaComposite graphComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f);
 		int w = backbuffer.getWidth();
 		int h = backbuffer.getHeight();
+
+		bufferGraphics.setComposite(graphComposite);
+		bufferGraphics.drawImage(threatImage, 0, 0, w,h, null);
+		bufferGraphics.setComposite(valueComposite);
+		bufferGraphics.drawImage(valueImage, 0, 0, w,h, null);
+		bufferGraphics.setComposite(graphComposite);
+		bufferGraphics.drawImage(graphImage, 0, 0, w,h, null);
 		bufferGraphics.setComposite(losComposite);
 		bufferGraphics.drawImage(losImage, 0, 0, w,h, null);
-		bufferGraphics.drawImage(graphImage, 0, 0, w,h, null);
-		bufferGraphics.drawImage(threatImage, 0, 0, w,h, null);
 
 		g.drawImage(backbuffer, 0, 0, getWidth(), getHeight(), null);
 	}
@@ -69,5 +77,8 @@ public class DebugView extends JFrame {
 
 	public void setGraphImage(BufferedImage graphImage) {
 		this.graphImage = graphImage;
+	}
+	public void setValueImage(BufferedImage valueImage){
+		this.valueImage = valueImage;
 	}
 }

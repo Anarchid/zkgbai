@@ -6,7 +6,7 @@ import com.springrts.ai.oo.clb.UnitDef;
 
 public class Enemy {
 	Unit unit;
-	UnitDef ud;
+	public UnitDef ud;
 	int unitID;
 	AIFloat3 position;
 	float threatRadius = 0;
@@ -25,11 +25,13 @@ public class Enemy {
 		this.unit = unit;
 		this.unitID = unit.getUnitId();
 		this.position = unit.getPos();
-		
+		this.ud = null;
+
 		UnitDef def = unit.getDef();
 
 		if(def != null){
 			updateFromUnitDef(def, cost);
+			this.ud = def;
 		}else{
 			this.value = 50;
 			this.danger = 0;

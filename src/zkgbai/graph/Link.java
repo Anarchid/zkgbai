@@ -63,6 +63,10 @@ public class Link {
 			float dz = (pos1.z-pos2.z);
 			length = (float) Math.sqrt(dx*dx+dz*dz);
 		}
+
+		public AIFloat3 getPos(){
+			return centerPos;
+		}
 		
 		public boolean checkConnected()
 		{
