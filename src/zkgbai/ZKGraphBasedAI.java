@@ -52,11 +52,30 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         
         parseStartScript();
         identifyEnemyTeams();
-        
-        LosManager losManager = new LosManager(this);
-        GraphManager graphManager = new GraphManager(this);
-        EconomyManager ecoManager = new EconomyManager(this);
-        MilitaryManager warManager = new MilitaryManager(this);
+		LosManager losManager = null;
+		GraphManager graphManager = null;
+		EconomyManager ecoManager = null;
+		MilitaryManager warManager = null;
+        try {
+			losManager = new LosManager(this);
+		} catch (Exception e){
+			printException(e);
+		}
+		try{
+			graphManager = new GraphManager(this);
+		} catch (Exception e){
+			printException(e);
+		}
+		try {
+        	ecoManager = new EconomyManager(this);
+		} catch (Exception e){
+			printException(e);
+		}
+        try {
+			warManager = new MilitaryManager(this);
+		} catch (Exception e){
+			printException(e);
+		}
         
         graphManager.setLosManager(losManager);
         warManager.setLosManager(losManager);
@@ -72,8 +91,12 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         modules.add(graphManager);
         modules.add(ecoManager);
         modules.add(warManager);
-        
-        debugView = new DebugView(this);
+
+		try{
+        	debugView = new DebugView(this);
+		} catch (Exception e){
+			printException(e);
+		}
         
         for (Module module : modules) {
         	try {

@@ -18,6 +18,7 @@ public class UnitClasses {
         this.assaults = new ArrayList<String>();
         this.arties = new ArrayList<String>();
         this.striders = new ArrayList<String>();
+        this.mobSupports = new ArrayList<String>();
 
         // raiders
         raiders.add("armpw");

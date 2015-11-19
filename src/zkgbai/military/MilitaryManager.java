@@ -124,9 +124,9 @@ public class MilitaryManager extends Module {
 		int w = threatmap.getWidth();
 		int h = threatmap.getHeight();
 		
-		threatGraphics.setBackground(new Color(0, 0, 0, 255));
+		threatGraphics.setBackground(new Color(0, 0, 0));
         threatGraphics.clearRect(0,0, w,h);
-		//threatGraphics.setComposite(new AdditiveComposite());
+		threatGraphics.setComposite(new AdditiveComposite());
 
 		threatGraphics.setColor(new Color(0,255, 0));
 		List<Unit> units = parent.getCallback().getTeamUnits();
@@ -149,11 +149,11 @@ public class MilitaryManager extends Module {
 
 				if (t.speed > 0) {
 					// for enemy mobiles
-					threatGraphics.setColor(new Color(1f, 0f, 0f, effectivePower)); //Direct Threat Color, red
+					threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
 					paintCircle(x, y, r); // draw direct threat circle
 				} else {
 					// for enemy buildings
-					threatGraphics.setColor(new Color(1f, 0f, 0f, Math.min(1f, effectivePower*2))); //Direct Threat Color, red
+					threatGraphics.setColor(new Color(Math.min(1f, effectivePower*2), 0f, 0f)); //Direct Threat Color, red
 					paintCircle(x, y, r); // draw direct threat circle
 				}
 
@@ -168,7 +168,7 @@ public class MilitaryManager extends Module {
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 
-			threatGraphics.setColor(new Color(0f, 0f, 0.2f)); // front line territory color
+			threatGraphics.setColor(new Color(0f, 0f, 0.5f)); // front line territory color
 			paintCircle(x, y, 75); // 800 elmo radius around each frontline mex
 		}
 
