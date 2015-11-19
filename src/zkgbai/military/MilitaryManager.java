@@ -357,8 +357,8 @@ public class MilitaryManager extends Module {
 	}
 
 	private void updateSquads(){
-		// set the rally point for the next forming squad
-		if (nextSquad != null && frame % 450 == 0){
+		// set the rally point for the next forming squad for defense
+		if (nextSquad != null && frame % 1200 == 0){
 			nextSquad.setTarget(getRallyPoint(nextSquad.getPos()), frame);
 		}
 
@@ -421,12 +421,14 @@ public class MilitaryManager extends Module {
 		// first check defense targets
 		if (defend) {
 			for (DefenseTarget d : defenseTargets) {
-				float tmpcost = graphManager.groundDistance(origin, d.position);
-				tmpcost /= 2*(1+getThreat(d.position));
+				if (frame - d.frameIssued < 300) {
+					float tmpcost = graphManager.groundDistance(origin, d.position);
+					tmpcost /= 2 * (1 + getThreat(d.position));
 
-				if (tmpcost < cost) {
-					cost = tmpcost;
-					target = d.position;
+					if (tmpcost < cost) {
+						cost = tmpcost;
+						target = d.position;
+					}
 				}
 			}
 		}
@@ -625,7 +627,7 @@ public class MilitaryManager extends Module {
 
 		List<DefenseTarget> expired = new ArrayList<DefenseTarget>();
 		for (DefenseTarget d:defenseTargets){
-			if (frame - d.frameIssued > 450){
+			if (frame - d.frameIssued > 1800){
 				expired.add(d);
 			}
 		}

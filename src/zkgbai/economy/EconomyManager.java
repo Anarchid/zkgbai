@@ -1239,10 +1239,15 @@ public class EconomyManager extends Module {
 			position = graphManager.getOverdriveSweetSpot(position);
 			position = callback.getMap().findClosestBuildSite(solar,position,600f, 3, 0);
 
+			float solarDist = 300;
+		if (energy > 100 && effectiveIncome > 30){
+			solarDist = 600;
+		}
+
 			// prevent ecomanager from spamming solars that graphmanager doesn't know about yet
 			for (ConstructionTask s: solarTasks){
 				float dist = distance(s.getPos(), position);
-				if (dist < 300){
+				if (dist < solarDist){
 					return;
 				}
 			}
