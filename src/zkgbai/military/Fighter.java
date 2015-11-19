@@ -24,22 +24,13 @@ public class Fighter {
         return unit.getPos();
     }
 
-    public float getMaxHealth(){
-        return unit.getMaxHealth();
-    }
-
-    public float getCurrentHealth(){
-        return unit.getHealth();
-    }
-
     public void fightTo(AIFloat3 pos, int frame){
         AIFloat3 target = getRadialPoint(pos, 200f);
         unit.fight(target, (short) 0, frame+1000);
     }
 
     public void moveTo(AIFloat3 pos, int frame){
-        AIFloat3 target = getRadialPoint(pos, 100f);
-        unit.moveTo(target, (short) 0, frame+1000);
+        unit.moveTo(pos, (short) 0, frame+1000);
     }
 
     protected AIFloat3 getRadialPoint(AIFloat3 position, Float radius){

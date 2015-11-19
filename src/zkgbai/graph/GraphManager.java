@@ -521,6 +521,16 @@ public class GraphManager extends Module {
 		return bestMS;
 	}
 
+	public List<MetalSpot> getFrontLineSpots(){
+		List<MetalSpot> spots = new ArrayList<MetalSpot>();
+		for (MetalSpot ms: metalSpots){
+			if (ms.isFrontLine()){
+				spots.add(ms);
+			}
+		}
+		return spots;
+	}
+
 	public AIFloat3 getNearestUnconnectedLink(AIFloat3 position){
 		AIFloat3 closest = null;
 		float distance = Float.MAX_VALUE;

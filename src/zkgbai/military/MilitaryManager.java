@@ -1,11 +1,8 @@
 package zkgbai.military;
 
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Graphics2D;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -34,6 +31,7 @@ public class MilitaryManager extends Module {
 	List<DefenseTarget> defenseTargets;
 	HashSet<Unit> soldiers;
 	java.util.Map<Integer, Fighter> fighters;
+	java.util.Map<Integer, Fighter> supports;
 	List<Unit> cowardUnits;
 	List<Unit> retreatingUnits;
 	List<Unit> havens;
@@ -50,9 +48,7 @@ public class MilitaryManager extends Module {
 	
 	int maxUnitPower = 0;
 	BufferedImage threatmap;
-	BufferedImage valuemap;
 	Graphics2D threatGraphics;
-	Graphics2D valueGraphics;
 	ArrayList<TargetMarker> targetMarkers;
 	
 	
@@ -94,6 +90,7 @@ public class MilitaryManager extends Module {
 		this.targets = new HashMap<Integer,Enemy>();
 		this.defenseTargets = new ArrayList<DefenseTarget>();
 		this.fighters = new HashMap<Integer, Fighter>();
+		this.supports = new HashMap<Integer, Fighter>();
 		this.soldiers = new HashSet<Unit>();
 		this.raiders = new ArrayList<Raider>();
 		this.striders = new ArrayList<Strider>();
@@ -104,7 +101,7 @@ public class MilitaryManager extends Module {
 		this.havens = new ArrayList<Unit>();
 		this.scoutTasks = new ArrayList<ScoutTask>();
 		this.raidTasks = new ArrayList<RaidTask>();
-		this.nano = parent.getCallback().getUnitDefByName("armnanotc").getUnitDefId();
+		this.nano = callback.getUnitDefByName("armnanotc").getUnitDefId();
 		this.unitTypes = new UnitClasses();
 		this.m = callback.getResourceByName("Metal");
 		
@@ -114,13 +111,11 @@ public class MilitaryManager extends Module {
 		
 		this.threatmap = new BufferedImage(width, height,BufferedImage.TYPE_INT_RGB);
 		this.threatGraphics = threatmap.createGraphics();
-		this.valuemap = new BufferedImage(width, height,BufferedImage.TYPE_INT_RGB);
-		this.valueGraphics = valuemap.createGraphics();
 		
 		try{
 			radarID = new RadarIdentifier(parent.getCallback());
 		}catch(Exception e){
-			parent.printException(e);;
+			parent.printException(e);
 		}
 	}
 	
@@ -131,8 +126,16 @@ public class MilitaryManager extends Module {
 		
 		threatGraphics.setBackground(new Color(0, 0, 0, 255));
         threatGraphics.clearRect(0,0, w,h);
-		valueGraphics.setBackground(new Color(0, 0, 0, 255));
-		valueGraphics.clearRect(0,0, w,h);
+		//threatGraphics.setComposite(new AdditiveComposite());
+
+		threatGraphics.setColor(new Color(0,255, 0));
+		List<Unit> units = parent.getCallback().getTeamUnits();
+		for(Unit u:units){
+			AIFloat3 position = u.getPos();
+			int x = (int) (position.x / 8);
+			int y = (int) (position.z / 8);
+			paintCircle(x,y,2);
+		}
 
 		for(Enemy t:targets.values()){
 			float effectivePower = Math.min(1.0f , t.danger/1000);
@@ -144,14 +147,13 @@ public class MilitaryManager extends Module {
 				int y = (int) (position.z / 8);
 				int r = (int) (t.threatRadius / 8);
 
-				threatGraphics.setColor(new Color(1f, 0f, 0f, effectivePower)); //Direct Threat Color, red
 				if (t.speed > 0) {
 					// for enemy mobiles
+					threatGraphics.setColor(new Color(1f, 0f, 0f, effectivePower)); //Direct Threat Color, red
 					paintCircle(x, y, r); // draw direct threat circle
-					threatGraphics.setColor(new Color(1f, 0f, 0f, effectivePower/4)); //Indirect Threat Color, red
-					paintCircle(x, y, r*4); // draw indirect threat circle
 				} else {
 					// for enemy buildings
+					threatGraphics.setColor(new Color(1f, 0f, 0f, Math.min(1f, effectivePower*2))); //Direct Threat Color, red
 					paintCircle(x, y, r); // draw direct threat circle
 				}
 
@@ -159,24 +161,15 @@ public class MilitaryManager extends Module {
 			}
 		}
 
-		List<MetalSpot> enemyTerritory = graphManager.getEnemyTerritory();
-		for (MetalSpot ms: enemyTerritory){
+		// mark front line territory
+		List<MetalSpot> frontLine = graphManager.getFrontLineSpots();
+		for (MetalSpot ms: frontLine){
 			AIFloat3 pos = ms.getPos();
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 
-			valueGraphics.setColor(new Color(0f, 0f, 1f, 0.2f)); // value color
-			paintValueCircle(x, y, 125);
-			paintValueCircle(x, y, 250);
-		}
-		
-		threatGraphics.setColor(new Color(0,255, 0, 255));
-		List<Unit> units = parent.getCallback().getTeamUnits();
-		for(Unit u:units){
-			AIFloat3 position = u.getPos();
-			int x = (int) (position.x / 8);
-			int y = (int) (position.z / 8);
-			paintCircle(x,y,2);
+			threatGraphics.setColor(new Color(0f, 0f, 0.2f)); // front line territory color
+			paintCircle(x, y, 75); // 800 elmo radius around each frontline mex
 		}
 
 		final float[] dash = {5.0f};
@@ -213,17 +206,9 @@ public class MilitaryManager extends Module {
 	private void paintHollowCircle(int x, int y, int r){
 		threatGraphics.drawOval(x-r, y-r, 2*r, 2*r);
 	}
-
-	private void paintValueCircle(int x, int y, int r){
-		valueGraphics.fillOval(x-r, y-r, 2*r, 2*r);
-	}
 	
 	public BufferedImage getThreatMap(){
 		return this.threatmap;
-	}
-
-	public BufferedImage getValueMap(){
-		return this.valuemap;
 	}
 	
 	public float getThreat(AIFloat3 position){
@@ -234,12 +219,15 @@ public class MilitaryManager extends Module {
 		return (threat/255);
 	}
 
-	public float getValue(AIFloat3 position){
+	public boolean isFrontLine(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
-		Color c = new Color(valuemap.getRGB(x,y));
+		Color c = new Color(threatmap.getRGB(x,y));
 		float value = (float) c.getBlue();
-		return (value/255);
+		if (value/255 > 0){
+			return true;
+		}
+		return false;
 	}
 
 	private void createScoutTasks(){
@@ -388,6 +376,27 @@ public class MilitaryManager extends Module {
 		}
 		squads.removeAll(deadSquads);
 	}
+
+	private void updateSupports(){
+		Iterator<Fighter> iter = supports.values().iterator();
+		while (iter.hasNext()){
+			Fighter s = iter.next();
+			if (s.squad != null){
+				if (!s.squad.isDead()){
+					s.moveTo(s.squad.getPos(), frame);
+				}else{
+					s.squad = null;
+				}
+			}
+
+			if (s.squad == null && nextSquad != null){
+				s.squad = nextSquad;
+				s.moveTo(nextSquad.getPos(), frame);
+			}else if (s.squad == null){
+				s.moveTo(getRallyPoint(s.getPos()), frame);
+			}
+		}
+	}
     
     
 	private AIFloat3 getTarget(AIFloat3 origin, boolean defend){
@@ -398,7 +407,6 @@ public class MilitaryManager extends Module {
     		for (MetalSpot m:ms){
     			float tmpcost = GraphManager.groundDistance(m.getPos(), origin);
 				tmpcost += 1500*getThreat(m.getPos());
-				tmpcost /= 1+getValue(m.getPos());
 				if (m.allyShadowed) {
 					tmpcost /= 2;
 				}
@@ -469,12 +477,33 @@ public class MilitaryManager extends Module {
 
 	private void dgunStriders(){
 		for (Strider s:striders){
-			List<Unit> enemies = callback.getEnemyUnitsIn(s.getPos(), 450f);
-			if (enemies.size() > 0 && frame > s.lastDgunFrame + s.dgunReload){
-				s.getUnit().dGunPosition(enemies.get(0).getPos(), (short) 0, frame + 300);
+			AIFloat3 target = getDgunTarget(s.getPos());
+			if (target != null && frame > s.lastDgunFrame + s.dgunReload){
+				s.getUnit().dGunPosition(target, (short) 0, frame + 300);
 				s.lastDgunFrame = frame;
 			}
 		}
+	}
+
+	private AIFloat3 getDgunTarget(AIFloat3 pos){
+		List<Unit> enemies = callback.getEnemyUnitsIn(pos, 450f);
+		AIFloat3 target = null;
+		float bestScore = 0;
+		for (Unit e:enemies){
+			float cost = e.getDef().getCost(m);
+			if (e.getMaxSpeed() > 0 && !e.getDef().isAbleToFly() && cost > 200){
+				if (cost > bestScore){
+					bestScore = cost;
+					target = e.getPos();
+				}
+			}else if (e.getMaxSpeed() == 0){
+				if (cost > bestScore){
+					bestScore = cost;
+					target = e.getPos();
+				}
+			}
+		}
+		return target;
 	}
 
 	private AIFloat3 getRallyPoint(AIFloat3 pos){
@@ -592,6 +621,7 @@ public class MilitaryManager extends Module {
 
 			assignRaiders();
 			updateSquads();
+			updateSupports();
 
 			retreatCowards();
 
@@ -721,10 +751,9 @@ public class MilitaryManager extends Module {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			fighters.put(f.id, f);
 			addToSquad(f);
-		}else if(unit.getDef().isAbleToAttack() && unit.getMaxSpeed() > 0 && unit.getDef().getBuildOptions().isEmpty()){
-    		soldiers.add(unit);
-    		unit.setFireState(3, (short)0, parent.currentFrame);
-    		unit.setMoveState(3, (short)0, parent.currentFrame);
+		}else if(unitTypes.mobSupports.contains(defName)){
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			supports.put(f.id, f);
     	}
     	
     	if(unit.getMaxHealth() > 3000 && unit.getDef().getBuildOptions().size() == 0){
@@ -744,6 +773,10 @@ public class MilitaryManager extends Module {
 			Fighter f = fighters.get(unit.getUnitId());
 			f.squad.removeUnit(f);
 			fighters.remove(f.id);
+		}
+
+		if (supports.containsKey(unit.getUnitId())){
+			supports.remove(unit.getUnitId());
 		}
 
 		Fighter dead = null;

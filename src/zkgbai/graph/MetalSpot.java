@@ -58,4 +58,23 @@ public class MetalSpot {
 	public float getValue(){
 		return value;
 	}
+
+	public boolean isFrontLine(){
+		if (!owned && !allyShadowed){
+			return false;
+		}
+
+		if (enemyShadowed){
+			return true;
+		}
+		for (Link l:links){
+			if (l.length < 1500) {
+				if ((l.v0.enemyShadowed && !l.v0.owned)
+						|| (l.v1.enemyShadowed && !l.v1.owned)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 }

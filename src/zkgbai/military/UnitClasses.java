@@ -11,6 +11,7 @@ public class UnitClasses {
     public List<String> assaults;
     public List<String> arties;
     public List<String> striders;
+    public List<String> mobSupports;
 
     public UnitClasses(){
         this.raiders = new ArrayList<String>();
@@ -32,6 +33,10 @@ public class UnitClasses {
         assaults.add("gunshipsupport");
         assaults.add("armbrawl");
         assaults.add("blackdawn");
+
+        // mobSupport: things that increase the strength of mobs
+        mobSupports.add("spherecloaker");
+        mobSupports.add("core_spectre");
 
         // striders; stuff that can dgun
         striders.add("dante");
