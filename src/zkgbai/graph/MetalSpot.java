@@ -67,13 +67,17 @@ public class MetalSpot {
 		if (enemyShadowed){
 			return true;
 		}
+		int numEnemy = 0;
 		for (Link l:links){
 			if (l.length < 1500) {
 				if ((l.v0.enemyShadowed && !l.v0.owned)
 						|| (l.v1.enemyShadowed && !l.v1.owned)) {
-					return true;
+					numEnemy++;
 				}
 			}
+		}
+		if (numEnemy > 1){
+			return true;
 		}
 		return false;
 	}

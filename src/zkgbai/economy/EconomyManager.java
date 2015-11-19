@@ -245,17 +245,12 @@ public class EconomyManager extends Module {
 			h.moveTo(pos, (short) 0, frame+240);
 			w.isChicken = true;
 			w.chickenFrame = frame;
-			warManager.requestReinforcements(w.getPos());
 		}
 		return 0;
 	}
     
     @Override
     public int unitDestroyed(Unit unit, Unit attacker) {
-		if (porcs.contains(unit) || mexes.contains(unit) || solars.contains(unit)){
-			warManager.requestReinforcements(unit.getPos());
-		}
-
 		radars.remove(unit);
     	porcs.remove(unit);
 		nanos.remove(unit);
@@ -468,14 +463,16 @@ public class EconomyManager extends Module {
 		}
 
 		if (warManager.raiders.size() < 4 || Math.random() > 0.9) {
-			if (Math.random() > 0.75 && effectiveIncome > 20) {
+			if ((effectiveIncome > 20 && Math.random() > 0.75)
+					|| (effectiveIncome > 30 && Math.random() > 0.5)
+					|| (effectiveIncome > 40)) {
 				return "spherepole";
 			} else {
 				return "armpw";
 			}
 		}
 
-		if (effectiveIncomeEnergy > 100 && numErasers == 0){
+		if (effectiveIncome > 40 && energy > 400 && numErasers == 0){
 			return "spherecloaker";
 		}
 
@@ -484,7 +481,7 @@ public class EconomyManager extends Module {
 			return "armzeus";
 		}else if (rand > 0.1){
 			return "armwar";
-		}else if (effectiveIncomeEnergy > 100){
+		}else if (effectiveIncome > 30 && energy > 400){
 			return "armsnipe";
 		}else{
 			return "armwar";

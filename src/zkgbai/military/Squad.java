@@ -26,7 +26,7 @@ public class Squad {
 		fighters.add(f);
 		f.squad = this;
 		metalValue = metalValue + f.metalValue;
-		boolean _ = isRallied(frame);
+		f.fightTo(target, frame);
 	}
 
 	public void removeUnit(Fighter f){
@@ -61,9 +61,14 @@ public class Squad {
 
 	public boolean isRallied(int frame){
 		AIFloat3 pos = getPos();
+		double rand = Math.random();
 		boolean rallied = true;
 		for (Fighter f: fighters){
-			f.fightTo(target, frame);
+			if (rand > 0.5) {
+				f.moveTo(pos, frame);
+			}else{
+				f.fightTo(pos, frame);
+			}
 			if (distance(pos, f.getPos()) > 300){
 				rallied = false;
 			}

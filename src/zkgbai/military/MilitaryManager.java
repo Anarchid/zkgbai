@@ -17,6 +17,7 @@ import zkgbai.economy.DefenseTarget;
 import zkgbai.economy.EconomyManager;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
+import zkgbai.gui.AdditiveComposite;
 import zkgbai.los.LosManager;
 import zkgbai.military.tasks.FighterTask;
 import zkgbai.military.tasks.RaidTask;
@@ -64,7 +65,6 @@ public class MilitaryManager extends Module {
 	private Resource m;
 
 	int frame = 0;
-	int lastReinforcementFrame = 0;
 
 	static int CMD_DONT_FIRE_AT_RADAR = 38372;
 	
@@ -109,7 +109,7 @@ public class MilitaryManager extends Module {
 		int width = parent.getCallback().getMap().getWidth();
 		int height = parent.getCallback().getMap().getHeight();
 		
-		this.threatmap = new BufferedImage(width, height,BufferedImage.TYPE_INT_RGB);
+		this.threatmap = new BufferedImage(width, height,BufferedImage.TYPE_INT_ARGB);
 		this.threatGraphics = threatmap.createGraphics();
 		
 		try{
@@ -124,7 +124,7 @@ public class MilitaryManager extends Module {
 		int w = threatmap.getWidth();
 		int h = threatmap.getHeight();
 		
-		threatGraphics.setBackground(new Color(0, 0, 0));
+		threatGraphics.setBackground(new Color(0, 0, 0, 0));
         threatGraphics.clearRect(0,0, w,h);
 		threatGraphics.setComposite(new AdditiveComposite());
 
@@ -168,7 +168,7 @@ public class MilitaryManager extends Module {
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 
-			threatGraphics.setColor(new Color(0f, 0f, 0.5f)); // front line territory color
+			threatGraphics.setColor(new Color(0f, 0f, 0.5f)); // front line territory color, blue
 			paintCircle(x, y, 75); // 800 elmo radius around each frontline mex
 		}
 
@@ -357,9 +357,15 @@ public class MilitaryManager extends Module {
 	}
 
 	private void updateSquads(){
+		// set the rally point for the next forming squad
+		if (nextSquad != null && frame % 450 == 0){
+			nextSquad.setTarget(getRallyPoint(nextSquad.getPos()), frame);
+		}
+
 		List<Squad> deadSquads = new ArrayList<Squad>();
 		for (Squad s: squads){
-			if (s.status == 'r'){
+			// set rallying for squads that are finished forming and gathering to attack
+			if (s.status == 'r' && frame % 150 == 0){
 				if (s.isRallied(frame)){
 					s.status = 'a';
 				}
@@ -389,9 +395,18 @@ public class MilitaryManager extends Module {
 				}
 			}
 
-			if (s.squad == null && nextSquad != null){
-				s.squad = nextSquad;
-				s.moveTo(nextSquad.getPos(), frame);
+			if (s.squad == null && (squads.size() > 0 || nextSquad != null)){
+				for (Squad sq:squads){
+					if (sq.status == 'r'){
+						s.squad = sq;
+					}
+				}
+				if (s.squad == null && nextSquad != null){
+					s.squad = nextSquad;
+				}
+				if (s.squad != null) {
+					s.moveTo(s.squad.getPos(), frame);
+				}
 			}else if (s.squad == null){
 				s.moveTo(getRallyPoint(s.getPos()), frame);
 			}
@@ -400,13 +415,28 @@ public class MilitaryManager extends Module {
     
     
 	private AIFloat3 getTarget(AIFloat3 origin, boolean defend){
-    	List<MetalSpot> ms = graphManager.getEnemySpots();
     	AIFloat3 target = null;
     	float cost = Float.MAX_VALUE;
+
+		// first check defense targets
+		if (defend) {
+			for (DefenseTarget d : defenseTargets) {
+				float tmpcost = graphManager.groundDistance(origin, d.position);
+				tmpcost /= 2*(1+getThreat(d.position));
+
+				if (tmpcost < cost) {
+					cost = tmpcost;
+					target = d.position;
+				}
+			}
+		}
+
+		// then look for enemy mexes to kill, and see which is cheaper
+		List<MetalSpot> ms = graphManager.getEnemySpots();
     	if(ms.size() > 0){
     		for (MetalSpot m:ms){
     			float tmpcost = GraphManager.groundDistance(m.getPos(), origin);
-				tmpcost += 1500*getThreat(m.getPos());
+				tmpcost -= 1000*getThreat(m.getPos());
 				if (m.allyShadowed) {
 					tmpcost /= 2;
 				}
@@ -418,17 +448,14 @@ public class MilitaryManager extends Module {
     		}
     	}
 
+		// if there aren't any defense targets or enemy mexes to attack, find a unit to kill
     	if(targets.size() > 0){
     		Iterator<Enemy> enemies = targets.values().iterator();
     		while(enemies.hasNext()){
     			Enemy e = enemies.next();
 				if (e.position != null && e.identified) {
 					float tmpcost = graphManager.groundDistance(origin, e.position);
-					if (!e.isStatic) {
-						tmpcost /= 1+getThreat(e.position);
-					}else{
-						tmpcost /= 1+(e.value/500);
-					}
+					tmpcost /= (e.value/500);
 
 					if (tmpcost < cost) {
 						cost = tmpcost;
@@ -437,18 +464,6 @@ public class MilitaryManager extends Module {
 				}
     		}
     	}
-
-		if (defend) {
-			for (DefenseTarget d : defenseTargets) {
-				float tmpcost = graphManager.groundDistance(origin, d.position);
-				tmpcost /= 2;
-
-				if (tmpcost < cost) {
-					cost = tmpcost;
-					target = d.position;
-				}
-			}
-		}
     	
     	if (target != null){
 			TargetMarker tm = new TargetMarker(target, frame);
@@ -456,7 +471,7 @@ public class MilitaryManager extends Module {
 			return target;
 		}
 
-		// if no targets are available
+		// if no targets are available attack enemyshadowed metal spots until we find one
     	ms = graphManager.getUnownedSpots();
     	for (MetalSpot m:ms){
 			if (m.enemyShadowed){
@@ -507,9 +522,27 @@ public class MilitaryManager extends Module {
 	}
 
 	private AIFloat3 getRallyPoint(AIFloat3 pos){
+		AIFloat3 target = null;
+		float cost = Float.MAX_VALUE;
+
+		// check for defense targets first
+		for (DefenseTarget d : defenseTargets) {
+			float tmpcost = graphManager.groundDistance(pos, d.position);
+			tmpcost /= 1+getThreat(d.position);
+
+			if (tmpcost < cost) {
+				cost = tmpcost;
+				target = d.position;
+			}
+		}
+
+		if (target != null){
+			return target;
+		}
+
+		//if there aren't any, then get the center of the current allied territory
 		List<MetalSpot> mexes = graphManager.getOwnedSpots();
 		AIFloat3 position = new AIFloat3();
-
 		if (mexes.size() > 0) {
 			int count = mexes.size();
 			float x = 0;
@@ -523,19 +556,11 @@ public class MilitaryManager extends Module {
 			UnitDef factory = callback.getUnitDefByName("factorygunship");
 			position = callback.getMap().findClosestBuildSite(factory, position, 600f, 3, 0);
 		}else{
+			// last resort: rally to the closest neutral metal spot
 			position = graphManager.getClosestNeutralSpot(pos).getPos();
 		}
 
 		return position;
-	}
-
-	public void requestReinforcements(AIFloat3 position){
-		if (frame-lastReinforcementFrame > 1800 && nextSquad != null){
-			lastReinforcementFrame = frame;
-			nextSquad.setTarget(position, frame);
-		}
-		DefenseTarget dt = new DefenseTarget(position, frame);
-		defenseTargets.add(dt);
 	}
 
 	private void retreatCowards(){
@@ -600,7 +625,7 @@ public class MilitaryManager extends Module {
 
 		List<DefenseTarget> expired = new ArrayList<DefenseTarget>();
 		for (DefenseTarget d:defenseTargets){
-			if (frame - d.frameIssued > 900){
+			if (frame - d.frameIssued > 450){
 				expired.add(d);
 			}
 		}
@@ -802,6 +827,11 @@ public class MilitaryManager extends Module {
 		}
 		striders.remove(dead);
 
+		if (!unit.getDef().isAbleToAttack() || unit.getMaxSpeed() == 0){
+			DefenseTarget dt = new DefenseTarget(unit.getPos(), frame);
+			defenseTargets.add(dt);
+		}
+
         return 0; // signaling: OK
     }
     
@@ -818,6 +848,7 @@ public class MilitaryManager extends Module {
 				}
 			}
 		}
+
 		return 0;
     }
 }
