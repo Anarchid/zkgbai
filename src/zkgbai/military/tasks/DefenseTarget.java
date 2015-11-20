@@ -1,4 +1,4 @@
-package zkgbai.economy;
+package zkgbai.military.tasks;
 
 import com.springrts.ai.oo.AIFloat3;
 

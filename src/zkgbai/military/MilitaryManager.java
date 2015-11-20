@@ -3,6 +3,7 @@ package zkgbai.military;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -13,12 +14,12 @@ import com.springrts.ai.oo.clb.*;
 
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
-import zkgbai.economy.DefenseTarget;
 import zkgbai.economy.EconomyManager;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
 import zkgbai.gui.AdditiveComposite;
 import zkgbai.los.LosManager;
+import zkgbai.military.tasks.DefenseTarget;
 import zkgbai.military.tasks.FighterTask;
 import zkgbai.military.tasks.RaidTask;
 import zkgbai.military.tasks.ScoutTask;
@@ -27,6 +28,7 @@ public class MilitaryManager extends Module {
 	
 	ZKGraphBasedAI parent;
 	GraphManager graphManager;
+	Pathfinder pathfinder;
 	
 	java.util.Map<Integer,Enemy> targets;
 	List<DefenseTarget> defenseTargets;
@@ -52,7 +54,7 @@ public class MilitaryManager extends Module {
 	Graphics2D threatGraphics;
 	ArrayList<TargetMarker> targetMarkers;
 	
-	
+    public static final short OPTION_SHIFT_KEY = (1 << 5); //  32	
 	static AIFloat3 nullpos = new AIFloat3(0,0,0);
 	
 	int nano;
@@ -104,6 +106,7 @@ public class MilitaryManager extends Module {
 		this.nano = callback.getUnitDefByName("armnanotc").getUnitDefId();
 		this.unitTypes = new UnitClasses();
 		this.m = callback.getResourceByName("Metal");
+		this.pathfinder = new Pathfinder(this);
 		
 		targetMarkers = new ArrayList<TargetMarker>();
 		int width = parent.getCallback().getMap().getWidth();
@@ -234,7 +237,7 @@ public class MilitaryManager extends Module {
 		List<MetalSpot> unscouted = graphManager.getUnownedSpots();
 		for (MetalSpot ms: unscouted){
 			ScoutTask st = new ScoutTask(ms.getPos(), ms);
-			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 240 || ms.getLastSeen() == 0)){
+			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 240 || ms.getLastSeen() == 0 && getThreat(ms.getPos())< 10)){
 				scoutTasks.add(st);
 			}
 		}
@@ -330,6 +333,10 @@ public class MilitaryManager extends Module {
 		if (task.spot.enemyShadowed || task.spot.hostile){
 			cost /= 4;
 		}
+		
+		cost /= task.spot.getValue();
+		cost += getThreat(task.spot.getPos())*1000;
+		
 		return cost;
 	}
 
@@ -582,7 +589,26 @@ public class MilitaryManager extends Module {
 			if(position != null){
 				UnitDef building = callback.getUnitDefByName("factorygunship");
 				position = callback.getMap().findClosestBuildSite(building, position, 600f, 3, 0);
-				u.moveTo(position, (short)0, frame+300);
+				
+				Deque<AIFloat3> path = pathfinder.findPath(u.getPos(),position, u.getDef().getMoveData().getMaxSlope(), pathfinder.AVOID_ENEMIES);
+	        	u.moveTo(path.poll(), (short) 0, frame); // immediately move to first waypoint
+	        	
+		    	int l = path.size();
+		    	
+		    	if (l==1){
+		    		parent.debug("retreat pathing failed");
+		    	}else{
+		    		path.poll(); // skip first waypoint if target actually found to prevent stuttering
+		        	u.moveTo(path.poll(), (short) 0, frame+5); 
+		        	frame += 10;
+		        	
+		        	AIFloat3 p = path.poll();
+					while(p != null){
+			        	u.moveTo(p, MilitaryManager.OPTION_SHIFT_KEY, frame);
+			        	frame += 10;
+			        	p = path.poll();
+		        	}
+		    	}
 			}
 		}
 	}
@@ -698,6 +724,9 @@ public class MilitaryManager extends Module {
     		e.setIdentified();
 			e.lastSeen = frame;
     	}
+    	
+		paintThreatMap();
+    	retreatCowards();
     	
         return 0; // signaling: OK
     }

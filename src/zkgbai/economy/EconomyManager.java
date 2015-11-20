@@ -11,6 +11,7 @@ import zkgbai.economy.tasks.RepairTask;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
 import zkgbai.military.MilitaryManager;
+import zkgbai.military.Raider;
 
 import com.springrts.ai.oo.AIFloat3;
 
@@ -712,7 +713,9 @@ public class EconomyManager extends Module {
 				if (effectiveIncome > 30 && energy > 100) {
 					return dist / (float) Math.log(dist);
 				}
-				return dist/2;
+				
+				// average mex has value 2, but some are worth more
+				return dist/ (graphManager.getClosestSpot(task.getPos()).getValue()*2);
 			}else if (isPorc){
 				return dist-200;
 			}else{
