@@ -60,8 +60,8 @@ public class Squad {
 	}
 
 	public boolean isRallied(int frame){
-		AIFloat3 pos = getPos();
 		double rand = Math.random();
+		AIFloat3 pos = getPos();
 		boolean rallied = true;
 		for (Fighter f: fighters){
 			if (rand > 0.5) {

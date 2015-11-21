@@ -9,6 +9,7 @@ public class MetalSpot {
 	float value = 0;
 	boolean connected = false;
 	public boolean visible = false;
+	public float weight = 0;
 
 	public boolean owned = false;
 	public boolean hostile = false;

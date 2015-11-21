@@ -53,6 +53,7 @@ public class EconomyManager extends Module {
 	int numWorkers = 0;
 	int numFighters = 0;
 	int numErasers = 0;
+	int raiderSpam = 0;
 
 	boolean enemyHasAir = false;
 	
@@ -463,7 +464,8 @@ public class EconomyManager extends Module {
 			return "armpw";
 		}
 
-		if (warManager.raiders.size() < 4 || Math.random() > 0.9) {
+		if ((warManager.raiders.size() < 4 || Math.random() > 0.9) && raiderSpam < 4) {
+			raiderSpam++;
 			if ((effectiveIncome > 20 && Math.random() > 0.75)
 					|| (effectiveIncome > 30 && Math.random() > 0.5)
 					|| (effectiveIncome > 40)) {
@@ -473,6 +475,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
+		raiderSpam--;
 		if (effectiveIncome > 40 && energy > 400 && numErasers == 0){
 			return "spherecloaker";
 		}
@@ -703,19 +706,20 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if (costMod == 1){
-		//for starting new jobs
-			if (isExpensive && task instanceof RepairTask)
-				return dist-500;
-			if (task instanceof ReclaimTask && metal < 300) {
+		if (costMod == 1) {
+			//for starting new jobs
+			if (isExpensive && task instanceof RepairTask){
+				return dist - 500;
+			}else if (isExpensive) {
+				return dist*(25/effectiveIncome);
+			}else if (task instanceof ReclaimTask && metal < 300) {
 				return dist / 2;
 			}else if (isMex){
 				if (effectiveIncome > 30 && energy > 100) {
 					return dist / (float) Math.log(dist);
 				}
-				
-				// average mex has value 2, but some are worth more
-				return dist/ (graphManager.getClosestSpot(task.getPos()).getValue()*2);
+				// average mex has value 2, but some are worth more or less
+				return dist/(graphManager.getClosestSpot(task.getPos()).weight + 1);
 			}else if (isPorc){
 				return dist-200;
 			}else{
@@ -727,7 +731,7 @@ public class EconomyManager extends Module {
 			if (isExpensive && task instanceof ReclaimTask && metal < 300){
 				return dist + (600*(costMod-2));
 			}else if (isExpensive) {
-				return dist/(float)Math.log(dist) + (200 * (costMod-2));
+				return dist/(float)Math.log(dist/(costMod-1));
 			}else if (isPorc){
 				return dist + (600*(costMod-2)) - 200;
 			}else{
@@ -885,7 +889,7 @@ public class EconomyManager extends Module {
     	// is there sufficient energy to cover metal income?
 		if ((mexes.size() * 1.5) - 1.5 > solars.size()+solarTasks.size()
 				|| (effectiveIncome > 15 && energy < 5 && solarTasks.size() < numWorkers)
-				|| (effectiveIncome > 30)) {
+				|| (effectiveIncome > 30 || energy < 100)) {
 			createEnergyTask(worker);
 		}
 

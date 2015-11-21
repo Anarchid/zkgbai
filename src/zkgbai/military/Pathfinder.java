@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 
+import com.springrts.ai.oo.clb.Unit;
 import zkgbai.graph.CostSupplier;
 
 /**
@@ -23,6 +24,14 @@ import zkgbai.graph.CostSupplier;
  * @author User
  */
 public class Pathfinder extends Object {
+
+    OOAICallback callback;
+    float mwidth, mheight;
+    int smwidth;
+    float[] slopeMap;
+    private final static int mapCompression = 8;
+    private final static int originalMapRes = 16;
+    private final static int mapRes = originalMapRes * mapCompression;
 
     public Pathfinder(MilitaryManager ai) {
     	this.ai = ai;
@@ -32,13 +41,6 @@ public class Pathfinder extends Object {
         smwidth = (int) (mwidth / mapRes);
         updateSlopeMap();
     }
-    OOAICallback callback;
-    float mwidth, mheight;
-    int smwidth;
-    float[] slopeMap;
-    private final static int mapCompression = 8;
-    private final static int originalMapRes = 16;
-    private final static int mapRes = originalMapRes * mapCompression;
 
     private void updateSlopeMap() {
         List<Float> map = callback.getMap().getSlopeMap();
@@ -71,16 +73,15 @@ public class Pathfinder extends Object {
         return costs[pos];
     }
 
-    public boolean isReachable(AIFloat3 target, AIFloat3 start, float maxSlope){
-        return findPath(start, target, maxSlope, FAST_PATH).size() > 1;
+    public boolean isReachable(Unit u, AIFloat3 target){
+        return findPath(u, target, FAST_PATH).size() > 1;
     }
     /**
      * Finds the cheapest path between two arbitrary positions using the A*
      * algorithm.
      *
-     * @param start
-     * @param target
-     * @param maxSlope Maximum slope that can be travelled on. 0 < maxslope < 1
+     * @param u the unit to find a path for
+     * @param target the target location
      * @param costs Class implementing CostSupplier
      * @return Path as List of AIFloat3. If list.size() &lt; 2 no valid path was
      * @see #FAST_PATH
@@ -88,8 +89,12 @@ public class Pathfinder extends Object {
      * @see #AVOID_ENEMIES found.
      *
      */
-    public Deque<AIFloat3> findPath(AIFloat3 start, AIFloat3 target, float maxSlope, CostSupplier costs) {
-        if (!(maxSlope > 0 && maxSlope <= 1)) throw new RuntimeException("Invalid maxSlope: " + maxSlope);
+    public Deque<AIFloat3> findPath(Unit u, AIFloat3 target, CostSupplier costs) {
+        AIFloat3 start = u.getPos();
+        float maxSlope = 0;
+        if (!u.getDef().isAbleToFly()) {
+            maxSlope = u.getDef().getMoveData().getMaxSlope();
+        }
         
         long time = System.currentTimeMillis();
         int startPos = (int) (target.z / mapRes) * smwidth + (int) (target.x / mapRes); //reverse to return in right order when traversing backwards
@@ -186,7 +191,6 @@ public class Pathfinder extends Object {
     }
 
     private float getHeuristic(int start, int trg) {
-        //return Math.abs(start % smwidth - trg % smwidth) + Math.abs(start / smwidth - trg / smwidth);//manhattan distance only works without diagonal paths
         return (float) Math.sqrt((start % smwidth - trg % smwidth) * (start % smwidth - trg % smwidth) + (start / smwidth - trg / smwidth) * (start / smwidth - trg / smwidth));
     }
 
@@ -206,7 +210,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return Float.MAX_VALUE;
             }
-            return 10 * (slope / maxSlope + ((slope > maxSlope) ? (1e6f): (0))) + 1;
+            return 10 * ((slope / maxSlope) + 1);
         }
     };
     /**
@@ -219,7 +223,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return Float.MAX_VALUE;
             }
-            return 10 * (slope / maxSlope + ((slope > maxSlope) ? (1e6f): (0))) + 5 * ai.getThreat(pos) + 1;
+            return 10 * (2 * ai.getThreat(pos) + 0.5f * (slope/maxSlope));
         }
     };
     /**
@@ -232,7 +236,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return Float.MAX_VALUE;
             }
-            return 10 * (slope / maxSlope + ((slope > maxSlope) ? (1e6f): (0))) + 1 * ai.getThreat(pos) + 1;
+            return 10 * (slope / maxSlope) + 1 * ai.getThreat(pos) + 1;
         }
     };
     /**
@@ -245,7 +249,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return Float.MAX_VALUE;
             }
-            return 10 * (slope / maxSlope + ((slope > maxSlope) ? (1e6f): (0))) + 25*ai.getThreat(pos) + 1;
+            return 10 * (slope / maxSlope) + 20 * ai.getThreat(pos);
         }
     };
 

@@ -28,7 +28,7 @@ public class MilitaryManager extends Module {
 	
 	ZKGraphBasedAI parent;
 	GraphManager graphManager;
-	Pathfinder pathfinder;
+	public Pathfinder pathfinder;
 	
 	java.util.Map<Integer,Enemy> targets;
 	List<DefenseTarget> defenseTargets;
@@ -131,13 +131,16 @@ public class MilitaryManager extends Module {
         threatGraphics.clearRect(0,0, w,h);
 		threatGraphics.setComposite(new AdditiveComposite());
 
-		threatGraphics.setColor(new Color(0,255, 0));
-		List<Unit> units = parent.getCallback().getTeamUnits();
-		for(Unit u:units){
-			AIFloat3 position = u.getPos();
-			int x = (int) (position.x / 8);
-			int y = (int) (position.z / 8);
-			paintCircle(x,y,2);
+		// paint allythreat for raiders
+		for (Raider r:raiders){
+			float power = Math.min(1.0f , r.getUnit().getPower()/1000);
+			float radius = r.getUnit().getMaxRange();
+			AIFloat3 pos = r.getPos();
+			int x = (int) pos.x/8;
+			int y = (int) pos.z/8;
+			int rad = (int) radius/4;
+			threatGraphics.setColor(new Color(0f, power, 0f));
+			paintCircle(x, y, rad);
 		}
 
 		for(Enemy t:targets.values()){
@@ -156,7 +159,7 @@ public class MilitaryManager extends Module {
 					paintCircle(x, y, r); // draw direct threat circle
 				} else {
 					// for enemy buildings
-					threatGraphics.setColor(new Color(Math.min(1f, effectivePower*2), 0f, 0f)); //Direct Threat Color, red
+					threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
 					paintCircle(x, y, r); // draw direct threat circle
 				}
 
@@ -219,7 +222,16 @@ public class MilitaryManager extends Module {
 		int y = (int) (position.z/8);
 		Color c = new Color(threatmap.getRGB(x,y));
 		float threat = (float) c.getRed();
-		return (threat/255);
+		return threat/255;
+	}
+
+	public float getEffectiveThreat(AIFloat3 position){
+		int x = (int) (position.x/8);
+		int y = (int) (position.z/8);
+		Color c = new Color(threatmap.getRGB(x,y));
+		float threat = (float) c.getRed();
+		float pthreat = (float) c.getGreen();
+		return (threat-(2*pthreat))/255;
 	}
 
 	public boolean isFrontLine(AIFloat3 position){
@@ -237,7 +249,7 @@ public class MilitaryManager extends Module {
 		List<MetalSpot> unscouted = graphManager.getUnownedSpots();
 		for (MetalSpot ms: unscouted){
 			ScoutTask st = new ScoutTask(ms.getPos(), ms);
-			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 240 || ms.getLastSeen() == 0 && getThreat(ms.getPos())< 10)){
+			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 240 || ms.getLastSeen() == 0)){
 				scoutTasks.add(st);
 			}
 		}
@@ -255,12 +267,11 @@ public class MilitaryManager extends Module {
 	}
 
 	private void createRaidTasks(){
-		for (Enemy e:targets.values()){
-			if (e.isStatic && e.threatRadius == 0 && getThreat(e.position) < 0.5){
-				RaidTask rt = new RaidTask(e.position);
-				if (!raidTasks.contains(rt)){
-					raidTasks.add(rt);
-				}
+		List<MetalSpot> enemyspots = graphManager.getEnemySpots();
+		for (MetalSpot ms:enemyspots){
+			RaidTask rt = new RaidTask(ms.getPos());
+			if (!raidTasks.contains(rt)) {
+				raidTasks.add(rt);
 			}
 		}
 	}
@@ -270,7 +281,7 @@ public class MilitaryManager extends Module {
 		for (RaidTask rt: raidTasks){
 			if (losManager.isInLos(rt.target)){
 				List<Unit> enemies = callback.getEnemyUnitsIn(rt.target, 200f);
-				if (enemies.size() == 0 || getThreat(rt.target) > 0.5){
+				if (enemies.size() == 0){
 					rt.endTask();
 					finished.add(rt);
 				}
@@ -311,14 +322,16 @@ public class MilitaryManager extends Module {
 				}
 			}
 
-			if (bestTask != null && (!bestTask.equals(r.getTask()) || r.getUnit().getCurrentCommands().size() == 0)){
+			if (bestTask != null && (!bestTask.equals(r.getTask()) || getEffectiveThreat(r.getPos()) >= 0 || r.getUnit().getCurrentCommands().size() == 0)){
 				if (bestTask instanceof ScoutTask){
-					r.fightTo(bestTask.target, frame);
+					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.RAIDER_PATH);
+					r.raid(path, frame);
 					r.setTask(bestTask);
 					((ScoutTask) bestTask).addRaider(r);
 				}
 				if (bestTask instanceof RaidTask){
-					r.raid(bestTask.target, frame);
+					Deque path = pathfinder.findPath(r.getUnit(), bestTask.target, pathfinder.RAIDER_PATH);
+					r.raid(path, frame);
 					r.setTask(bestTask);
 					((RaidTask) bestTask).addRaider(r);
 				}
@@ -326,23 +339,21 @@ public class MilitaryManager extends Module {
 		}
 	}
 
-	private float getScoutCost( ScoutTask task,  Raider raider){
+	private float getScoutCost(ScoutTask task,  Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
 		// reduce cost relative to every 15 seconds since last seen
-		cost = cost/(1+((frame - task.spot.getLastSeen())/900));
-		if (task.spot.enemyShadowed || task.spot.hostile){
+		cost /= 1+(frame - task.spot.getLastSeen())/900;
+		cost /= task.spot.getValue();
+		if (task.spot.enemyShadowed){
 			cost /= 4;
 		}
-		
-		cost /= task.spot.getValue();
-		cost += getThreat(task.spot.getPos())*1000;
 		
 		return cost;
 	}
 
-	private float getRaidCost( RaidTask task,  Raider raider){
+	private float getRaidCost(RaidTask task,  Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
-		cost /= 8;
+		cost /= Math.log((cost * (1 - getThreat(task.target))));
 		return cost;
 	}
 
@@ -428,15 +439,14 @@ public class MilitaryManager extends Module {
 		// first check defense targets
 		if (defend) {
 			for (DefenseTarget d : defenseTargets) {
-				if (frame - d.frameIssued < 300) {
-					float tmpcost = graphManager.groundDistance(origin, d.position);
-					tmpcost /= 2 * (1 + getThreat(d.position));
+				float tmpcost = graphManager.groundDistance(origin, d.position);
+				tmpcost = tmpcost+600/(getThreat(d.position)+1f);
 
-					if (tmpcost < cost) {
-						cost = tmpcost;
-						target = d.position;
-					}
+				if (tmpcost < cost) {
+					cost = tmpcost;
+					target = d.position;
 				}
+
 			}
 		}
 
@@ -590,23 +600,16 @@ public class MilitaryManager extends Module {
 				UnitDef building = callback.getUnitDefByName("factorygunship");
 				position = callback.getMap().findClosestBuildSite(building, position, 600f, 3, 0);
 				
-				Deque<AIFloat3> path = pathfinder.findPath(u.getPos(),position, u.getDef().getMoveData().getMaxSlope(), pathfinder.AVOID_ENEMIES);
-	        	u.moveTo(path.poll(), (short) 0, frame); // immediately move to first waypoint
-	        	
-		    	int l = path.size();
+				Deque<AIFloat3> path = pathfinder.findPath(u, position, pathfinder.AVOID_ENEMIES);
+				path.poll(); // skip first waypoint if target actually found to prevent stuttering
 		    	
-		    	if (l==1){
+		    	if (path.isEmpty()){
 		    		parent.debug("retreat pathing failed");
 		    	}else{
-		    		path.poll(); // skip first waypoint if target actually found to prevent stuttering
-		        	u.moveTo(path.poll(), (short) 0, frame+5); 
-		        	frame += 10;
-		        	
-		        	AIFloat3 p = path.poll();
-					while(p != null){
-			        	u.moveTo(p, MilitaryManager.OPTION_SHIFT_KEY, frame);
-			        	frame += 10;
-			        	p = path.poll();
+		        	u.moveTo(path.poll(), (short) 0, frame+300); // immediately move to first waypoint
+
+					while(!path.isEmpty()){
+			        	u.moveTo(path.poll(), OPTION_SHIFT_KEY, frame+300); // queue the rest with shift.
 		        	}
 		    	}
 			}
@@ -802,7 +805,7 @@ public class MilitaryManager extends Module {
 		}else if (unitTypes.raiders.contains(defName)) {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiders.add(r);
-			unit.setMoveState(2, (short) 0, frame + 10);
+			unit.setMoveState(1, (short) 0, frame + 10);
 		}else if (unitTypes.assaults.contains(defName)){
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			fighters.put(f.id, f);
@@ -882,4 +885,16 @@ public class MilitaryManager extends Module {
 
 		return 0;
     }
+
+	private AIFloat3 getRadialPoint(AIFloat3 position, Float radius){
+		// returns a random point lying on a circle around the given position.
+		AIFloat3 pos = new AIFloat3();
+		double angle = Math.random()*2*Math.PI;
+		double vx = Math.cos(angle);
+		double vz = Math.sin(angle);
+		pos.x = (float) (position.x + radius*vx);
+		pos.z = (float) (position.z + radius*vz);
+		return pos;
+	}
 }
+

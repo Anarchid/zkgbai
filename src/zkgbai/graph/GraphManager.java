@@ -48,6 +48,8 @@ public class GraphManager extends Module {
 	private LosManager losManager;
 	Resource e;
 	Resource m;
+
+	float avgMexValue = 0;
 	
 	BufferedImage threatMap;
 	
@@ -106,10 +108,15 @@ public class GraphManager extends Module {
 		 	         // 2 -> right
 		 	         // 3 -> top
 					for (MetalSpot ms:metalSpots){
+						avgMexValue += ms.value/metalSpots.size();
+
 						AIFloat3 pos = ms.position;
 						if(pos.z > box[3] && pos.z < box[0] && pos.x>box[1] && pos.x<box[2]){
 							ms.enemyShadowed = true;
 						}
+					}
+					for (MetalSpot ms: metalSpots){
+						ms.weight = ms.value/avgMexValue;
 					}
 				}
 			}

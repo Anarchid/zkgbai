@@ -4,6 +4,8 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 import zkgbai.military.tasks.FighterTask;
 
+import java.util.Deque;
+
 
 public class Raider extends Fighter {
     private FighterTask task;
@@ -24,7 +26,18 @@ public class Raider extends Fighter {
         return task;
     }
 
-    public void raid(AIFloat3 pos, int frame){
-        unit.fight(pos, (short) 0, frame);
+    public void raid(Deque<AIFloat3> path, int frame){
+        unit.stop((short) 0, frame);
+        AIFloat3 target = path.poll(); // skip first waypoint if target actually found to prevent stuttering
+
+        if (path.isEmpty()){
+            fightTo(target, frame);
+        }else{
+            unit.fight(path.poll(), (short) 0, frame + 300); // immediately move to first waypoint
+
+            while(!path.isEmpty()){
+                unit.fight(path.poll(), OPTION_SHIFT_KEY, frame+300); // queue the rest with shift.
+            }
+        }
     }
 }

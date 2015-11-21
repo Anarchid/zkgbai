@@ -11,6 +11,7 @@ public class Fighter {
     public int id;
     public Squad squad;
     protected Unit unit;
+    protected static final short OPTION_SHIFT_KEY = (1 << 5); //  32
 
     public Fighter(Unit u, float metal){
         this.unit = u;
