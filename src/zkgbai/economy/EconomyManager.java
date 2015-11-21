@@ -657,6 +657,7 @@ public class EconomyManager extends Module {
 		boolean isExpensive = false;
 		boolean isMex = false;
 		boolean isPorc = false;
+		boolean isEscalation = false;
 
 		for (Worker w: task.assignedWorkers){
 			float idist = distance(w.getPos(),task.getPos());
@@ -672,6 +673,11 @@ public class EconomyManager extends Module {
 			if (ctask.buildType.getName().contains("factory") && factories.size() == 0){
 				return -1000; // factory plops and emergency facs get maximum priority
 			}
+			
+			if((ctask.buildType.getName().equals("striderhub") || ctask.buildType.getName().contains("factory")) && effectiveIncome > 50){
+				isEscalation = true;
+			}
+			
 			if (ctask.buildType.getCost(m) > 300){
 				isExpensive = true;
 			}else if (ctask.buildType.getName().equals("cormex")){
@@ -722,6 +728,8 @@ public class EconomyManager extends Module {
 				return dist/(graphManager.getClosestSpot(task.getPos()).weight + 1);
 			}else if (isPorc){
 				return dist-200;
+			}else if (isEscalation){
+				return dist*50 / effectiveIncome;
 			}else{
 				return dist;
 			}

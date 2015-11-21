@@ -330,7 +330,7 @@ public class MilitaryManager extends Module {
 					((ScoutTask) bestTask).addRaider(r);
 				}
 				if (bestTask instanceof RaidTask){
-					Deque path = pathfinder.findPath(r.getUnit(), bestTask.target, pathfinder.RAIDER_PATH);
+					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 100f), pathfinder.RAIDER_PATH);
 					r.raid(path, frame);
 					r.setTask(bestTask);
 					((RaidTask) bestTask).addRaider(r);
@@ -353,7 +353,8 @@ public class MilitaryManager extends Module {
 
 	private float getRaidCost(RaidTask task,  Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
-		cost /= Math.log((cost * (1 - getThreat(task.target))));
+		cost -= 2000;
+		cost += 4000*getThreat(task.target);
 		return cost;
 	}
 
