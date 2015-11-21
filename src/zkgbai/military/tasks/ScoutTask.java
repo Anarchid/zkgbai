@@ -30,12 +30,12 @@ public class ScoutTask extends FighterTask {
         assignedRaiders.remove(r);
     }
 
-    public void endTask(){
+    public void endTask(int frame){
         for (Raider r:assignedRaiders){
             r.clearTask();
         }
     }
-
+    
     @Override
     public boolean equals(Object o){
         if (o instanceof ScoutTask){

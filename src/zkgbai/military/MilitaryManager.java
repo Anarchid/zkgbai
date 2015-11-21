@@ -259,7 +259,7 @@ public class MilitaryManager extends Module {
 		List<ScoutTask> finished = new ArrayList<ScoutTask>();
 		for (ScoutTask st: scoutTasks){
 			if (st.spot.visible){
-				st.endTask();
+				st.endTask(parent.currentFrame);
 				finished.add(st);
 			}
 		}
@@ -324,8 +324,8 @@ public class MilitaryManager extends Module {
 
 			if (bestTask != null && (!bestTask.equals(r.getTask()) || getEffectiveThreat(r.getPos()) >= 0 || r.getUnit().getCurrentCommands().size() == 0)){
 				if (bestTask instanceof ScoutTask){
-					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.RAIDER_PATH);
-					r.raid(path, frame);
+					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.AVOID_ENEMIES);
+					r.scout(path, frame);
 					r.setTask(bestTask);
 					((ScoutTask) bestTask).addRaider(r);
 				}
@@ -730,6 +730,10 @@ public class MilitaryManager extends Module {
     	}
     	
 		paintThreatMap();
+		
+		for(ScoutTask st:scoutTasks){
+			st.endTask(parent.currentFrame);
+		}
     	retreatCowards();
     	
         return 0; // signaling: OK
