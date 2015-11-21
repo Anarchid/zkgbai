@@ -281,7 +281,7 @@ public class MilitaryManager extends Module {
 	private void createRaidTasks(){
 		List<MetalSpot> enemyspots = graphManager.getEnemySpots();
 		for (MetalSpot ms:enemyspots){
-			RaidTask rt = new RaidTask(ms.getPos());
+			RaidTask rt = new RaidTask(ms.getPos(), true);
 			if (!raidTasks.contains(rt)) {
 				raidTasks.add(rt);
 			}
@@ -290,7 +290,7 @@ public class MilitaryManager extends Module {
 		for (Enemy e:targets.values()){
 			if (e.identified && e.isStatic && e.danger == 0 && e.position != null){
 				if (getThreat(e.position) == 0) {
-					RaidTask rt = new RaidTask(e.position);
+					RaidTask rt = new RaidTask(e.position, false);
 					if (!raidTasks.contains(rt)) {
 						raidTasks.add(rt);
 					}
@@ -308,6 +308,10 @@ public class MilitaryManager extends Module {
 					rt.endTask();
 					finished.add(rt);
 				}
+			}
+			if (!rt.isMex && getThreat(rt.target) > 0){
+				rt.endTask();
+				finished.add(rt);
 			}
 		}
 		raidTasks.removeAll(finished);

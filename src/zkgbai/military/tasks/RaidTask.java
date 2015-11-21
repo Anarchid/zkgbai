@@ -14,10 +14,12 @@ import java.util.List;
  */
 public class RaidTask extends FighterTask {
     public List<Raider> assignedRaiders;
+    public boolean isMex;
 
-    public RaidTask(AIFloat3 t){
+    public RaidTask(AIFloat3 t, boolean mex){
         super(t);
         this.assignedRaiders = new ArrayList<Raider>();
+        this.isMex = mex;
     }
 
     public void addRaider(Raider r){
