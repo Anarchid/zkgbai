@@ -408,8 +408,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     			StartBox startbox = new StartBox(
     				box[0] * mapWidth,
     				box[1] * mapHeight,
-    				(box[0] + box[2] * mapWidth), 
-    				(box[1] + box[3] * mapWidth)
+    				(box[0] + box[2]) * mapWidth, 
+    				(box[1] + box[3]) * mapWidth
     			);
 	        	
 	        	startBoxes.put(allyTeamID, startbox);
