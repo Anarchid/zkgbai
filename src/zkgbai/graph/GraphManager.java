@@ -481,6 +481,30 @@ public class GraphManager extends Module {
 		return spots;
 	}
 
+	public AIFloat3 getAllyCenter(){
+		List<MetalSpot> spots = new ArrayList<MetalSpot>();
+		for(MetalSpot ms:metalSpots){
+			if(ms.owned || ms.allyShadowed) spots.add(ms);
+		}
+
+		if (spots.size() > 0){
+			AIFloat3 position = new AIFloat3();
+			int count = spots.size();
+			float x = 0;
+			float z = 0;
+			for (MetalSpot ms : spots) {
+				x += (ms.getPos().x) / count;
+				z += (ms.getPos().z) / count;
+			}
+			position.x = x;
+			position.z = z;
+			UnitDef factory = callback.getUnitDefByName("factorygunship");
+			position = callback.getMap().findClosestBuildSite(factory, position, 600f, 3, 0);
+			return position;
+		}
+		return null;
+	}
+
 	public List<MetalSpot> getUnownedSpots(){
 		// returns all metal spots not owned by allies.
 		List<MetalSpot> spots = new ArrayList<MetalSpot>();

@@ -151,7 +151,7 @@ public class MilitaryManager extends Module {
 			if (position != null) {
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
-				int r = (int) (t.threatRadius / 8);
+				int r = (int) ((t.threatRadius*1.25f) / 8);
 
 				if (t.speed > 0) {
 					// for enemy mobiles
@@ -159,7 +159,7 @@ public class MilitaryManager extends Module {
 					paintCircle(x, y, r); // draw direct threat circle
 				} else {
 					// for enemy buildings
-					threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
+					threatGraphics.setColor(new Color(effectivePower/2, 0f, 0f)); //Direct Threat Color, red
 					paintCircle(x, y, r); // draw direct threat circle
 				}
 
@@ -234,6 +234,14 @@ public class MilitaryManager extends Module {
 		return (threat-(2*pthreat))/255;
 	}
 
+	public float getFriendlyThreat(AIFloat3 position){
+		int x = (int) (position.x/8);
+		int y = (int) (position.z/8);
+		Color c = new Color(threatmap.getRGB(x,y));
+		float pthreat = (float) c.getGreen();
+		return pthreat/255;
+	}
+
 	public boolean isFrontLine(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
@@ -246,7 +254,11 @@ public class MilitaryManager extends Module {
 	}
 
 	private void createScoutTasks(){
-		List<MetalSpot> unscouted = graphManager.getUnownedSpots();
+		List<MetalSpot> unscouted = graphManager.getEnemyTerritory();
+		if (unscouted.size() == 0){
+			unscouted = graphManager.getUnownedSpots(); // if enemy territory is not known, get all spots not in our own territory.
+		}
+
 		for (MetalSpot ms: unscouted){
 			ScoutTask st = new ScoutTask(ms.getPos(), ms);
 			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 240 || ms.getLastSeen() == 0)){
@@ -274,13 +286,24 @@ public class MilitaryManager extends Module {
 				raidTasks.add(rt);
 			}
 		}
+
+		for (Enemy e:targets.values()){
+			if (e.identified && e.isStatic && e.danger == 0 && e.position != null){
+				if (getThreat(e.position) == 0) {
+					RaidTask rt = new RaidTask(e.position);
+					if (!raidTasks.contains(rt)) {
+						raidTasks.add(rt);
+					}
+				}
+			}
+		}
 	}
 
 	private void checkRaidTasks(){
 		List<RaidTask> finished = new ArrayList<RaidTask>();
 		for (RaidTask rt: raidTasks){
 			if (losManager.isInLos(rt.target)){
-				List<Unit> enemies = callback.getEnemyUnitsIn(rt.target, 200f);
+				List<Unit> enemies = callback.getEnemyUnitsIn(rt.target, 100f);
 				if (enemies.size() == 0){
 					rt.endTask();
 					finished.add(rt);
@@ -322,16 +345,25 @@ public class MilitaryManager extends Module {
 				}
 			}
 
-			if (bestTask != null && (!bestTask.equals(r.getTask()) || getEffectiveThreat(r.getPos()) >= 0 || r.getUnit().getCurrentCommands().size() == 0)){
+			boolean overThreat = (getEffectiveThreat(r.getPos()) >= 0.5);
+			if (bestTask != null && (!bestTask.equals(r.getTask()) || overThreat || r.getUnit().getCurrentCommands().size() == 0)){
 				if (bestTask instanceof ScoutTask){
 					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.AVOID_ENEMIES);
-					r.scout(path, frame);
+					if (overThreat){
+						r.sneak(path, frame);
+					}else {
+						r.raid(path, frame);
+					}
 					r.setTask(bestTask);
 					((ScoutTask) bestTask).addRaider(r);
 				}
 				if (bestTask instanceof RaidTask){
 					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 100f), pathfinder.RAIDER_PATH);
-					r.raid(path, frame);
+					if (overThreat){
+						r.sneak(path, frame);
+					}else {
+						r.raid(path, frame);
+					}
 					r.setTask(bestTask);
 					((RaidTask) bestTask).addRaider(r);
 				}
@@ -344,17 +376,13 @@ public class MilitaryManager extends Module {
 		// reduce cost relative to every 15 seconds since last seen
 		cost /= 1+(frame - task.spot.getLastSeen())/900;
 		cost /= task.spot.getValue();
-		if (task.spot.enemyShadowed){
-			cost /= 4;
-		}
-		
 		return cost;
 	}
 
 	private float getRaidCost(RaidTask task,  Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
 		cost -= 2000;
-		cost += 4000*getThreat(task.target);
+		cost += 4000*(getThreat(task.target)-getFriendlyThreat(raider.getPos()));
 		return cost;
 	}
 
@@ -562,19 +590,9 @@ public class MilitaryManager extends Module {
 
 		//if there aren't any, then get the center of the current allied territory
 		List<MetalSpot> mexes = graphManager.getOwnedSpots();
-		AIFloat3 position = new AIFloat3();
-		if (mexes.size() > 0) {
-			int count = mexes.size();
-			float x = 0;
-			float z = 0;
-			for (MetalSpot ms : mexes) {
-				x += (ms.getPos().x) / count;
-				z += (ms.getPos().z) / count;
-			}
-			position.x = x;
-			position.z = z;
-			UnitDef factory = callback.getUnitDefByName("factorygunship");
-			position = callback.getMap().findClosestBuildSite(factory, position, 600f, 3, 0);
+		AIFloat3 position = graphManager.getAllyCenter();
+		if (position != null) {
+			return position;
 		}else{
 			// last resort: rally to the closest neutral metal spot
 			position = graphManager.getClosestNeutralSpot(pos).getPos();
@@ -584,35 +602,27 @@ public class MilitaryManager extends Module {
 	}
 
 	private void retreatCowards(){
+		AIFloat3 position = graphManager.getAllyCenter();
 		for (Unit u: retreatingUnits){
-			float distance = Float.MAX_VALUE;
-			AIFloat3 position = null;
-			for(Unit thing:havens){
-				if(thing.getDef().getUnitDefId() == nano){
-					AIFloat3 pos = thing.getPos();
-					float dist = GraphManager.groundDistance(pos, u.getPos());
-					if(dist < distance){
-						distance = dist;
-						position = pos;
-					}
-				}
-			}
 			if(position != null){
 				UnitDef building = callback.getUnitDefByName("factorygunship");
 				position = callback.getMap().findClosestBuildSite(building, position, 600f, 3, 0);
 				
 				Deque<AIFloat3> path = pathfinder.findPath(u, position, pathfinder.AVOID_ENEMIES);
-				path.poll(); // skip first waypoint if target actually found to prevent stuttering
-		    	
-		    	if (path.isEmpty()){
-		    		parent.debug("retreat pathing failed");
-		    	}else{
-		        	u.moveTo(path.poll(), (short) 0, frame+300); // immediately move to first waypoint
+				u.moveTo(path.poll(), (short) 0, frame + 300); // skip first waypoint if target actually found to prevent stuttering, otherwise use it.
 
-					while(!path.isEmpty()){
-			        	u.moveTo(path.poll(), OPTION_SHIFT_KEY, frame+300); // queue the rest with shift.
-		        	}
-		    	}
+				if (path.isEmpty()){
+					// pathing failed
+				}else{
+					u.moveTo(path.poll(), (short) 0, frame + 300); // immediately move to first non-redundant waypoint
+
+					int pathSize = Math.min(5, path.size());
+					for(int i=0;i<pathSize;i++){ // queue up to the next 5 waypoints with shift
+						u.moveTo(path.poll(), OPTION_SHIFT_KEY, frame+300);
+						if(path.isEmpty()) break;
+					}
+					// let the rest of the waypoints get handled the next time around.
+				}
 			}
 		}
 	}
