@@ -14,6 +14,7 @@ import java.util.Queue;
 import java.util.Set;
 
 import com.springrts.ai.AICallback;
+
 import org.poly2tri.Poly2Tri;
 import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
@@ -30,6 +31,7 @@ import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 
 import zkgbai.Module;
+import zkgbai.StartBox;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.gui.DebugView;
 import zkgbai.los.LosManager;
@@ -100,18 +102,13 @@ public class GraphManager extends Module {
     		
 			Set<Integer> enemies = parent.getEnemyAllyTeamIDs();
 			for(int enemy:enemies){
-				float[] box = parent.getEnemyBox(enemy);
+				StartBox box = parent.getEnemyBox(enemy);
 				if(box!=null){
-					
-		 	         // 0 -> bottom
-		 	         // 1 -> left
-		 	         // 2 -> right
-		 	         // 3 -> top
 					for (MetalSpot ms:metalSpots){
 						avgMexValue += ms.value/metalSpots.size();
 
 						AIFloat3 pos = ms.position;
-						if(pos.z > box[3] && pos.z < box[0] && pos.x>box[1] && pos.x<box[2]){
+						if(box.contains(pos)){
 							ms.enemyShadowed = true;
 						}
 					}
