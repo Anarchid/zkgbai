@@ -35,7 +35,7 @@ import zkgbai.military.MilitaryManager;
 public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     private OOAICallback callback;
     private List<Module> modules = new LinkedList<Module>();
-    public HashMap<Integer, float[]> startBoxes;
+    public HashMap<Integer, StartBox> startBoxes;
 	HashSet<Integer> enemyTeams = new HashSet<Integer>();
 	HashSet<Integer> enemyAllyTeams = new HashSet<Integer>(); 
     public int teamID;
@@ -48,7 +48,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         this.callback = callback;
         this.teamID = teamId;
         this.allyTeamID = callback.getGame().getMyAllyTeam();
-        startBoxes = new HashMap<Integer, float[]>();
+        startBoxes = new HashMap<Integer, StartBox>();
         
         parseStartScript();
         identifyEnemyTeams();
@@ -383,36 +383,70 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
     
     private void parseStartScript(){
-    	String script = callback.getGame().getSetupScript();
-    	Pattern p = Pattern.compile("\\[allyteam(\\d)\\]\\s*\\{([^\\}]*)\\}");
-    	Matcher m = p.matcher(script);
-    	 while (m.find()) {
-    		 int allyTeamId = Integer.parseInt(m.group(1));
-    		 String teamDefBody = m.group(2);
-    		 Pattern sbp = Pattern.compile("startrect\\w+=(\\d+(\\.\\d+)?);");
-    		 Matcher mb = sbp.matcher(teamDefBody);
-    		     		 
-    		 float[] startbox = new float[4];
-    		 int i = 0;
- 	        
- 	         // 0 -> bottom
- 	         // 1 -> left
- 	         // 2 -> right
- 	         // 3 -> top
-        	 while (mb.find()) {
-        		 startbox[i] = Float.parseFloat(mb.group(1));
-        		 i++;
-        	 }
-        	 
-        	 int mapWidth  = 8* callback.getMap().getWidth();
-        	 int mapHeight = 8* callback.getMap().getHeight();
-        	 
-        	 startbox[0] *= mapHeight;
-        	 startbox[1] *= mapWidth;
-        	 startbox[2] *= mapWidth;
-        	 startbox[3] *= mapHeight;
-        	 
-        	 startBoxes.put(allyTeamId, startbox);
+		int mapWidth  = 8* callback.getMap().getWidth();
+		int mapHeight = 8* callback.getMap().getHeight();
+
+		String script = callback.getGame().getSetupScript();
+    	
+    	Pattern z = Pattern.compile("startboxes=return \\{(.*)\\};");
+    	Matcher zkBoxes = z.matcher(script);
+    	
+    	Pattern zkBox = Pattern.compile(" \\[(\\d+)\\] = \\{ (\\d+\\.\\d+), (\\d+\\.\\d+), (\\d+\\.\\d+), (\\d+\\.\\d+) \\},");
+    	if(zkBoxes.find()){
+    		Matcher b = zkBox.matcher(zkBoxes.group(1));
+    		
+    		while(b.find()){
+    			int allyTeamID = Integer.parseInt(b.group(1));
+    			
+	    		float[] box = new float[4];
+
+    			for(int i =0;i<4;i++){
+    				// left top width height
+    				box[i] = Float.parseFloat(b.group(i+2));
+    			}
+    			
+    			StartBox startbox = new StartBox(
+    				box[0] * mapWidth,
+    				box[1] * mapHeight,
+    				(box[0] + box[2] * mapWidth), 
+    				(box[1] + box[3] * mapWidth)
+    			);
+	        	
+	        	startBoxes.put(allyTeamID, startbox);
+    		}    		
+    	}else{
+	    	Pattern p = Pattern.compile("\\[allyteam(\\d)\\]\\s*\\{([^\\}]*)\\}");
+	    	Matcher m = p.matcher(script);
+	    	 while (m.find()) {
+	    		 int allyTeamId = Integer.parseInt(m.group(1));
+	    		 String teamDefBody = m.group(2);
+	    		 Pattern sbp = Pattern.compile("startrect\\w+=(\\d+(\\.\\d+)?);");
+	    		 Matcher mb = sbp.matcher(teamDefBody);
+	    		     		 
+	    		 float[] startbox = new float[4];
+	    		 int i = 0;
+	 	        
+	 	         // 0 -> bottom
+	 	         // 1 -> left
+	 	         // 2 -> right
+	 	         // 3 -> top
+	        	 while (mb.find()) {
+	        		 startbox[i] = Float.parseFloat(mb.group(1));
+	        		 i++;
+	        	 }
+	        	 
+	        	 startbox[0] *= mapHeight;
+	        	 startbox[1] *= mapWidth;
+	        	 startbox[2] *= mapWidth;
+	        	 startbox[3] *= mapHeight;
+	        	 
+	        	 startBoxes.put(allyTeamId, new StartBox(
+	        		startbox[1],
+	        		startbox[3],
+	        		startbox[2],
+	        		startbox[0]
+	        	 ));
+	    	}    		 
     	}
     }
     
@@ -425,7 +459,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 				
 				if(allyTeam != this.allyTeamID){
 					enemyTeams.add(i);
-					enemyAllyTeams.add(i);
+					if(!enemyAllyTeams.contains(allyTeam)){
+						enemyAllyTeams.add(allyTeam);
+					}
 				}
 			}
 		}
@@ -456,10 +492,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	return this.enemyTeams;
     }
     
-    public float[] getEnemyBox(int allyTeamID){
+    public StartBox getEnemyBox(int allyTeamID){
     	return this.startBoxes.get(allyTeamID);
     }
-    
     
     public void printException(Exception ex) {
         StringWriter sw = new StringWriter();
