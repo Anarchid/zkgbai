@@ -356,7 +356,7 @@ public class MilitaryManager extends Module {
 					if (overThreat){
 						r.sneak(path, frame);
 					}else {
-						r.raid(path, frame);
+						r.fightTo(bestTask.target, frame);
 					}
 					r.setTask(bestTask);
 					((ScoutTask) bestTask).addRaider(r);
@@ -366,7 +366,7 @@ public class MilitaryManager extends Module {
 					if (overThreat){
 						r.sneak(path, frame);
 					}else {
-						r.raid(path, frame);
+						r.fightTo(bestTask.target, frame);
 					}
 					r.setTask(bestTask);
 					((RaidTask) bestTask).addRaider(r);
