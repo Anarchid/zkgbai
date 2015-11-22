@@ -391,10 +391,10 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	Pattern z = Pattern.compile("startboxes=return \\{(.*)\\};");
     	Matcher zkBoxes = z.matcher(script);
     	
-    	Pattern zkBox = Pattern.compile(" \\[(\\d+)\\] = \\{ (\\d+\\.\\d+), (\\d+\\.\\d+), (\\d+\\.\\d+), (\\d+\\.\\d+) \\},");
     	if(zkBoxes.find()){
+        	Pattern zkBox = Pattern.compile(" \\[(\\d+)\\] = \\{ (\\d+\\.\\d+), (\\d+\\.\\d+), (\\d+\\.\\d+), (\\d+\\.\\d+) \\},");	
     		Matcher b = zkBox.matcher(zkBoxes.group(1));
-    		
+    		debug("ZK boxes detected");
     		while(b.find()){
     			int allyTeamID = Integer.parseInt(b.group(1));
     			
@@ -417,6 +417,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	}else{
 	    	Pattern p = Pattern.compile("\\[allyteam(\\d)\\]\\s*\\{([^\\}]*)\\}");
 	    	Matcher m = p.matcher(script);
+	    
 	    	 while (m.find()) {
 	    		 int allyTeamId = Integer.parseInt(m.group(1));
 	    		 String teamDefBody = m.group(2);
