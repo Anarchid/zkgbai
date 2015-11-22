@@ -406,11 +406,11 @@ public class MilitaryManager extends Module {
 		List<Squad> deadSquads = new ArrayList<Squad>();
 		for (Squad s: squads){
 			// set rallying for squads that are finished forming and gathering to attack
-			if (s.status == 'r' && frame % 150 == 0){
+			if (s.status == 'r' && frame % 60 == 0){
 				if (s.isRallied(frame)){
 					s.status = 'a';
 				}
-			}else{
+			}else if (s.status == 'a'){
 				AIFloat3 target = getTarget(s.getPos(), true);
 				// reduce redundant order spam.
 				if (!target.equals(s.target)) {
