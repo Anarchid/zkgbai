@@ -154,7 +154,7 @@ public class MilitaryManager extends Module {
 				int r = (int) ((t.threatRadius) / 8);
 				if (t.isRiot){
 					effectivePower = 1f;
-					r = 2*r;
+					r = (int) (1.5f*r);
 				}
 
 				if (t.speed > 0) {
@@ -263,7 +263,7 @@ public class MilitaryManager extends Module {
 
 	private void createScoutTasks(){
 		List<MetalSpot> unscouted = graphManager.getEnemyTerritory();
-		if (unscouted.isEmpty() && scoutTasks.isEmpty()){
+		if (unscouted.size() == 0 && scoutTasks.size() == 0){
 			unscouted = graphManager.getUnownedSpots(); // if enemy territory is not known, get all spots not in our own territory.
 		}
 
@@ -331,15 +331,14 @@ public class MilitaryManager extends Module {
 
 			boolean overThreat = (getEffectiveThreat(r.getPos()) > 0.1);
 			if (bestTask != null && (!bestTask.equals(r.getTask()) || (overThreat && !r.avoiding) || r.getUnit().getCurrentCommands().size() == 0)){
-				if (bestTask.spot.enemyShadowed){
+				if (!bestTask.spot.hostile){
 					if (overThreat){
 						Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.RAIDER_PATH);
 						r.sneak(path, frame);
 					}else {
 						r.fightTo(bestTask.target, frame);
 					}
-				}
-				if (bestTask.spot.hostile){
+				}else{ // for raiding
 					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 50f), pathfinder.RAIDER_PATH);
 					if (overThreat){
 						r.sneak(path, frame);
@@ -359,9 +358,9 @@ public class MilitaryManager extends Module {
 		if (task.spot.hostile){
 			cost -= 2000;
 		}else {
-			cost -= 500 * (frame - task.spot.getLastSeen()) / 900;
+			cost -= 750 * (frame - task.spot.getLastSeen()) / 900;
 		}
-		cost *= 1+getThreat(task.target);
+		cost += 4000*(getThreat(task.target)- getFriendlyThreat(task.target));
 		return cost;
 	}
 

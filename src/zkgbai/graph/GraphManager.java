@@ -110,9 +110,11 @@ public class GraphManager extends Module {
 						if(box.contains(pos)){
 							ms.enemyShadowed = true;
 						}
-						avgMexValue += ms.value / metalSpots.size();
 					}
 				}
+			}
+			for (MetalSpot ms: metalSpots){
+				avgMexValue += ms.value / metalSpots.size();
 			}
 			for (MetalSpot ms: metalSpots){
 				ms.weight = ms.value/avgMexValue;
