@@ -31,7 +31,6 @@ import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 
 import zkgbai.Module;
-//import zkgbai.StartBox;
 import zkgbai.StartBox;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.gui.DebugView;

@@ -263,7 +263,7 @@ public class MilitaryManager extends Module {
 
 	private void createScoutTasks(){
 		List<MetalSpot> unscouted = graphManager.getEnemyTerritory();
-		if (unscouted.size() == 0 && scoutTasks.size() == 0){
+		if (unscouted.isEmpty() && scoutTasks.isEmpty()){
 			unscouted = graphManager.getUnownedSpots(); // if enemy territory is not known, get all spots not in our own territory.
 		}
 
@@ -277,10 +277,19 @@ public class MilitaryManager extends Module {
 
 	private void checkScoutTasks(){
 		List<ScoutTask> finished = new ArrayList<ScoutTask>();
-		for (ScoutTask st: scoutTasks){
-			if (!st.spot.hostile && !st.spot.enemyShadowed){
-				st.endTask(parent.currentFrame);
-				finished.add(st);
+		if (graphManager.getEnemyTerritory().isEmpty()){
+			for (ScoutTask st: scoutTasks){
+				if (st.spot.visible){
+					st.endTask(parent.currentFrame);
+					finished.add(st);
+				}
+			}
+		}else {
+			for (ScoutTask st : scoutTasks) {
+				if (!st.spot.hostile && !st.spot.enemyShadowed) {
+					st.endTask(parent.currentFrame);
+					finished.add(st);
+				}
 			}
 		}
 		scoutTasks.removeAll(finished);
@@ -358,7 +367,7 @@ public class MilitaryManager extends Module {
 		if (task.spot.hostile){
 			cost -= 2000;
 		}else {
-			cost -= 750 * (frame - task.spot.getLastSeen()) / 900;
+			cost -= 750 * ((frame - task.spot.getLastSeen()) / 900);
 		}
 		cost += 4000*(getThreat(task.target)- getFriendlyThreat(task.target));
 		return cost;
