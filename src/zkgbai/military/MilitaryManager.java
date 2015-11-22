@@ -356,7 +356,7 @@ public class MilitaryManager extends Module {
 					if (overThreat){
 						r.sneak(path, frame);
 					}else {
-						r.fightTo(bestTask.target, frame);
+						r.raid(path, frame);
 					}
 					r.setTask(bestTask);
 					((ScoutTask) bestTask).addRaider(r);
@@ -366,7 +366,7 @@ public class MilitaryManager extends Module {
 					if (overThreat){
 						r.sneak(path, frame);
 					}else {
-						r.fightTo(bestTask.target, frame);
+						r.raid(path, frame);
 					}
 					r.setTask(bestTask);
 					((RaidTask) bestTask).addRaider(r);
@@ -824,7 +824,11 @@ public class MilitaryManager extends Module {
 		}else if (unitTypes.raiders.contains(defName)) {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiders.add(r);
-			unit.setMoveState(1, (short) 0, frame + 10);
+			if (ecoManager.effectiveIncome < 20) {
+				unit.setMoveState(2, (short) 0, frame + 10); // set to roam early game to block enemy raiders
+			}else{
+				unit.setMoveState(1, (short) 0, frame + 10);
+			}
 		}else if (unitTypes.assaults.contains(defName)){
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			fighters.put(f.id, f);

@@ -31,7 +31,7 @@ import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 
 import zkgbai.Module;
-import zkgbai.StartBox;
+//import zkgbai.StartBox;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.gui.DebugView;
 import zkgbai.los.LosManager;
@@ -101,21 +101,22 @@ public class GraphManager extends Module {
     		parent.debug("Parsed JSON metalmap with "+metalSpots.size()+" spots and "+links.size()+" links");
     		
 			Set<Integer> enemies = parent.getEnemyAllyTeamIDs();
-			for(int enemy:enemies){
+			/*for(int enemy:enemies){
 				StartBox box = parent.getEnemyBox(enemy);
 				if(box!=null){
 					for (MetalSpot ms:metalSpots){
-						avgMexValue += ms.value/metalSpots.size();
-
 						AIFloat3 pos = ms.position;
 						if(box.contains(pos)){
 							ms.enemyShadowed = true;
 						}
 					}
-					for (MetalSpot ms: metalSpots){
-						ms.weight = ms.value/avgMexValue;
-					}
 				}
+			}*/
+			for (MetalSpot ms:metalSpots) {
+				avgMexValue += ms.value / metalSpots.size();
+			}
+			for (MetalSpot ms: metalSpots){
+				ms.weight = ms.value/avgMexValue;
 			}
     	}
     	return 0; //signaling: OK
