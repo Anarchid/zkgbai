@@ -356,7 +356,11 @@ public class MilitaryManager extends Module {
 	private float getScoutCost(ScoutTask task,  Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
 		// reduce cost relative to every 15 seconds since last seen
-		cost -= 1000*(frame - task.spot.getLastSeen())/900;
+		if (task.spot.hostile){
+			cost -= 2000;
+		}else {
+			cost -= 500 * (frame - task.spot.getLastSeen()) / 900;
+		}
 		cost *= 1+getThreat(task.target);
 		return cost;
 	}
