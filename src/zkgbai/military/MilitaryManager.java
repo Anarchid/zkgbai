@@ -153,25 +153,25 @@ public class MilitaryManager extends Module {
 				int y = (int) (position.z / 8);
 				int r = (int) ((t.threatRadius) / 8);
 				if (t.isRiot){
-					effectivePower = Math.min(1.0f , effectivePower*2);
-					r = (int) (1.3f*r);
+					effectivePower = Math.min(1.0f , effectivePower*2f);
 				}
 
 				if (t.speed > 0) {
 					// for enemy mobiles
 					if (!t.isRiot) {
-						threatGraphics.setColor(new Color(effectivePower*0.75f, 0f, 0f)); //Direct Threat Color, red
-						paintCircle(x, y, r); // draw direct threat circle
-						threatGraphics.setColor(new Color(effectivePower * 0.25f, 0f, 0f)); //Indirect Threat Color, red
-						paintCircle(x, y, r * 4); // draw direct threat circle
-					}else{
 						threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
 						paintCircle(x, y, r); // draw direct threat circle
+					}else{
+						// use a threat gradient for riots to improve pathing intelligence
+						threatGraphics.setColor(new Color(effectivePower/3, 0f, 0f)); //Direct Threat Color, red
+						paintCircle(x, y, r/2);
+						paintCircle(x, y, r);
+						paintCircle(x, y, (int) (r*1.5f));
 					}
 				} else {
-					// for enemy buildings
+					// for enemy statics
 					threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
-					paintCircle(x, y, (int) (r*1.2f)); // draw direct threat circle
+					paintCircle(x, y, (int) (r*1.2f)); // draw direct threat circle.
 				}
 
 
