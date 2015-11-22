@@ -46,7 +46,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	@Override
     public int init(int teamId, OOAICallback callback) {
         this.callback = callback;
-        this.teamID = teamId;
+        this.teamID = callback.getGame().getMyTeam(); // teamID as passed by interface is broken 0_0
         this.allyTeamID = callback.getGame().getMyAllyTeam();
         startBoxes = new HashMap<Integer, StartBox>();
         
