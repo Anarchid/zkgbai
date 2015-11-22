@@ -19,6 +19,7 @@ public class Enemy {
 	boolean isRadarOnly = true;
 	boolean isRadarVisible = false;
 	boolean identified = false;
+	boolean isRiot = false;
 	float maxObservedSpeed = 0;
 	
 	Enemy(Unit unit, float cost){
@@ -70,6 +71,11 @@ public class Enemy {
 		if(u.getWeaponMounts().size() > 0){
 			this.danger =  u.getPower();
 			this.threatRadius = u.getMaxWeaponRange();
+
+			if (u.getTooltip().contains("Riot") || u.getName().contains("com")){
+				// identify riots
+				this.isRiot = true;
+			}
 		}		
 		this.speed = u.getSpeed()/30;
 	}

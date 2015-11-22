@@ -35,7 +35,7 @@ import zkgbai.military.MilitaryManager;
 public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     private OOAICallback callback;
     private List<Module> modules = new LinkedList<Module>();
-    //public HashMap<Integer, StartBox> startBoxes;
+    public HashMap<Integer, StartBox> startBoxes;
 	HashSet<Integer> enemyTeams = new HashSet<Integer>();
 	HashSet<Integer> enemyAllyTeams = new HashSet<Integer>(); 
     public int teamID;
@@ -48,9 +48,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         this.callback = callback;
         this.teamID = teamId;
         this.allyTeamID = callback.getGame().getMyAllyTeam();
-        //startBoxes = new HashMap<Integer, StartBox>();
+        startBoxes = new HashMap<Integer, StartBox>();
         
-        //parseStartScript();
+        parseStartScript();
         identifyEnemyTeams();
 		LosManager losManager = null;
 		GraphManager graphManager = null;
@@ -382,7 +382,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         return 0; // signaling: OK
     }
     
-   /* private void parseStartScript(){
+   private void parseStartScript(){
 		int mapWidth  = 8* callback.getMap().getWidth();
 		int mapHeight = 8* callback.getMap().getHeight();
 
@@ -449,7 +449,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	        	 ));
 	    	}    		 
     	}
-    }*/
+    }
     
     private void identifyEnemyTeams(){
 		int numTeams = callback.getGame().getTeams();
@@ -493,9 +493,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	return this.enemyTeams;
     }
     
-    /*public StartBox getEnemyBox(int allyTeamID){
+    public StartBox getEnemyBox(int allyTeamID){
     	return this.startBoxes.get(allyTeamID);
-    }*/
+    }
     
     public void printException(Exception ex) {
         StringWriter sw = new StringWriter();

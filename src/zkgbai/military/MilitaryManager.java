@@ -133,32 +133,40 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for raiders
 		for (Raider r:raiders){
-			float power = Math.min(1.0f , r.getUnit().getPower()/1000);
+			float power = Math.min(1.0f , r.getUnit().getPower()/5000);
 			float radius = r.getUnit().getMaxRange();
 			AIFloat3 pos = r.getPos();
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
-			int rad = (int) radius/4;
+			int rad = (int) radius/2;
 			threatGraphics.setColor(new Color(0f, power, 0f));
 			paintCircle(x, y, rad);
 		}
 
 		for(Enemy t:targets.values()){
-			float effectivePower = Math.min(1.0f , t.danger/1000);
+			float effectivePower = Math.min(1.0f , t.danger/5000);
 
 			AIFloat3 position = t.position;
 
 			if (position != null) {
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
-				int r = (int) ((t.threatRadius*1.25f) / 8);
+				int r = (int) ((t.threatRadius) / 8);
+				if (t.isRiot){
+					effectivePower = 1f;
+					r = 2*r;
+				}
 
 				if (t.speed > 0) {
 					// for enemy mobiles
-					threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
+					threatGraphics.setColor(new Color(effectivePower*0.75f, 0f, 0f)); //Direct Threat Color, red
 					paintCircle(x, y, r); // draw direct threat circle
+					if (!t.isRiot) {
+						threatGraphics.setColor(new Color(effectivePower * 0.25f, 0f, 0f)); //Indirect Threat Color, red
+						paintCircle(x, y, r * 4); // draw direct threat circle
+					}
 				} else {
-					// for enemy buildings
+					// for enemy buildings, use half threat so that they don't scare raiders
 					threatGraphics.setColor(new Color(effectivePower/2, 0f, 0f)); //Direct Threat Color, red
 					paintCircle(x, y, r); // draw direct threat circle
 				}
@@ -255,13 +263,13 @@ public class MilitaryManager extends Module {
 
 	private void createScoutTasks(){
 		List<MetalSpot> unscouted = graphManager.getEnemyTerritory();
-		if (unscouted.size() == 0){
+		if (unscouted.isEmpty() && scoutTasks.isEmpty()){
 			unscouted = graphManager.getUnownedSpots(); // if enemy territory is not known, get all spots not in our own territory.
 		}
 
 		for (MetalSpot ms: unscouted){
 			ScoutTask st = new ScoutTask(ms.getPos(), ms);
-			if (!scoutTasks.contains(st) && (frame - ms.getLastSeen() > 240 || ms.getLastSeen() == 0)){
+			if (!scoutTasks.contains(st)){
 				scoutTasks.add(st);
 			}
 		}
@@ -270,7 +278,7 @@ public class MilitaryManager extends Module {
 	private void checkScoutTasks(){
 		List<ScoutTask> finished = new ArrayList<ScoutTask>();
 		for (ScoutTask st: scoutTasks){
-			if (st.spot.visible){
+			if (!st.spot.hostile && !st.spot.enemyShadowed){
 				st.endTask(parent.currentFrame);
 				finished.add(st);
 			}
@@ -286,32 +294,17 @@ public class MilitaryManager extends Module {
 				raidTasks.add(rt);
 			}
 		}
-
-		for (Enemy e:targets.values()){
-			if (e.identified && e.isStatic && e.danger == 0 && e.position != null){
-				if (getThreat(e.position) == 0) {
-					RaidTask rt = new RaidTask(e.position, false);
-					if (!raidTasks.contains(rt)) {
-						raidTasks.add(rt);
-					}
-				}
-			}
-		}
 	}
 
 	private void checkRaidTasks(){
 		List<RaidTask> finished = new ArrayList<RaidTask>();
 		for (RaidTask rt: raidTasks){
 			if (losManager.isInLos(rt.target)){
-				List<Unit> enemies = callback.getEnemyUnitsIn(rt.target, 100f);
+				List<Unit> enemies = callback.getEnemyUnitsIn(rt.target, 50f);
 				if (enemies.size() == 0){
 					rt.endTask();
 					finished.add(rt);
 				}
-			}
-			if (!rt.isMex && getThreat(rt.target) > 0){
-				rt.endTask();
-				finished.add(rt);
 			}
 		}
 		raidTasks.removeAll(finished);
@@ -319,19 +312,13 @@ public class MilitaryManager extends Module {
 
 	private void assignRaiders(){
 		for (Raider r: raiders){
-			FighterTask bestTask = null;
+			ScoutTask bestTask = null;
 			float cost = Float.MAX_VALUE;
 
 			if (r.getTask() != null){
 				bestTask = r.getTask();
-				if (r.getTask() instanceof ScoutTask){
-					ScoutTask st = (ScoutTask) r.getTask();
-					cost = getScoutCost(st, r);
-				}
-				if (r.getTask() instanceof RaidTask){
-					RaidTask rt = (RaidTask) r.getTask();
-					cost = getRaidCost(rt, r);
-				}
+				cost = getScoutCost(bestTask, r) - 200;
+
 			}
 
 			for (ScoutTask s:scoutTasks){
@@ -341,36 +328,27 @@ public class MilitaryManager extends Module {
 					bestTask = s;
 				}
 			}
-			for (RaidTask rt:raidTasks){
-				float tmpcost = getRaidCost(rt, r);
-				if (tmpcost < cost){
-					cost = tmpcost;
-					bestTask = rt;
-				}
-			}
 
-			boolean overThreat = (getEffectiveThreat(r.getPos()) >= 0.5);
-			if (bestTask != null && (!bestTask.equals(r.getTask()) || overThreat || r.getUnit().getCurrentCommands().size() == 0)){
-				if (bestTask instanceof ScoutTask){
-					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.AVOID_ENEMIES);
+			boolean overThreat = (getEffectiveThreat(r.getPos()) > 0.1);
+			if (bestTask != null && (!bestTask.equals(r.getTask()) || (overThreat && !r.avoiding) || r.getUnit().getCurrentCommands().size() == 0)){
+				if (bestTask.spot.enemyShadowed){
+					if (overThreat){
+						Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.RAIDER_PATH);
+						r.sneak(path, frame);
+					}else {
+						r.fightTo(bestTask.target, frame);
+					}
+				}
+				if (bestTask.spot.hostile){
+					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 50f), pathfinder.RAIDER_PATH);
 					if (overThreat){
 						r.sneak(path, frame);
 					}else {
 						r.raid(path, frame);
 					}
-					r.setTask(bestTask);
-					((ScoutTask) bestTask).addRaider(r);
 				}
-				if (bestTask instanceof RaidTask){
-					Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 100f), pathfinder.RAIDER_PATH);
-					if (overThreat){
-						r.sneak(path, frame);
-					}else {
-						r.raid(path, frame);
-					}
-					r.setTask(bestTask);
-					((RaidTask) bestTask).addRaider(r);
-				}
+				bestTask.addRaider(r);
+				r.setTask(bestTask);
 			}
 		}
 	}
@@ -378,15 +356,8 @@ public class MilitaryManager extends Module {
 	private float getScoutCost(ScoutTask task,  Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
 		// reduce cost relative to every 15 seconds since last seen
-		cost /= 1+(frame - task.spot.getLastSeen())/900;
-		cost /= task.spot.getValue();
-		return cost;
-	}
-
-	private float getRaidCost(RaidTask task,  Raider raider){
-		float cost = graphManager.groundDistance(task.target, raider.getPos());
-		cost -= 2000;
-		cost += 4000*(getThreat(task.target)-getFriendlyThreat(raider.getPos()));
+		cost -= 1000*(frame - task.spot.getLastSeen())/900;
+		cost *= 1+getThreat(task.target);
 		return cost;
 	}
 
@@ -824,11 +795,6 @@ public class MilitaryManager extends Module {
 		}else if (unitTypes.raiders.contains(defName)) {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiders.add(r);
-			if (ecoManager.effectiveIncome < 20) {
-				unit.setMoveState(2, (short) 0, frame + 10); // set to roam early game to block enemy raiders
-			}else{
-				unit.setMoveState(1, (short) 0, frame + 10);
-			}
 		}else if (unitTypes.assaults.contains(defName)){
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			fighters.put(f.id, f);
@@ -865,13 +831,8 @@ public class MilitaryManager extends Module {
 		for (Raider r:raiders){
 			if (r.id == unit.getUnitId()){
 				dead = r;
-				if (r.getTask() instanceof ScoutTask){
-					ScoutTask st = (ScoutTask) r.getTask();
-					st.removeRaider(r);
-				}
-				if (r.getTask() instanceof RaidTask){
-					RaidTask st = (RaidTask) r.getTask();
-					st.removeRaider(r);
+				if (r.getTask() != null) {
+					r.getTask().removeRaider(r);
 				}
 			}
 		}

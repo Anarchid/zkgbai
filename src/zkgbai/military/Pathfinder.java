@@ -180,7 +180,7 @@ public class Pathfinder extends Object {
             pos = pathTo[pos];
         }
         result.add(target);
-        result.add(target);//add twice to confirm path
+        //result.add(target);//add twice to confirm path
         time = System.currentTimeMillis() - time;
         if (time > 10) {
             ai.parent.debug("pathfinder took " + time + "ms");
@@ -223,7 +223,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return Float.MAX_VALUE;
             }
-            return 10 * (2 * ai.getThreat(pos) + 0.5f * (slope/maxSlope));
+            return 10 * (5 * ai.getThreat(pos) + (slope/maxSlope));
         }
     };
     /**
