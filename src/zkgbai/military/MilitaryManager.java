@@ -133,7 +133,7 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for raiders
 		for (Raider r:raiders){
-			float power = Math.min(1.0f , r.getUnit().getPower()/5000);
+			float power = Math.min(1.0f , (r.getUnit().getPower() + r.getUnit().getMaxHealth())/5000);
 			float radius = r.getUnit().getMaxRange();
 			AIFloat3 pos = r.getPos();
 			int x = (int) pos.x/8;
@@ -159,15 +159,18 @@ public class MilitaryManager extends Module {
 
 				if (t.speed > 0) {
 					// for enemy mobiles
-					threatGraphics.setColor(new Color(effectivePower*0.75f, 0f, 0f)); //Direct Threat Color, red
-					paintCircle(x, y, r); // draw direct threat circle
 					if (!t.isRiot) {
+						threatGraphics.setColor(new Color(effectivePower*0.75f, 0f, 0f)); //Direct Threat Color, red
+						paintCircle(x, y, r); // draw direct threat circle
 						threatGraphics.setColor(new Color(effectivePower * 0.25f, 0f, 0f)); //Indirect Threat Color, red
 						paintCircle(x, y, r * 4); // draw direct threat circle
+					}else{
+						threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
+						paintCircle(x, y, r); // draw direct threat circle
 					}
 				} else {
-					// for enemy buildings, use half threat so that they don't scare raiders
-					threatGraphics.setColor(new Color(effectivePower/2, 0f, 0f)); //Direct Threat Color, red
+					// for enemy buildings
+					threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
 					paintCircle(x, y, r); // draw direct threat circle
 				}
 
@@ -339,7 +342,7 @@ public class MilitaryManager extends Module {
 			}
 
 			boolean overThreat = (getEffectiveThreat(r.getPos()) > 0.1);
-			if (bestTask != null && (!bestTask.equals(r.getTask()) || (overThreat && !r.avoiding) || r.getUnit().getCurrentCommands().size() == 0)){
+			if (bestTask != null && (!bestTask.equals(r.getTask()) || overThreat || r.getUnit().getCurrentCommands().size() == 0)){
 				if (!bestTask.spot.hostile){
 					if (overThreat){
 						Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.RAIDER_PATH);
@@ -392,7 +395,7 @@ public class MilitaryManager extends Module {
 
 	private void updateSquads(){
 		// set the rally point for the next forming squad for defense
-		if (nextSquad != null && frame % 1200 == 0){
+		if (nextSquad != null && frame % 600 == 0){
 			nextSquad.setTarget(getRallyPoint(nextSquad.getPos()), frame);
 		}
 
@@ -423,7 +426,11 @@ public class MilitaryManager extends Module {
 			Fighter s = iter.next();
 			if (s.squad != null){
 				if (!s.squad.isDead()){
-					s.moveTo(s.squad.getPos(), frame);
+					if (s.squad.status == 'f') {
+						s.moveTo(s.squad.target, frame);
+					}else{
+						s.moveTo(s.squad.getPos(), frame);
+					}
 				}else{
 					s.squad = null;
 				}
@@ -439,7 +446,11 @@ public class MilitaryManager extends Module {
 					s.squad = nextSquad;
 				}
 				if (s.squad != null) {
-					s.moveTo(s.squad.getPos(), frame);
+					if (s.squad.status == 'f') {
+						s.moveTo(s.squad.target, frame);
+					}else{
+						s.moveTo(s.squad.getPos(), frame);
+					}
 				}
 			}else if (s.squad == null){
 				s.moveTo(getRallyPoint(s.getPos()), frame);

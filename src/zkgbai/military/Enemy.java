@@ -69,10 +69,10 @@ public class Enemy {
 		this.ud = u;
 		
 		if(u.getWeaponMounts().size() > 0){
-			this.danger =  u.getPower();
+			this.danger =  u.getPower() + u.getHealth();
 			this.threatRadius = u.getMaxWeaponRange();
 
-			if (u.getTooltip().contains("Riot") || u.getName().contains("com")){
+			if (u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().contains("com")){
 				// identify riots
 				this.isRiot = true;
 			}
