@@ -60,15 +60,10 @@ public class Squad {
 	}
 
 	public boolean isRallied(int frame){
-		double rand = Math.random();
 		AIFloat3 pos = getPos();
 		boolean rallied = true;
 		for (Fighter f: fighters){
-			if (rand > 0.5) {
-				f.moveTo(pos, frame);
-			}else{
-				f.fightTo(pos, frame);
-			}
+			f.moveTo(pos, frame);
 			if (distance(pos, f.getPos()) > 300){
 				rallied = false;
 			}

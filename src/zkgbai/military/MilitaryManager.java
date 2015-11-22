@@ -133,12 +133,12 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for raiders
 		for (Raider r:raiders){
-			float power = Math.min(1.0f , (r.getUnit().getPower() + r.getUnit().getMaxHealth())/5000);
+			float power = Math.min(1.0f, (r.getUnit().getPower() + r.getUnit().getMaxHealth())/5000);
 			float radius = r.getUnit().getMaxRange();
 			AIFloat3 pos = r.getPos();
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
-			int rad = (int) radius/2;
+			int rad = 50;
 			threatGraphics.setColor(new Color(0f, power, 0f));
 			paintCircle(x, y, rad);
 		}
@@ -153,8 +153,8 @@ public class MilitaryManager extends Module {
 				int y = (int) (position.z / 8);
 				int r = (int) ((t.threatRadius) / 8);
 				if (t.isRiot){
-					effectivePower = 1f;
-					r = (int) (1.5f*r);
+					effectivePower = Math.min(1.0f , effectivePower*2);
+					r = (int) (1.3f*r);
 				}
 
 				if (t.speed > 0) {
@@ -171,7 +171,7 @@ public class MilitaryManager extends Module {
 				} else {
 					// for enemy buildings
 					threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
-					paintCircle(x, y, r); // draw direct threat circle
+					paintCircle(x, y, (int) (r*1.2f)); // draw direct threat circle
 				}
 
 
@@ -341,7 +341,7 @@ public class MilitaryManager extends Module {
 				}
 			}
 
-			boolean overThreat = (getEffectiveThreat(r.getPos()) > 0.1);
+			boolean overThreat = (getEffectiveThreat(r.getPos()) >= 0);
 			if (bestTask != null && (!bestTask.equals(r.getTask()) || overThreat || r.getUnit().getCurrentCommands().size() == 0)){
 				if (!bestTask.spot.hostile){
 					if (overThreat){
@@ -366,13 +366,17 @@ public class MilitaryManager extends Module {
 
 	private float getScoutCost(ScoutTask task,  Raider raider){
 		float cost = graphManager.groundDistance(task.target, raider.getPos());
-		// reduce cost relative to every 15 seconds since last seen
 		if (task.spot.hostile){
-			cost -= 2000;
+			cost /= 4;
 		}else {
-			cost -= 750 * ((frame - task.spot.getLastSeen()) / 900);
+			if ((frame - task.spot.getLastSeen()) < 450) {
+				cost += 3000;
+			}else {
+				// reduce cost relative to every 30 seconds since last seen for enemy shadowed spots
+				cost /= ((frame - task.spot.getLastSeen()) / 900);
+			}
 		}
-		cost += 4000*(getThreat(task.target)- getFriendlyThreat(task.target));
+		cost += 1000*(getThreat(task.target)- getFriendlyThreat(raider.getPos()));
 		return cost;
 	}
 
@@ -587,7 +591,6 @@ public class MilitaryManager extends Module {
 		}
 
 		//if there aren't any, then get the center of the current allied territory
-		List<MetalSpot> mexes = graphManager.getOwnedSpots();
 		AIFloat3 position = graphManager.getAllyCenter();
 		if (position != null) {
 			return position;
@@ -736,14 +739,6 @@ public class MilitaryManager extends Module {
     		e.setIdentified();
 			e.lastSeen = frame;
     	}
-    	
-		paintThreatMap();
-		
-		for(ScoutTask st:scoutTasks){
-			st.endTask(parent.currentFrame);
-		}
-    	retreatCowards();
-    	
         return 0; // signaling: OK
     }
 

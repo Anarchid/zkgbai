@@ -1128,6 +1128,9 @@ public class EconomyManager extends Module {
 		}
 
 		float minporcdist = 500;
+		if (effectiveIncome < 20){
+			minporcdist = 900;
+		}
 
 		if (effectiveIncome > 20 && warManager.isFrontLine(position)){
 			minporcdist = 400;
