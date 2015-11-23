@@ -158,6 +158,7 @@ public class MilitaryManager extends Module {
 
 				if (t.speed > 0) {
 					// for enemy mobiles
+					effectivePower *= 1-((frame - t.lastSeen)/1800); // reduce threat over time when enemies leave los
 					if (!t.isRiot) {
 						threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
 						paintCircle(x, y, r); // draw direct threat circle
@@ -647,16 +648,16 @@ public class MilitaryManager extends Module {
 					}
 				}
 				t.position = tpos;
-			} else if (frame - t.lastSeen > 900 && !t.isStatic) {
-				// "forget" where mobile units are after they haven't been seen for 30 seconds
-				t.position = null;
-				if (frame - t.lastSeen > 1800) {
-					// remove mobiles that haven't been seen for 60 seconds
+			} else if (frame - t.lastSeen > 1800 && !t.isStatic) {
+				// remove mobiles that haven't been seen for 60 seconds
+				outdated.add(t);
+			}else if (t.position != null) {
+				if (losManager.isInLos(t.position) && !t.visible) {
+					// remove units that aren't where they were last seen, if that position is visible
 					outdated.add(t);
 				}
 			} else if (t.isStatic && t.position != null){
-				// note this assumes that tpos was some form of null when the building should be visible
-				if (losManager.isInLos(t.position)) {
+				if (losManager.isInLos(t.position) && !t.visible) {
 					outdated.add(t);
 				}
 			}

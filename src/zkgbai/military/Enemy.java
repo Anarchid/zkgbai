@@ -71,6 +71,9 @@ public class Enemy {
 		if(u.getWeaponMounts().size() > 0){
 			this.danger =  u.getPower() + u.getHealth();
 			this.threatRadius = u.getMaxWeaponRange();
+			if (u.getName().equals("arm_venom")){
+				this.danger += 300;
+			}
 
 			if (u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().contains("com")){
 				// identify riots

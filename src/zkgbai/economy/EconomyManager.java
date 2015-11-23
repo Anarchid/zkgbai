@@ -55,6 +55,8 @@ public class EconomyManager extends Module {
 	int numErasers = 0;
 	int raiderSpam = 0;
 
+	int teamcount = 1;
+
 	boolean enemyHasAir = false;
 	
 	int frame = 0;
@@ -117,6 +119,16 @@ public class EconomyManager extends Module {
 		
 		this.m = callback.getResourceByName("Metal");
 		this.e = callback.getResourceByName("Energy");
+
+		// find out how many allies we have to weight resource income
+		int teams = callback.getGame().getTeams();
+		for (int i=0; i < teams; i++){
+			if (i != myTeamID){
+				if (callback.getGame().getTeamAllyTeam(i) == myAllyTeamID){
+					this.teamcount++;
+				}
+			}
+		}
 		
 		this.attackers = new ArrayList<String>();
 		attackers.add("armrock");
@@ -139,8 +151,8 @@ public class EconomyManager extends Module {
 	public int update(int frame) {
 		this.frame = frame;
 
-		effectiveIncomeMetal = eco.getIncome(m);
-		effectiveIncomeEnergy = eco.getIncome(e);
+		effectiveIncomeMetal = eco.getIncome(m)*teamcount;
+		effectiveIncomeEnergy = eco.getIncome(e)*teamcount;
 
 		metal = eco.getCurrent(m);
 		energy = eco.getCurrent(e);
@@ -898,7 +910,8 @@ public class EconomyManager extends Module {
 		if ((mexes.size() * 1.5) - 1.0 > solars.size()+solarTasks.size()
 				|| (effectiveIncome > 15 && energy < 5 && solarTasks.size() < numWorkers)
 				|| (effectiveIncome > 30 && energy < 100 && solarTasks.size() < numWorkers)
-				|| (effectiveIncome > 40 && energy < 400 && solarTasks.size() < numWorkers)) {
+				|| (effectiveIncome > 40 && energy < 400 && solarTasks.size() < numWorkers)
+				|| (effectiveIncome > 40 && fusionTasks.isEmpty())) {
 			createEnergyTask(worker);
 		}
 
