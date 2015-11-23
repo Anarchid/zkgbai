@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 
@@ -27,10 +28,12 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Map;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Resource;
+import com.springrts.ai.oo.clb.Team;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 
 import zkgbai.Module;
+import zkgbai.StartArea;
 import zkgbai.StartBox;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.gui.DebugView;
@@ -101,17 +104,45 @@ public class GraphManager extends Module {
     		parent.debug("Parsed JSON metalmap with "+metalSpots.size()+" spots and "+links.size()+" links");
     		
 			Set<Integer> enemies = parent.getEnemyAllyTeamIDs();
-			for(int enemy:enemies){
-				StartBox box = parent.getEnemyBox(enemy);
-				if(box!=null){
-					for (MetalSpot ms:metalSpots){
-						AIFloat3 pos = ms.position;
-						if(box.contains(pos)){
-							ms.enemyShadowed = true;
+			
+			if(parent.startType == ZKGraphBasedAI.StartType.ZK_STARTPOS){
+				// identify ally startbox ID's
+				Set<Integer> allyBoxes = new HashSet<Integer>();
+				for(Team a:parent.allies){
+					int boxID = (int)a.getTeamRulesParamByName("start_box_id").getValueFloat();
+					allyBoxes.add(boxID);
+					parent.debug("team "+a.getTeamId()+" of allyteam "+parent.getCallback().getGame().getTeamAllyTeam(a.getTeamId())+" is ally with boxID "+boxID);
+				}
+				
+				for(Entry<Integer, StartArea> s:parent.startBoxes.entrySet()){
+					if(!allyBoxes.contains(s.getKey())){
+						parent.debug(s.getKey()+" is an enemy startbox");
+						for (MetalSpot ms:metalSpots){
+							AIFloat3 pos = ms.position;
+							if(s.getValue().contains(pos)){
+								ms.enemyShadowed = true;
+							}
+						}
+					}else{
+						parent.debug(s.getKey()+" is an allied startbox");
+					}
+				}
+				
+			}else{
+				for(int enemy:enemies){
+					StartArea box = parent.getEnemyBox(enemy);
+				
+					if(box!=null){
+						for (MetalSpot ms:metalSpots){
+							AIFloat3 pos = ms.position;
+							if(box.contains(pos)){
+								ms.enemyShadowed = true;
+							}
 						}
 					}
 				}
-			}
+    		}
+
 			for (MetalSpot ms: metalSpots){
 				avgMexValue += ms.value / metalSpots.size();
 			}

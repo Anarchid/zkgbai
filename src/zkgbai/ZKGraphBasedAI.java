@@ -5,8 +5,11 @@ import java.util.HashMap;
 import com.springrts.ai.Enumerations.UnitCommandOptions;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.CommandDescription;
+import com.springrts.ai.oo.clb.Game;
+import com.springrts.ai.oo.clb.GameRulesParam;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Resource;
+import com.springrts.ai.oo.clb.Team;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.WeaponDef;
@@ -18,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -35,23 +39,35 @@ import zkgbai.military.MilitaryManager;
 public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     private OOAICallback callback;
     private List<Module> modules = new LinkedList<Module>();
-    public HashMap<Integer, StartBox> startBoxes;
+    public HashMap<Integer, StartArea> startBoxes;
 	HashSet<Integer> enemyTeams = new HashSet<Integer>();
-	HashSet<Integer> enemyAllyTeams = new HashSet<Integer>(); 
+	HashSet<Integer> enemyAllyTeams = new HashSet<Integer>();
+	public List<Team> allies; 
     public int teamID;
     public int allyTeamID;
     public int currentFrame = 0;
     DebugView debugView;
+    
+    public static enum StartType{
+    	SPRING_BOX,
+    	ZK_BOX,
+    	ZK_STARTPOS,
+    	SPRING_STARTPOS, // unsupported
+    }
+    
+    public StartType startType;
     
 	@Override
     public int init(int teamId, OOAICallback callback) {
         this.callback = callback;
         this.teamID = callback.getGame().getMyTeam(); // teamID as passed by interface is broken 0_0
         this.allyTeamID = callback.getGame().getMyAllyTeam();
-        startBoxes = new HashMap<Integer, StartBox>();
+        startBoxes = new HashMap<Integer, StartArea>();
         
-        parseStartScript();
+        parseStartBoxes();
         identifyEnemyTeams();
+        allies = callback.getAllyTeams();
+        
 		LosManager losManager = null;
 		GraphManager graphManager = null;
 		EconomyManager ecoManager = null;
@@ -382,9 +398,33 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         return 0; // signaling: OK
     }
     
-   private void parseStartScript(){
+   private void parseStartBoxes(){
 		int mapWidth  = 8* callback.getMap().getWidth();
 		int mapHeight = 8* callback.getMap().getHeight();
+			
+		Game g = callback.getGame();
+		GameRulesParam maxStartBox = g.getGameRulesParamByName("startbox_max_n");
+
+		if(maxStartBox != null){
+			startType = StartType.ZK_STARTPOS;
+			
+			int maxBox = (int) maxStartBox.getValueFloat();
+			debug("detected "+(maxBox+1)+" advanced ZK startboxes ");
+			
+			for(int i=0;i<=maxBox;i++){
+				ArrayList<AIFloat3> starts = new ArrayList<AIFloat3>();
+				int numStarts = (int) g.getGameRulesParamByName("startpos_n_"+i).getValueFloat();
+				for(int j = 1;j<=numStarts;j++){
+					float x = g.getGameRulesParamByName("startpos_x_"+i+"_"+j).getValueFloat();
+					float z = g.getGameRulesParamByName("startpos_z_"+i+"_"+j).getValueFloat();
+					starts.add(new AIFloat3(x,0,z));
+					debug("startbox "+i+" contains startpos <"+x+","+z+">");
+				}
+				 startBoxes.put(i,new ZKStartLocation(starts));
+			}
+
+			return;
+		}
 
 		String script = callback.getGame().getSetupScript();
     	
@@ -392,6 +432,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	Matcher zkBoxes = z.matcher(script);
     	
     	if(zkBoxes.find()){
+			startType = StartType.ZK_BOX;
+
         	Pattern zkBox = Pattern.compile(" \\[(\\d+)\\] = \\{ (\\d+(?:\\.\\d+)?)[,]? (\\d+(?:\\.\\d+)?), (\\d+(?:\\.\\d+)?), (\\d+(?:\\.\\d+)?) \\},");
     		Matcher b = zkBox.matcher(zkBoxes.group(1));
     		debug("ZK boxes detected");
@@ -415,6 +457,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	        	startBoxes.put(allyTeamID, startbox);
     		}    	
     	}else{
+    		
+			startType = StartType.SPRING_BOX;
+
 	    	Pattern p = Pattern.compile("\\[allyteam(\\d)\\]\\s*\\{([^\\}]*)\\}");
 	    	Matcher m = p.matcher(script);
 	    
@@ -452,20 +497,19 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
     
     private void identifyEnemyTeams(){
-		int numTeams = callback.getGame().getTeams();
-
-		for(int i=0;i<numTeams;i++){
-			if (i != teamID){
-				int allyTeam = callback.getGame().getTeamAllyTeam(i);
-				
-				if(allyTeam != this.allyTeamID){
-					enemyTeams.add(i);
-					if(!enemyAllyTeams.contains(allyTeam)){
-						enemyAllyTeams.add(allyTeam);
-					}
+    	List<Team> enemies = callback.getEnemyTeams();
+		
+    	for(Team i:enemies){
+    		int enemyTeam = i.getTeamId(); 
+    		int allyTeam = callback.getGame().getTeamAllyTeam(enemyTeam);
+    		
+    		enemyTeams.add(enemyTeam);
+			if(allyTeam != this.allyTeamID){
+				if(!enemyAllyTeams.contains(allyTeam)){
+					enemyAllyTeams.add(allyTeam);
 				}
 			}
-		}
+    	}
     }
     
     public OOAICallback getCallback(){
@@ -493,7 +537,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	return this.enemyTeams;
     }
     
-    public StartBox getEnemyBox(int allyTeamID){
+    public StartArea getEnemyBox(int id){
     	return this.startBoxes.get(allyTeamID);
     }
     
