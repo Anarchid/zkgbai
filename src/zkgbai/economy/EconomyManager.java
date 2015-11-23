@@ -121,14 +121,10 @@ public class EconomyManager extends Module {
 		this.e = callback.getResourceByName("Energy");
 
 		// find out how many allies we have to weight resource income
-		int teams = callback.getGame().getTeams();
-		for (int i=0; i < teams; i++){
-			if (i != myTeamID){
-				if (callback.getGame().getTeamAllyTeam(i) == myAllyTeamID){
-					this.teamcount++;
-				}
-			}
-		}
+		/*if (callback.getTeams().getSize() > 2){
+			this.teamcount++;
+			parent.debug("Number of teams detected: " + callback.getTeams().getSize());
+		}*/
 		
 		this.attackers = new ArrayList<String>();
 		attackers.add("armrock");
@@ -441,27 +437,35 @@ public class EconomyManager extends Module {
 		}
 	}
 
-	private void setPriorities(){
-		if (effectiveIncome < 30){
-			// set constructors at high prio at start, until 30 m/s income
-			for (Worker w:workers){
-				ArrayList<Float> params = new ArrayList<>();
-				params.add((float) 2);
-				w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame+30);
-			}
-		}else{
-			// above 30m/s, set workers to normal prio.
-			for (Worker w: workers){
-				ArrayList<Float> params = new ArrayList<>();
-				params.add((float) 1);
-				w.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame+30);
-			}
+	private void setPriorities() {
+		// set nanos to high prio if resources are available, normal prio otherwise.
+		ArrayList<Float> params = new ArrayList<>();
+		if (effectiveIncome > 30 && energy > 100 && (float)nanos.size() < (effectiveIncome/10)) {
+			params.add((float) 2);
+		} else {
+			params.add((float) 1);
+		}
+
+		for (Unit n: nanos){
+			n.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 30);
+		}
+
+		// set facs to normal prio if resources are available, low prio otherwise.
+		params.clear();
+		if (effectiveIncome > 30 && energy > 100) {
+			params.add((float) 1);
+		} else {
+			params.add((float) 3);
+		}
+
+		for (Worker f : factories) {
+			f.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 30);
 		}
 	}
 
 	private Boolean needWorkers(){
 		if (((float) numWorkers < Math.floor(((effectiveIncome)/3)) + fusions.size() && numFighters > numWorkers && effectiveIncome > 9 && effectiveIncome < 30)
-				|| effectiveIncome > 30 && numFighters > numWorkers) {
+				|| effectiveIncome > 30 && (float) numWorkers < Math.floor(((effectiveIncome)/5)) + fusions.size() && numFighters > numWorkers) {
 			return true;
 		}
 		return false;
@@ -476,8 +480,8 @@ public class EconomyManager extends Module {
 			return "armpw";
 		}
 
-		if ((warManager.raiders.size() < 4 || Math.random() > 0.9) && raiderSpam < 4) {
-			raiderSpam++;
+		if (raiderSpam < 8) {
+			raiderSpam += 2;
 			if ((effectiveIncome > 20 && Math.random() > 0.75)
 					|| (effectiveIncome > 30 && Math.random() > 0.5)
 					|| (effectiveIncome > 40)) {
@@ -487,13 +491,15 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		raiderSpam--;
-		if (effectiveIncome > 40 && energy > 100 && numErasers == 0){
+		if (effectiveIncome > 60 && energy > 100 && numErasers == 0){
 			return "spherecloaker";
 		}
 
+		raiderSpam--;
 		double rand = Math.random();
-		if(rand > 0.55){
+		if (rand > 0.5){
+			return "armrock";
+		}else if(rand > 0.3){
 			return "armzeus";
 		}else if (rand > 0.1){
 			return "armwar";
@@ -669,7 +675,6 @@ public class EconomyManager extends Module {
 		boolean isExpensive = false;
 		boolean isMex = false;
 		boolean isPorc = false;
-		boolean isEscalation = false;
 
 		for (Worker w: task.assignedWorkers){
 			float idist = distance(w.getPos(),task.getPos());
@@ -686,11 +691,7 @@ public class EconomyManager extends Module {
 				return -1000; // factory plops and emergency facs get maximum priority
 			}
 			
-			if((ctask.buildType.getName().equals("striderhub") || ctask.buildType.getName().contains("factory")) && effectiveIncome > 50){
-				isEscalation = true;
-			}
-			
-			if (ctask.buildType.getCost(m) > 300){
+			if (ctask.buildType.getCost(m) > 200){
 				isExpensive = true;
 			}else if (ctask.buildType.getName().equals("cormex")){
 				isMex = true;
@@ -729,7 +730,7 @@ public class EconomyManager extends Module {
 			if (isExpensive && task instanceof RepairTask){
 				return dist - 500;
 			}else if (isExpensive) {
-				return dist*(25/effectiveIncome);
+				return dist - 500;
 			}else if (task instanceof ReclaimTask && metal < 300) {
 				return dist / 2;
 			}else if (isMex){
@@ -740,8 +741,6 @@ public class EconomyManager extends Module {
 				return dist/(graphManager.getClosestSpot(task.getPos()).weight + 1);
 			}else if (isPorc){
 				return dist-200;
-			}else if (isEscalation){
-				return dist*50 / effectiveIncome;
 			}else{
 				return dist;
 			}
@@ -751,7 +750,7 @@ public class EconomyManager extends Module {
 			if (isExpensive && task instanceof ReclaimTask && metal < 300){
 				return dist + (600*(costMod-2));
 			}else if (isExpensive) {
-				return (dist/(float)Math.log(dist))+50*costMod;
+				return (dist/(float)Math.log(dist))+100*costMod;
 			}else if (isPorc){
 				return dist + (600*(costMod-2)) - 200;
 			}else{
@@ -886,8 +885,8 @@ public class EconomyManager extends Module {
     	AIFloat3 position = worker.getPos();
 		// do we need a factory?
 		if ((factories.size() == 0 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 60 && factories.size() == 1 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 120 && factories.size() == 2 && factoryTasks.size() == 0)) {
+				|| (effectiveIncome > 100 && factories.size() == 1 && factoryTasks.size() == 0)
+				|| (effectiveIncome > 150 && factories.size() == 2 && factoryTasks.size() == 0)) {
 			createFactoryTask(worker);
 		}
 
@@ -908,16 +907,15 @@ public class EconomyManager extends Module {
 
     	// is there sufficient energy to cover metal income?
 		if ((mexes.size() * 1.5) - 1.0 > solars.size()+solarTasks.size()
-				|| (effectiveIncome > 15 && energy < 5 && solarTasks.size() < numWorkers)
-				|| (effectiveIncome > 30 && energy < 100 && solarTasks.size() < numWorkers)
-				|| (effectiveIncome > 40 && energy < 400 && solarTasks.size() < numWorkers)
+				|| (effectiveIncome > 15 && energy < 400 && solarTasks.size() < numWorkers)
+				|| (effectiveIncome > 30 && (mexes.size() * 4) > solars.size()+solarTasks.size() && solarTasks.size() < numWorkers)
 				|| (effectiveIncome > 40 && fusionTasks.isEmpty())) {
 			createEnergyTask(worker);
 		}
 
     	
     	// do we need caretakers?
-    	if((float)nanos.size()+nanoTasks.size() < Math.floor(effectiveIncome/5)-2 && factories.size() > 0){
+    	if((float)nanos.size() < (effectiveIncome/10)-2.5 && factories.size() > 0 && nanoTasks.isEmpty()){
 			 Worker target = getCaretakerTarget();
 			createNanoTurretTask(target.getUnit());
     	}

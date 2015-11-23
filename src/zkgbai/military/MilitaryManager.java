@@ -391,9 +391,10 @@ public class MilitaryManager extends Module {
 
 		nextSquad.addUnit(f, frame);
 
-		if (nextSquad.metalValue > nextSquad.income * 60){
+		if (nextSquad.metalValue > nextSquad.income * 45){
 			nextSquad.status = 'r';
 			squads.add(nextSquad);
+			nextSquad.setTarget(graphManager.getAllyCenter(), frame);
 			nextSquad = null;
 		}
 	}
