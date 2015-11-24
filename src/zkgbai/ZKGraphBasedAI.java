@@ -538,7 +538,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
     
     public StartArea getEnemyBox(int id){
-    	return this.startBoxes.get(allyTeamID);
+    	return this.startBoxes.get(id);
     }
     
     public void printException(Exception ex) {
