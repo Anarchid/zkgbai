@@ -12,6 +12,7 @@ public class UnitClasses {
     public List<String> arties;
     public List<String> striders;
     public List<String> mobSupports;
+    public List<String> loners;
 
     public UnitClasses(){
         this.raiders = new ArrayList<String>();
@@ -19,6 +20,7 @@ public class UnitClasses {
         this.arties = new ArrayList<String>();
         this.striders = new ArrayList<String>();
         this.mobSupports = new ArrayList<String>();
+        this.loners = new ArrayList<String>();
 
         // raiders
         raiders.add("armpw");
@@ -30,7 +32,6 @@ public class UnitClasses {
         assaults.add("armzeus");
         assaults.add("armwar");
         assaults.add("armrock");
-        assaults.add("armsnipe");
         assaults.add("gunshipsupport");
         assaults.add("armbrawl");
         assaults.add("blackdawn");
@@ -42,5 +43,8 @@ public class UnitClasses {
         // striders; stuff that can dgun
         striders.add("dante");
         striders.add("scorpion");
+
+        // strider-like stuff that does better on its own than in mobs
+        loners.add("armsnipe");
     }
 }

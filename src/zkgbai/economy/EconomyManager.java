@@ -440,20 +440,22 @@ public class EconomyManager extends Module {
 	private void setPriorities() {
 		// set nanos to high prio if resources are available, normal prio otherwise.
 		ArrayList<Float> params = new ArrayList<>();
-		if (effectiveIncome > 30 && energy > 100 && (float)nanos.size() < (effectiveIncome/10)) {
-			params.add((float) 2);
-		} else {
-			params.add((float) 1);
-		}
+		params.add((float) 2);
 
 		for (Unit n: nanos){
 			n.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 30);
 		}
 
-		// set facs to normal prio if resources are available, low prio otherwise.
+		for (ConstructionTask ft:factoryTasks){
+			if (ft.target != null){
+				ft.target.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 30);
+			}
+		}
+
+		// set facs to high prio if resources are available, low prio otherwise.
 		params.clear();
-		if (effectiveIncome > 30 && energy > 100) {
-			params.add((float) 1);
+		if ((effectiveIncome > 20 && energy > 400)) {
+			params.add((float) 2);
 		} else {
 			params.add((float) 3);
 		}
@@ -464,8 +466,7 @@ public class EconomyManager extends Module {
 	}
 
 	private Boolean needWorkers(){
-		if (((float) numWorkers < Math.floor(((effectiveIncome)/3)) + fusions.size() && numFighters > numWorkers && effectiveIncome > 9 && effectiveIncome < 30)
-				|| effectiveIncome > 30 && (float) numWorkers < Math.floor(((effectiveIncome)/5)) + fusions.size() && numFighters > numWorkers) {
+		if (((float) numWorkers < Math.floor(((effectiveIncome)/3)) + fusions.size() && (numFighters > numWorkers || metal > 250 || numWorkers == 0) && (effectiveIncome > 9 || numWorkers == 0))) {
 			return true;
 		}
 		return false;
@@ -717,8 +718,8 @@ public class EconomyManager extends Module {
 			RepairTask rptask = (RepairTask) task;
 			UnitDef def = rptask.target.getDef();
 			if (def != null) {
-				if (def.getCost(m) > 700) {
-					isExpensive = true;
+				if (def.isAbleToAttack()) {
+					return dist - (2 * def.getCost(m)) + (200 * (costMod-1));
 				}
 			}else{
 				return 100000;
@@ -909,7 +910,7 @@ public class EconomyManager extends Module {
 		if ((mexes.size() * 1.5) - 1.0 > solars.size()+solarTasks.size()
 				|| (effectiveIncome > 15 && energy < 400 && solarTasks.size() < numWorkers)
 				|| (effectiveIncome > 30 && (mexes.size() * 4) > solars.size()+solarTasks.size() && solarTasks.size() < numWorkers)
-				|| (effectiveIncome > 40 && fusionTasks.isEmpty())) {
+				|| (effectiveIncome > 60 && fusionTasks.isEmpty())) {
 			createEnergyTask(worker);
 		}
 
@@ -1247,7 +1248,7 @@ public class EconomyManager extends Module {
 
 		ConstructionTask ct;
 
-		if (effectiveIncome > 40 && fdist > 800 && !warManager.isFrontLine(position) && fusions.size() < 8 && fusionTasks.isEmpty()){
+		if (effectiveIncome > 60 && fdist > 800 && !warManager.isFrontLine(position) && fusions.size() < 8 && fusionTasks.isEmpty()){
 			position = graphManager.getOverdriveSweetSpot(position);
 			position = callback.getMap().findClosestBuildSite(fusion,position,600f, 3, 0);
 			ct = new ConstructionTask(fusion, position, 0);
