@@ -25,6 +25,8 @@ import org.poly2tri.triangulation.sets.PointSet;
 import com.json.parsers.JSONParser;
 import com.json.parsers.JsonParserFactory;
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.Game;
+import com.springrts.ai.oo.clb.GameRulesParam;
 import com.springrts.ai.oo.clb.Map;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Resource;
@@ -55,6 +57,7 @@ public class GraphManager extends Module {
 	Resource m;
 
 	float avgMexValue = 0;
+	boolean graphInitialized;
 	
 	BufferedImage threatMap;
 	
@@ -64,6 +67,8 @@ public class GraphManager extends Module {
 	private Graphics2D graphGraphics;
 	
 	public GraphManager(ZKGraphBasedAI parent){
+		graphInitialized = false;
+		
 		this.metalSpots = new ArrayList<MetalSpot>();
 		this.links = new ArrayList<Link>();
 		this.pylons = new ArrayList<Pylon>();
@@ -86,11 +91,56 @@ public class GraphManager extends Module {
 		
 		this.graphImage = new BufferedImage(width, height,BufferedImage.TYPE_INT_ARGB_PRE);
 		this.graphGraphics = graphImage.createGraphics();
+		
+		ArrayList<HashMap> grpMexes = parseMetalSpotsGRP();
+		if(grpMexes.size() > 0){
+			initializeGraph(grpMexes);
+		}
+		
 	}
 	
 	@Override
 	public String getModuleName() {
 		return "GraphManager";
+	}
+	
+	@SuppressWarnings("rawtypes")
+	private ArrayList<HashMap> parseMetalSpotsGRP(){
+		Game g = parent.getCallback().getGame();
+		
+		GameRulesParam mexCount = g.getGameRulesParamByName("mex_count");
+		
+		ArrayList<HashMap> data = new ArrayList<HashMap>();
+
+		if (mexCount == null){
+			return data;
+		}
+		
+		int numSpots = (int)mexCount.getValueFloat();
+		
+		parent.debug("Detected "+numSpots+" metal spots in GRP");
+		
+		
+		if(numSpots < 0){
+			return data;
+		}
+		
+		for (int i=1;i<numSpots;i++){
+			HashMap<String, String> map = new HashMap<String, String>();
+			try{
+				map.put("x", Float.toString(g.getGameRulesParamByName("mex_x"+i).getValueFloat()));
+				map.put("y", Float.toString(g.getGameRulesParamByName("mex_y"+i).getValueFloat()));
+				map.put("z", Float.toString(g.getGameRulesParamByName("mex_z"+i).getValueFloat()));
+				map.put("metal", Float.toString(g.getGameRulesParamByName("mex_metal"+i).getValueFloat()));
+				data.add(map);
+			}
+			catch(NullPointerException e){
+				parent.debug("faulty GRP metal config; returning partial");
+				return data;
+			}
+		}
+		
+		return data;
 	}
 	
     @Override
@@ -100,54 +150,9 @@ public class GraphManager extends Module {
 			JsonParserFactory factory=JsonParserFactory.getInstance();
 			JSONParser parser=factory.newJsonParser();
 			ArrayList<HashMap> jsonData=(ArrayList)parser.parseJson(json).values().toArray()[0];
-			initializeGraph(jsonData);
-    		parent.debug("Parsed JSON metalmap with "+metalSpots.size()+" spots and "+links.size()+" links");
-    		
-			Set<Integer> enemies = parent.getEnemyAllyTeamIDs();
-			
-			if(parent.startType == ZKGraphBasedAI.StartType.ZK_STARTPOS){
-				// identify ally startbox ID's
-				Set<Integer> allyBoxes = new HashSet<Integer>();
-				for(Team a:parent.allies){
-					int boxID = (int)a.getTeamRulesParamByName("start_box_id").getValueFloat();
-					allyBoxes.add(boxID);
-					parent.debug("team "+a.getTeamId()+" of allyteam "+parent.getCallback().getGame().getTeamAllyTeam(a.getTeamId())+" is ally with boxID "+boxID);
-				}
-				
-				for(Entry<Integer, StartArea> s:parent.startBoxes.entrySet()){
-					if(!allyBoxes.contains(s.getKey())){
-						parent.debug(s.getKey()+" is an enemy startbox");
-						for (MetalSpot ms:metalSpots){
-							AIFloat3 pos = ms.position;
-							if(s.getValue().contains(pos)){
-								ms.enemyShadowed = true;
-							}
-						}
-					}else{
-						parent.debug(s.getKey()+" is an allied startbox");
-					}
-				}
-				
-			}else{
-				for(int enemy:enemies){
-					StartArea box = parent.getEnemyBox(enemy);
-				
-					if(box!=null){
-						for (MetalSpot ms:metalSpots){
-							AIFloat3 pos = ms.position;
-							if(box.contains(pos)){
-								ms.enemyShadowed = true;
-							}
-						}
-					}
-				}
-    		}
-
-			for (MetalSpot ms: metalSpots){
-				avgMexValue += ms.value / metalSpots.size();
-			}
-			for (MetalSpot ms: metalSpots){
-				ms.weight = ms.value/avgMexValue;
+    		parent.debug("Parsed JSON metalmap with "+jsonData.size()+" spots");
+			if(!graphInitialized){
+				initializeGraph(jsonData);	
 			}
     	}
     	return 0; //signaling: OK
@@ -399,6 +404,57 @@ public class GraphManager extends Module {
     		
     		links.add(l);
     	}
+    	
+    	doInitialInference();
+    	paintGraph();
+    }
+    
+    private void doInitialInference(){
+		Set<Integer> enemies = parent.getEnemyAllyTeamIDs();
+		if(parent.startType == ZKGraphBasedAI.StartType.ZK_STARTPOS){
+			// identify ally startbox ID's
+			Set<Integer> allyBoxes = new HashSet<Integer>();
+			for(Team a:parent.allies){
+				int boxID = (int)a.getTeamRulesParamByName("start_box_id").getValueFloat();
+				allyBoxes.add(boxID);
+				parent.debug("team "+a.getTeamId()+" of allyteam "+parent.getCallback().getGame().getTeamAllyTeam(a.getTeamId())+" is ally with boxID "+boxID);
+			}
+			
+			for(Entry<Integer, StartArea> s:parent.startBoxes.entrySet()){
+				if(!allyBoxes.contains(s.getKey())){
+					parent.debug(s.getKey()+" is an enemy startbox");
+					for (MetalSpot ms:metalSpots){
+						AIFloat3 pos = ms.position;
+						if(s.getValue().contains(pos)){
+							ms.enemyShadowed = true;
+						}
+					}
+				}else{
+					parent.debug(s.getKey()+" is an allied startbox");
+				}
+			}
+			
+		}else{
+			for(int enemy:enemies){
+				StartArea box = parent.getEnemyBox(enemy);
+			
+				if(box!=null){
+					for (MetalSpot ms:metalSpots){
+						AIFloat3 pos = ms.position;
+						if(box.contains(pos)){
+							ms.enemyShadowed = true;
+						}
+					}
+				}
+			}
+		}
+
+		for (MetalSpot ms: metalSpots){
+			avgMexValue += ms.value / metalSpots.size();
+		}
+		for (MetalSpot ms: metalSpots){
+			ms.weight = ms.value/avgMexValue;
+		}
     }
     
 	private void paintGraph(){
