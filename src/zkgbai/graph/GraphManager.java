@@ -407,6 +407,7 @@ public class GraphManager extends Module {
     	
     	doInitialInference();
     	paintGraph();
+    	graphInitialized = true;
     }
     
     private void doInitialInference(){
