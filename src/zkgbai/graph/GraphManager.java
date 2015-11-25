@@ -125,7 +125,7 @@ public class GraphManager extends Module {
 			return data;
 		}
 		
-		for (int i=1;i<numSpots;i++){
+		for (int i=1;i<=numSpots;i++){
 			HashMap<String, String> map = new HashMap<String, String>();
 			try{
 				map.put("x", Float.toString(g.getGameRulesParamByName("mex_x"+i).getValueFloat()));
