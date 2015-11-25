@@ -250,8 +250,7 @@ public class EconomyManager extends Module {
 				w.getTask().removeWorker(w);
 				w.clearTask();
 			}
-			Worker fac = getNearestFac(h.getPos());
-			AIFloat3 pos = getRadialPoint(fac.getPos(), 300f);
+			AIFloat3 pos = graphManager.getAllyCenter();
 			h.moveTo(pos, (short) 0, frame+240);
 			w.isChicken = true;
 			w.chickenFrame = frame;
@@ -391,11 +390,6 @@ public class EconomyManager extends Module {
 
 		if (defName.equals("armnanotc")){
 			nanos.add(unit);
-			//AIFloat3 shiftedPosition = unit.getPos();
-			//shiftedPosition.x+=30;
-			//shiftedPosition.z+=30;
-			//unit.patrolTo(shiftedPosition, (short) 0, frame + 900000);
-			//unit.setRepeat(true, (short) 0, 900000);
 		}
 
 		if(defName.equals("cormex")){
@@ -454,10 +448,12 @@ public class EconomyManager extends Module {
 
 		// set facs to high prio if resources are available, low prio otherwise.
 		params.clear();
-		if ((effectiveIncome > 20 && energy > 400)) {
-			params.add((float) 2);
-		} else {
-			params.add((float) 3);
+		if ((effectiveIncome > 20 && energy > 400 && (nanos.size() + factories.size() < effectiveIncome/10) && (warManager.squads.size() < 4 || effectiveIncome > 100f))) {
+			params.add(2f);
+		}else if (warManager.squads.size() >= 4 || (effectiveIncome > 20 && nanos.size() + factories.size() > effectiveIncome/10)) {
+			params.add(1f);
+		}else{
+			params.add(3f);
 		}
 
 		for (Worker f : factories) {
@@ -482,12 +478,13 @@ public class EconomyManager extends Module {
 		}
 
 		if (raiderSpam < 8) {
-			raiderSpam += 2;
 			if ((effectiveIncome > 20 && Math.random() > 0.75)
 					|| (effectiveIncome > 30 && Math.random() > 0.5)
-					|| (effectiveIncome > 40)) {
+					|| (effectiveIncome > 40 && Math.random() > 0.25)) {
+				raiderSpam += 2;
 				return "spherepole";
 			} else {
+				raiderSpam++;
 				return "armpw";
 			}
 		}
@@ -692,11 +689,11 @@ public class EconomyManager extends Module {
 				return -1000; // factory plops and emergency facs get maximum priority
 			}
 			
-			if (ctask.buildType.getCost(m) > 200){
+			if (ctask.buildType.getCost(m) > 300){
 				isExpensive = true;
 			}else if (ctask.buildType.getName().equals("cormex")){
 				isMex = true;
-			}else if (ctask.buildType.isAbleToAttack()){
+			}else if (ctask.buildType.isAbleToAttack() || ctask.buildType.getName().equals("armnanotc")){
 				isPorc = true;
 			}
 		}
@@ -719,7 +716,7 @@ public class EconomyManager extends Module {
 			UnitDef def = rptask.target.getDef();
 			if (def != null) {
 				if (def.isAbleToAttack()) {
-					return dist - (2 * def.getCost(m)) + (200 * (costMod-1));
+					return (dist/2) - Math.min(def.getCost(m), 1000) + (200 * (costMod-1));
 				}
 			}else{
 				return 100000;
@@ -886,8 +883,8 @@ public class EconomyManager extends Module {
     	AIFloat3 position = worker.getPos();
 		// do we need a factory?
 		if ((factories.size() == 0 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 100 && factories.size() == 1 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 150 && factories.size() == 2 && factoryTasks.size() == 0)) {
+				|| (effectiveIncome > 50 && factories.size() == 1 && factoryTasks.size() == 0)
+				|| (effectiveIncome > 100 && factories.size() == 2 && factoryTasks.size() == 0)) {
 			createFactoryTask(worker);
 		}
 

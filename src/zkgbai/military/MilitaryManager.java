@@ -40,7 +40,8 @@ public class MilitaryManager extends Module {
 	List<Unit> havens;
 	
 	Squad nextSquad;
-	List<Squad> squads;
+	public List<Squad> squads;
+	List<Raider> raidQueue;
 	public List<Raider> raiders;
 	List<Strider> striders;
 
@@ -54,7 +55,7 @@ public class MilitaryManager extends Module {
 	Graphics2D threatGraphics;
 	ArrayList<TargetMarker> targetMarkers;
 	
-    public static final short OPTION_SHIFT_KEY = (1 << 5); //  32	
+    public static final short OPTION_SHIFT_KEY = (1 << 5); //  32
 	static AIFloat3 nullpos = new AIFloat3(0,0,0);
 	
 	int nano;
@@ -67,6 +68,7 @@ public class MilitaryManager extends Module {
 	private Resource m;
 
 	int frame = 0;
+	int lastDefenseFrame = 0;
 
 	static int CMD_DONT_FIRE_AT_RADAR = 38372;
 	
@@ -95,6 +97,7 @@ public class MilitaryManager extends Module {
 		this.supports = new HashMap<Integer, Fighter>();
 		this.loners = new HashMap<Integer, Fighter>();
 		this.raiders = new ArrayList<Raider>();
+		this.raidQueue = new ArrayList<Raider>();
 		this.striders = new ArrayList<Strider>();
 		this.squads = new ArrayList<Squad>();
 		this.nextSquad = null;
@@ -139,6 +142,7 @@ public class MilitaryManager extends Module {
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 			int rad = 50;
+
 			threatGraphics.setColor(new Color(0f, power, 0f));
 			paintCircle(x, y, rad);
 		}
@@ -324,6 +328,7 @@ public class MilitaryManager extends Module {
 	}
 
 	private void assignRaiders(){
+
 		for (Raider r: raiders){
 			ScoutTask bestTask = null;
 			float cost = Float.MAX_VALUE;
@@ -343,7 +348,7 @@ public class MilitaryManager extends Module {
 			}
 
 			boolean overThreat = (getEffectiveThreat(r.getPos()) >= 0);
-			if (bestTask != null && (!bestTask.equals(r.getTask()) || overThreat || r.getUnit().getCurrentCommands().size() == 0)){
+			if (bestTask != null && (overThreat || bestTask != r.getTask() || r.getUnit().getCurrentCommands().isEmpty())){
 				if (!bestTask.spot.hostile){
 					if (overThreat){
 						Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.RAIDER_PATH);
@@ -391,7 +396,7 @@ public class MilitaryManager extends Module {
 
 		nextSquad.addUnit(f, frame);
 
-		if (nextSquad.metalValue > nextSquad.income * 45){
+		if (nextSquad.metalValue > nextSquad.income * 30){
 			nextSquad.status = 'r';
 			squads.add(nextSquad);
 			nextSquad.setTarget(graphManager.getAllyCenter(), frame);
@@ -697,6 +702,12 @@ public class MilitaryManager extends Module {
 		}
 
 		if(frame%15 == 0) {
+			if (raidQueue.size() > 5){
+				raiders.addAll(raidQueue);
+				raidQueue.clear();
+			}
+			paintThreatMap();
+
 			updateTargets();
 			createRaidTasks();
 			createScoutTasks();
@@ -732,10 +743,6 @@ public class MilitaryManager extends Module {
 			}
 
 			dgunStriders();
-		}
-
-		if (frame % 30 == 0){
-			paintThreatMap();
 		}
         return 0; // signaling: OK
     }
@@ -829,7 +836,15 @@ public class MilitaryManager extends Module {
 			striders.add(st);
 		}else if (unitTypes.raiders.contains(defName)) {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
-			raiders.add(r);
+			if (unit.getDef().getCost(m) > 100){
+				raiders.add(r);
+			}else {
+				raidQueue.add(r);
+				AIFloat3 pos = graphManager.getAllyCenter();
+				if (pos != null){
+					unit.fight(pos, (short) 0, frame + 300);
+				}
+			}
 		}else if (unitTypes.assaults.contains(defName)){
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			fighters.put(f.id, f);
@@ -879,7 +894,16 @@ public class MilitaryManager extends Module {
 				}
 			}
 		}
+		for (Raider r:raidQueue){
+			if (r.id == unit.getUnitId()){
+				dead = r;
+				if (r.getTask() != null) {
+					r.getTask().removeRaider(r);
+				}
+			}
+		}
 		raiders.remove(dead);
+		raidQueue.remove(dead);
 
 		for (Strider s:striders){
 			if (s.id == unit.getUnitId()){
@@ -887,11 +911,6 @@ public class MilitaryManager extends Module {
 			}
 		}
 		striders.remove(dead);
-
-		if (!unit.getDef().isAbleToAttack() || unit.getMaxSpeed() == 0){
-			DefenseTarget dt = new DefenseTarget(unit.getPos(), frame);
-			defenseTargets.add(dt);
-		}
 
         return 0; // signaling: OK
     }
@@ -911,6 +930,39 @@ public class MilitaryManager extends Module {
 			}
 		}
 
+		// retreat scouting raiders so that they don't suicide into enemy raiders
+		for (Raider r: raiders){
+			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && r.scouting){
+				dir.x *= -100;
+				dir.z *= -100;
+				AIFloat3 pos = h.getPos();
+				pos.x += dir.x;
+				pos.z += dir.z;
+				h.moveTo(pos, (short) 0, frame);
+			}
+		}
+
+		for (Raider r: raidQueue){
+			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && r.scouting){
+				dir.x *= -100;
+				dir.z *= -100;
+				AIFloat3 pos = h.getPos();
+				pos.x += dir.x;
+				pos.z += dir.z;
+				h.moveTo(pos, (short) 0, frame);
+			}
+		}
+
+
+
+		if ((!h.getDef().isAbleToAttack() || h.getMaxSpeed() == 0) && frame - lastDefenseFrame > 300){
+			lastDefenseFrame = frame;
+			DefenseTarget dt = new DefenseTarget(h.getPos(), frame);
+			defenseTargets.add(dt);
+			for (Raider r: raidQueue){
+				r.fightTo(h.getPos(), frame);
+			}
+		}
 		return 0;
     }
 
