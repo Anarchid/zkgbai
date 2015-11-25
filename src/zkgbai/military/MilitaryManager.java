@@ -152,7 +152,7 @@ public class MilitaryManager extends Module {
 
 			AIFloat3 position = t.position;
 
-			if (position != null) {
+			if (position != null && t.ud != null && !t.ud.getTooltip().contains("Anti-Air")) {
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
 				int r = (int) ((t.threatRadius) / 8);
@@ -677,7 +677,7 @@ public class MilitaryManager extends Module {
 
 		List<DefenseTarget> expired = new ArrayList<DefenseTarget>();
 		for (DefenseTarget d:defenseTargets){
-			if (frame - d.frameIssued > 1800){
+			if (frame - d.frameIssued > 600){
 				expired.add(d);
 			}
 		}
