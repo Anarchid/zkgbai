@@ -11,7 +11,6 @@ public class Enemy {
 	AIFloat3 position;
 	float threatRadius = 0;
 	float value = 0;
-	float danger = 0;
 	float speed = 0;
 	public int lastSeen = 0;
 	boolean visible = false;
@@ -35,7 +34,6 @@ public class Enemy {
 			this.ud = def;
 		}else{
 			this.value = 50;
-			this.danger = 0;
 			this.position = unit.getPos();
 			this.isStatic = false;
 		}
@@ -69,12 +67,7 @@ public class Enemy {
 		this.ud = u;
 		
 		if(u.getWeaponMounts().size() > 0){
-			this.danger =  u.getPower() + u.getHealth();
 			this.threatRadius = u.getMaxWeaponRange();
-			if (u.getName().equals("arm_venom")){
-				this.danger += 300;
-			}
-
 			if (u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().contains("com")){
 				// identify riots
 				this.isRiot = true;
@@ -87,8 +80,28 @@ public class Enemy {
 		this.identified = true;
 		this.value = rd.getValue();
 		this.isStatic = (rd.getSpeed() == 0);
-		this.speed = rd.getSpeed();	
-		this.danger = rd.getDanger();
+		this.speed = rd.getSpeed();
 		this.threatRadius = rd.getRange();
+	}
+
+	public float getDanger(){
+		float health = 0;
+		float danger = 0;
+		if (ud != null) {
+			if (ud.getName().equals("arm_venom")) {
+				danger += 300;
+			}
+			if (unit.getHealth() > 0) {
+				health = unit.getHealth();
+				danger = ud.getPower() + health;
+			} else {
+				health = ud.getHealth();
+				danger = ud.getPower() + health;
+			}
+			if (isRiot){
+				danger *= 2;
+			}
+		}
+		return danger;
 	}
 }
