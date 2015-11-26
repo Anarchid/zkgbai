@@ -41,6 +41,7 @@ public class MilitaryManager extends Module {
 	List<Unit> havens;
 	
 	Squad nextSquad;
+	Squad nextAirSquad;
 	public List<Squad> squads;
 	List<Raider> raidQueue;
 	public List<Raider> raiders;
@@ -72,7 +73,7 @@ public class MilitaryManager extends Module {
 	int lastDefenseFrame = 0;
 
 	static int CMD_DONT_FIRE_AT_RADAR = 38372;
-	
+	static int CMD_AIR_STRAFE = 39381;
 	
 	@Override
 	public String getModuleName() {
@@ -103,6 +104,7 @@ public class MilitaryManager extends Module {
 		this.striders = new ArrayList<Strider>();
 		this.squads = new ArrayList<Squad>();
 		this.nextSquad = null;
+		this.nextAirSquad = null;
 		this.cowardUnits = new ArrayList<Unit>();
 		this.retreatingUnits = new ArrayList<Unit>();
 		this.havens = new ArrayList<Unit>();
@@ -406,10 +408,31 @@ public class MilitaryManager extends Module {
 		}
 	}
 
+	private void addToAirSquad( Fighter f){
+		// create a new squad if there isn't one
+		if (nextAirSquad == null){
+			nextAirSquad = new Squad();
+			nextAirSquad.setTarget(getRallyPoint(f.getPos()), frame);
+			nextAirSquad.income = ecoManager.effectiveIncome;
+		}
+
+		nextAirSquad.addUnit(f, frame);
+
+		if (nextAirSquad.metalValue > Math.min(nextAirSquad.income * 30, 1200f)){
+			nextAirSquad.status = 'r';
+			squads.add(nextAirSquad);
+			nextAirSquad.setTarget(graphManager.getAllyCenter(), frame);
+			nextAirSquad = null;
+		}
+	}
+
 	private void updateSquads(){
 		// set the rally point for the next forming squad for defense
 		if (nextSquad != null && frame % 600 == 0){
 			nextSquad.setTarget(getRallyPoint(nextSquad.getPos()), frame);
+		}
+		if (nextAirSquad != null && frame % 600 == 0){
+			nextAirSquad.setTarget(getRallyPoint(nextAirSquad.getPos()), frame);
 		}
 
 		List<Squad> deadSquads = new ArrayList<Squad>();
@@ -729,7 +752,11 @@ public class MilitaryManager extends Module {
 				Unit u = f.getUnit();
 				if (retreatingUnits.contains(u) && u.getHealth() / u.getMaxHealth() > 0.95) {
 					retreatingUnits.remove(u);
-					addToSquad(f);
+					if (unitTypes.airMobs.contains(u.getDef().getName())){
+						addToAirSquad(f);
+					}else {
+						addToSquad(f);
+					}
 				}
 			}
 
@@ -833,6 +860,13 @@ public class MilitaryManager extends Module {
 			unit.executeCustomCommand(CMD_DONT_FIRE_AT_RADAR, params, (short) 0, frame+60);
 		}
 
+		// disable air strafe for brawlers
+		if (defName.equals("armbrawl")){
+			ArrayList<Float> params = new ArrayList<>();
+			params.add((float) 0);
+			unit.executeCustomCommand(CMD_AIR_STRAFE, params, (short) 0, frame+30);
+		}
+
 		if (unitTypes.striders.contains(defName)){
 			Strider st = new Strider(unit, unit.getDef().getCost(m));
 			striders.add(st);
@@ -847,10 +881,14 @@ public class MilitaryManager extends Module {
 					unit.fight(pos, (short) 0, frame + 300);
 				}
 			}
-		}else if (unitTypes.assaults.contains(defName)){
+		}else if (unitTypes.assaults.contains(defName)) {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			fighters.put(f.id, f);
 			addToSquad(f);
+		}else if (unitTypes.airMobs.contains(defName)){
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			fighters.put(f.id, f);
+			addToAirSquad(f);
 		}else if(unitTypes.mobSupports.contains(defName)){
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			supports.put(f.id, f);
@@ -937,8 +975,10 @@ public class MilitaryManager extends Module {
 					retreatingUnits.add(h);
 					if (fighters.containsKey(h.getUnitId())){
 						Fighter f = fighters.get(h.getUnitId());
-						f.squad.removeUnit(f);
-						f.squad = null;
+						if (f.squad != null) {
+							f.squad.removeUnit(f);
+							f.squad = null;
+						}
 					}
 				}
 			}

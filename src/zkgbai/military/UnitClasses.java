@@ -11,6 +11,7 @@ public class UnitClasses {
     public List<String> assaults;
     public List<String> arties;
     public List<String> striders;
+    public List<String> airMobs;
     public List<String> mobSupports;
     public List<String> loners;
     public List<String> AAs;
@@ -21,6 +22,7 @@ public class UnitClasses {
         this.assaults = new ArrayList<String>();
         this.arties = new ArrayList<String>();
         this.striders = new ArrayList<String>();
+        this.airMobs = new ArrayList<String>();
         this.mobSupports = new ArrayList<String>();
         this.loners = new ArrayList<String>();
         this.AAs = new ArrayList<String>();
@@ -36,9 +38,11 @@ public class UnitClasses {
         assaults.add("armzeus");
         assaults.add("armwar");
         assaults.add("armrock");
-        assaults.add("gunshipsupport");
-        assaults.add("armbrawl");
-        assaults.add("blackdawn");
+
+        // Air mobs
+        airMobs.add("gunshipsupport");
+        airMobs.add("armbrawl");
+        airMobs.add("blackdawn");
 
         // mobSupport: things that increase the strength of mobs
         mobSupports.add("spherecloaker");

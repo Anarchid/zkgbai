@@ -521,8 +521,12 @@ public class EconomyManager extends Module {
 			return "armca";
 		}
 
+		if (enemyHasAir && (Math.random() > 0.75 || warManager.AAs.size() < 3)){
+			return "gunshipaa";
+		}
+
 		double rand = Math.random();
-		if (rand > 0.35){
+		if (rand > 0.60){
 			return "gunshipsupport";
 		}else if (rand > 0.01) {
 			return "armbrawl";
@@ -889,8 +893,8 @@ public class EconomyManager extends Module {
     	AIFloat3 position = worker.getPos();
 		// do we need a factory?
 		if ((factories.size() == 0 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 70 && factories.size() == 1 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 150 && factories.size() == 2 && factoryTasks.size() == 0)) {
+				|| (effectiveIncome > 40 && factories.size() == 1 && factoryTasks.size() == 0)
+				|| (effectiveIncome > 80 && factories.size() == 2 && factoryTasks.size() == 0)) {
 			createFactoryTask(worker);
 		}
 
@@ -962,7 +966,12 @@ public class EconomyManager extends Module {
     void createPorcTask(Worker worker){
 		AIFloat3 position = worker.getUnit().getPos();
 		position = getRadialPoint(position, 150f);
-		UnitDef porc = callback.getUnitDefByName("corrl");
+		UnitDef porc;
+		if (porcs.isEmpty()){
+			porc = callback.getUnitDefByName("corllt");
+		}else{
+			porc = callback.getUnitDefByName("corrl");
+		}
 		position = callback.getMap().findClosestBuildSite(porc,position,600f, 3, 0);
 
 		if (!needDefender(position)){
@@ -1013,9 +1022,9 @@ public class EconomyManager extends Module {
 		if(factories.size() == 0){
 			factory = cloak;
 		}else if (factories.size() == 1){
-			factory = strider;
-		}else{
 			factory = gunship;
+		}else{
+			factory = strider;
 		}
     	
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
