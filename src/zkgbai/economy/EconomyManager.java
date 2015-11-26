@@ -168,17 +168,17 @@ public class EconomyManager extends Module {
 			assignNanos();
 		}
 
-		if (frame % 3 == 0) {
-			//create new building tasks.
-			for ( Worker w : workers) {
-				if (!assigned.contains(w)) {
-					createWorkerTask(w);
-					break;
-				}
-			}
 
-			assignWorkers(); // assign workers to tasks
+		//create new building tasks.
+		for (Worker w : workers) {
+			if (!assigned.contains(w)) {
+				createWorkerTask(w);
+				break;
+			}
 		}
+
+		assignWorkers(); // assign workers to tasks
+
 		return 0;
 	}
 	
@@ -586,46 +586,47 @@ public class EconomyManager extends Module {
 	}
 
 	void assignWorkers() {
-		 List<Worker> toAssign = new ArrayList<Worker>();
-		int numAssigned = 0;
-
+		 Worker toAssign = null;
 		// limit the number of workers assigned at one time to prevent super lag.
 		for (Worker w : workers) {
-			if (!assigned.contains(w) && numAssigned == 0){
-				toAssign.add(w);
-				assigned.add(w);
-				numAssigned++;
-			}
-		}
-
-		if (numAssigned == 0){
-			assigned.clear();
-		}
-
-		for ( Worker w: toAssign){
-			if (!w.isChicken) {
-				 WorkerTask task = getCheapestJob(w);
-				WorkerTask wtask = w.getTask();
-				if (task != null && !task.equals(wtask)) {
-					// remove it from its old assignment if it had one
-					if (wtask != null){
-						wtask.removeWorker(w);
-					}
-					if (task instanceof ConstructionTask) {
-						 ConstructionTask ctask = (ConstructionTask) task;
-						w.getUnit().build(ctask.buildType, ctask.getPos(), ctask.facing, (short) 0, frame + 500);
-					} else if (task instanceof ReclaimTask) {
-						 ReclaimTask rt = (ReclaimTask) task;
-						w.getUnit().reclaimFeature(rt.target, (short) 0, frame + 500);
-					} else if (task instanceof RepairTask) {
-						 RepairTask rt = (RepairTask) task;
-						w.getUnit().repair(rt.target, (short) 0, frame + 500);
-					}
-					w.setTask(task);
-					task.addWorker(w);
+			if ((!assigned.contains(w) || w.isIdle)){
+				toAssign = w;
+				if (w.isIdle){
+					break;
 				}
 			}
 		}
+
+		if (toAssign == null){
+			assigned.clear();
+			return;
+		}
+
+		Worker w = toAssign;
+		assigned.add(w);
+		if (!w.isChicken) {
+			WorkerTask task = getCheapestJob(w);
+			WorkerTask wtask = w.getTask();
+			if (task != null && !task.equals(wtask)) {
+				// remove it from its old assignment if it had one
+				if (wtask != null) {
+					wtask.removeWorker(w);
+				}
+				if (task instanceof ConstructionTask) {
+					ConstructionTask ctask = (ConstructionTask) task;
+					w.getUnit().build(ctask.buildType, ctask.getPos(), ctask.facing, (short) 0, frame + 500);
+				} else if (task instanceof ReclaimTask) {
+					ReclaimTask rt = (ReclaimTask) task;
+					w.getUnit().reclaimFeature(rt.target, (short) 0, frame + 500);
+				} else if (task instanceof RepairTask) {
+					RepairTask rt = (RepairTask) task;
+					w.getUnit().repair(rt.target, (short) 0, frame + 500);
+				}
+				w.setTask(task);
+				task.addWorker(w);
+			}
+		}
+
 	}
 
 	
@@ -695,7 +696,7 @@ public class EconomyManager extends Module {
 			}else if (ctask.buildType.isAbleToAttack()){
 				isPorc = true;
 			}else if(ctask.buildType.getName().equals("armnanotc")){
-				return dist/(float) Math.log(dist)+250*(costMod-1);
+				return dist-1000 + (500*(costMod-1));
 			}
 		}
 
@@ -716,8 +717,8 @@ public class EconomyManager extends Module {
 			RepairTask rptask = (RepairTask) task;
 			UnitDef def = rptask.target.getDef();
 			if (def != null) {
-				if (def.isAbleToAttack()) {
-					return (dist/2) - Math.min(def.getCost(m), 1000) + (200 * (costMod-1));
+				if (def.isAbleToAttack() && def.getBuildOptions().isEmpty()) {
+					return (dist/2) - (def.getHealth()/costMod);
 				}
 			}else{
 				return 100000;
@@ -1349,7 +1350,7 @@ public class EconomyManager extends Module {
 		}
 	}
     
-    void createNanoTurretTask( Unit target){
+    void createNanoTurretTask(Unit target){
 		UnitDef nano = callback.getUnitDefByName("armnanotc");
     	AIFloat3 position = target.getPos();
     	float buildDist = 400f;
@@ -1368,7 +1369,7 @@ public class EconomyManager extends Module {
 		int ctCount = 9001;
 		for ( Worker f:factories){
 			// Try to spread caretakers evenly between facs and to catch singus.
-			List<Unit> nearUnits = callback.getFriendlyUnitsIn(f.getPos(), 800);
+			List<Unit> nearUnits = callback.getFriendlyUnitsIn(f.getPos(), 450);
 			int numCT = 0;
 			for ( Unit u : nearUnits){
 				if (u.getDef().getName().equals("armnanotc")){

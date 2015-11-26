@@ -156,7 +156,7 @@ public class MilitaryManager extends Module {
 
 			AIFloat3 position = t.position;
 
-			if (position != null && t.ud != null && !t.ud.getTooltip().contains("Anti-Air") && !unitTypes.planes.contains(t.ud.getName())) {
+			if (position != null && t.ud != null && !t.ud.getTooltip().contains("Anti-Air") && !unitTypes.planes.contains(t.ud.getName()) && !t.isArty) {
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
 				int r = (int) ((t.threatRadius) / 8);
@@ -997,7 +997,7 @@ public class MilitaryManager extends Module {
 		}
 
 		for (Raider r: raidQueue){
-			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && r.scouting){
+			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6){
 				dir.x *= -100;
 				dir.z *= -100;
 				AIFloat3 pos = h.getPos();

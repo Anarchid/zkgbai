@@ -19,6 +19,7 @@ public class Enemy {
 	boolean isRadarVisible = false;
 	boolean identified = false;
 	boolean isRiot = false;
+	boolean isArty = false;
 	float maxObservedSpeed = 0;
 	
 	Enemy(Unit unit, float cost){
@@ -71,6 +72,11 @@ public class Enemy {
 			if (u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().contains("com")){
 				// identify riots
 				this.isRiot = true;
+			}
+
+			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm")) && !u.getName().contains("Riot")){
+				// identify riots
+				this.isArty = true;
 			}
 		}		
 		this.speed = u.getSpeed()/30;

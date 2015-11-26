@@ -10,6 +10,7 @@ public class Worker {
 	private WorkerTask task;
 	public int id;
 	public boolean isChicken;
+	public boolean isIdle = true;
 	public int chickenFrame;
 	AIFloat3 lastpos = null;
 	
@@ -24,6 +25,7 @@ public class Worker {
 	
 	public void setTask(WorkerTask task){
 		this.task = task;
+		this.isIdle = false;
 	}
 	
 	public WorkerTask getTask(){
@@ -40,6 +42,7 @@ public class Worker {
 
 	public void clearTask(){
 		this.task = null;
+		this.isIdle = true;
 	}
 
 	public void unstick(int frame){
