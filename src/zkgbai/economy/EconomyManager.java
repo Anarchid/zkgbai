@@ -469,7 +469,7 @@ public class EconomyManager extends Module {
 	}
 
 	private Boolean needWorkers(){
-		if (((float) numWorkers < Math.floor(((effectiveIncome)/3)) + fusions.size() && (numFighters > numWorkers || metal > 250 || numWorkers == 0) && (effectiveIncome > 9 || numWorkers == 0))) {
+		if (((float) numWorkers-1 < Math.floor(((effectiveIncome)/5)) + fusions.size() && (numFighters > numWorkers || metal > 250 || numWorkers == 0) && (effectiveIncome > 9 || numWorkers == 0))) {
 			return true;
 		}
 		return false;
@@ -484,10 +484,14 @@ public class EconomyManager extends Module {
 			return "armpw";
 		}
 
+		if (enemyHasAir && (Math.random() > 0.75 || warManager.AAs.size() < 3)){
+			return "armjeth";
+		}
+
 		if (raiderSpam < 8) {
-			if ((effectiveIncome > 20 && Math.random() > 0.75)
-					|| (effectiveIncome > 30 && Math.random() > 0.5)
-					|| (effectiveIncome > 40 && Math.random() > 0.25)) {
+			if ((effectiveIncome < 30 && Math.random() > 0.75)
+					|| (effectiveIncome > 30 && effectiveIncome < 45 && Math.random() > 0.5)
+					|| (effectiveIncome > 45 && Math.random() > 0.25)) {
 				raiderSpam += 2;
 				return "spherepole";
 			} else {
@@ -496,7 +500,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if (effectiveIncome > 60 && energy > 100 && numErasers == 0){
+		if (effectiveIncome > 45 && energy > 100 && numErasers == 0){
 			return "spherecloaker";
 		}
 
@@ -508,7 +512,7 @@ public class EconomyManager extends Module {
 			return "armzeus";
 		}else if (rand > 0.1){
 			return "armwar";
-		}else if (effectiveIncome > 40 && energy > 100){
+		}else if (effectiveIncome > 30 && energy > 100){
 			return "armsnipe";
 		}else{
 			return "armzeus";
@@ -1251,7 +1255,7 @@ public class EconomyManager extends Module {
 
 		ConstructionTask ct;
 
-		if (effectiveIncome > 40 && fdist > 800 && !warManager.isFrontLine(position) && fusions.size() < 8 && fusionTasks.isEmpty()){
+		if (effectiveIncome > 35 && fdist > 800 && !warManager.isFrontLine(position) && fusions.size() < 8 && fusionTasks.isEmpty()){
 			position = graphManager.getOverdriveSweetSpot(position);
 			position = callback.getMap().findClosestBuildSite(fusion,position,600f, 3, 0);
 			ct = new ConstructionTask(fusion, position, 0);

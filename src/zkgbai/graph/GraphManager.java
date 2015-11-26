@@ -60,6 +60,8 @@ public class GraphManager extends Module {
 	boolean graphInitialized;
 	
 	BufferedImage threatMap;
+
+	AIFloat3 allyCenter = null;
 	
 	public HashMap<String, Integer> pylonDefs; 
 	int pylonCounter;
@@ -286,7 +288,8 @@ public class GraphManager extends Module {
     		}
     		
     	}
-    	
+
+    	calcAllyCenter();
     	paintGraph();
 
 		return 0;
@@ -432,12 +435,19 @@ public class GraphManager extends Module {
 					}
 				}else{
 					parent.debug(s.getKey()+" is an allied startbox");
+					for (MetalSpot ms:metalSpots){
+						AIFloat3 pos = ms.position;
+						if(s.getValue().contains(pos)){
+							ms.allyShadowed = true;
+						}
+					}
 				}
 			}
 			
 		}else{
+			StartArea box = null;
 			for(int enemy:enemies){
-				StartArea box = parent.getEnemyBox(enemy);
+				box = parent.getStartArea(enemy);
 			
 				if(box!=null){
 					for (MetalSpot ms:metalSpots){
@@ -446,6 +456,14 @@ public class GraphManager extends Module {
 							ms.enemyShadowed = true;
 						}
 					}
+				}
+			}
+
+			box = parent.getStartArea(parent.allyTeamID);
+			for (MetalSpot ms:metalSpots){
+				AIFloat3 pos = ms.position;
+				if(box.contains(pos)){
+					ms.allyShadowed = true;
 				}
 			}
 		}
@@ -558,7 +576,7 @@ public class GraphManager extends Module {
 		return spots;
 	}
 
-	public List<MetalSpot> getOwnedSpots(){
+	public List<MetalSpot> getAllyTerritory(){
 		// returns all metal spots not owned by allies.
 		List<MetalSpot> spots = new ArrayList<MetalSpot>();
 		for(MetalSpot ms:metalSpots){
@@ -567,7 +585,7 @@ public class GraphManager extends Module {
 		return spots;
 	}
 
-	public AIFloat3 getAllyCenter(){
+	private void calcAllyCenter(){
 		List<MetalSpot> spots = new ArrayList<MetalSpot>();
 		for(MetalSpot ms:metalSpots){
 			if(ms.owned || ms.allyShadowed) spots.add(ms);
@@ -586,9 +604,14 @@ public class GraphManager extends Module {
 			position.z = z;
 			UnitDef factory = callback.getUnitDefByName("factorygunship");
 			position = callback.getMap().findClosestBuildSite(factory, position, 600f, 3, 0);
-			return position;
+			allyCenter = position;
+		}else {
+			allyCenter = null;
 		}
-		return null;
+	}
+
+	public AIFloat3 getAllyCenter(){
+		return allyCenter;
 	}
 
 	public List<MetalSpot> getUnownedSpots(){

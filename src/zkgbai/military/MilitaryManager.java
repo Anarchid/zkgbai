@@ -35,6 +35,7 @@ public class MilitaryManager extends Module {
 	java.util.Map<Integer, Fighter> fighters;
 	java.util.Map<Integer, Fighter> supports;
 	java.util.Map<Integer, Fighter> loners;
+	public java.util.Map<Integer, Fighter> AAs;
 	List<Unit> cowardUnits;
 	List<Unit> retreatingUnits;
 	List<Unit> havens;
@@ -96,6 +97,7 @@ public class MilitaryManager extends Module {
 		this.fighters = new HashMap<Integer, Fighter>();
 		this.supports = new HashMap<Integer, Fighter>();
 		this.loners = new HashMap<Integer, Fighter>();
+		this.AAs = new HashMap<Integer, Fighter>();
 		this.raiders = new ArrayList<Raider>();
 		this.raidQueue = new ArrayList<Raider>();
 		this.striders = new ArrayList<Strider>();
@@ -136,7 +138,7 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for raiders
 		for (Raider r:raiders){
-			float power = Math.min(1.0f, (r.getUnit().getPower() + r.getUnit().getMaxHealth())/5000);
+			float power = Math.min(1.0f, (r.getUnit().getPower() + r.getUnit().getHealth())/5000);
 			float radius = r.getUnit().getMaxRange();
 			AIFloat3 pos = r.getPos();
 			int x = (int) pos.x/8;
@@ -148,17 +150,14 @@ public class MilitaryManager extends Module {
 		}
 
 		for(Enemy t:targets.values()){
-			float effectivePower = Math.min(1.0f , t.danger/5000);
+			float effectivePower = Math.min(1.0f , t.getDanger()/5000);
 
 			AIFloat3 position = t.position;
 
-			if (position != null && t.ud != null && !t.ud.getTooltip().contains("Anti-Air")) {
+			if (position != null && t.ud != null && !t.ud.getTooltip().contains("Anti-Air") && !unitTypes.planes.contains(t.ud.getName())) {
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
 				int r = (int) ((t.threatRadius) / 8);
-				if (t.isRiot){
-					effectivePower = Math.min(1.0f , effectivePower*2f);
-				}
 
 				if (t.speed > 0) {
 					// for enemy mobiles
@@ -347,7 +346,7 @@ public class MilitaryManager extends Module {
 				}
 			}
 
-			boolean overThreat = (getEffectiveThreat(r.getPos()) >= 0);
+			boolean overThreat = (getEffectiveThreat(r.getPos()) > 0);
 			if (bestTask != null && (overThreat || bestTask != r.getTask() || r.getUnit().getCurrentCommands().isEmpty())){
 				if (!bestTask.spot.hostile){
 					if (overThreat){
@@ -382,7 +381,10 @@ public class MilitaryManager extends Module {
 				cost /= ((frame - task.spot.getLastSeen()) / 900);
 			}
 		}
-		cost += 1000*(getThreat(task.target)- getFriendlyThreat(raider.getPos()));
+
+		if (getThreat(task.target) > getFriendlyThreat(raider.getPos())){
+			cost += 1000;
+		}
 		return cost;
 	}
 
@@ -396,7 +398,7 @@ public class MilitaryManager extends Module {
 
 		nextSquad.addUnit(f, frame);
 
-		if (nextSquad.metalValue > nextSquad.income * 30){
+		if (nextSquad.metalValue > Math.min(nextSquad.income * 30, 1200f)){
 			nextSquad.status = 'r';
 			squads.add(nextSquad);
 			nextSquad.setTarget(graphManager.getAllyCenter(), frame);
@@ -816,7 +818,7 @@ public class MilitaryManager extends Module {
     }
     
     @Override
-    public int unitFinished( Unit unit) {      
+    public int unitFinished(Unit unit) {
     	
     	if(unit.getDef().getUnitDefId() == nano){
     		havens.add(unit);
@@ -855,6 +857,14 @@ public class MilitaryManager extends Module {
     	}else if(unitTypes.loners.contains(defName)) {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			loners.put(f.id, f);
+		}else if (unitTypes.AAs.contains(defName)){
+			unit.setMoveState(2, (short) 0, frame + 10);
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			AAs.put(f.id, f);
+			AIFloat3 pos = graphManager.getAllyCenter();
+			if (pos != null){
+				unit.fight(pos, (short) 0, frame + 300);
+			}
 		}
     	
     	if(unit.getDef().getCost(m) > 200 && unit.getDef().getBuildOptions().size() == 0 && !unitTypes.raiders.contains(defName)){
@@ -879,6 +889,10 @@ public class MilitaryManager extends Module {
 
 		if (loners.containsKey(unit.getUnitId())){
 			loners.remove(unit.getUnitId());
+		}
+
+		if (AAs.containsKey(unit.getUnitId())){
+			AAs.remove(unit.getUnitId());
 		}
 
 		if (supports.containsKey(unit.getUnitId())){
@@ -961,6 +975,14 @@ public class MilitaryManager extends Module {
 			defenseTargets.add(dt);
 			for (Raider r: raidQueue){
 				r.fightTo(h.getPos(), frame);
+			}
+
+			if (attacker.getDef() != null){
+				if (attacker.getDef().isAbleToFly()){
+					for (Fighter f: AAs.values()){
+						f.fightTo(h.getPos(), frame);
+					}
+				}
 			}
 		}
 		return 0;

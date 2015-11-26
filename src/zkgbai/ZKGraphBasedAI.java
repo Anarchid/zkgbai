@@ -33,6 +33,7 @@ import javax.vecmath.Tuple3f;
 import zkgbai.Module;
 import zkgbai.economy.EconomyManager;
 import zkgbai.graph.GraphManager;
+import zkgbai.graph.MetalSpot;
 import zkgbai.gui.DebugView;
 import zkgbai.los.LosManager;
 import zkgbai.military.MilitaryManager;
@@ -131,6 +132,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         debugView.repaint();
         
         selectRandomCommander();
+		chooseStartPos(graphManager);
         
         return 0;
     }
@@ -564,7 +566,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	return this.enemyTeams;
     }
     
-    public StartArea getEnemyBox(int id){
+    public StartArea getStartArea(int id){
     	return this.startBoxes.get(id);
     }
     
@@ -574,4 +576,11 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         ex.printStackTrace(pw);
         debug("exception(" + sw.toString().replace("\n", " ") + ") " + ex);
     }
+
+	private void chooseStartPos(GraphManager gm){
+		List<MetalSpot> spots = gm.getAllyTerritory();
+		int rand = (int) Math.floor(Math.random()*spots.size());
+		MetalSpot spot = spots.get(rand);
+		callback.getGame().sendStartPosition(true, spot.getPos());
+	}
 }
