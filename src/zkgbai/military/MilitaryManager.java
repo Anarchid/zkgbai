@@ -138,7 +138,7 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for raiders
 		for (Raider r:raiders){
-			float power = Math.min(1.0f, (r.getUnit().getPower() + r.getUnit().getHealth())/5000);
+			float power = Math.min(1.0f, (r.getUnit().getPower() + r.getUnit().getMaxHealth())/5000);
 			float radius = r.getUnit().getMaxRange();
 			AIFloat3 pos = r.getPos();
 			int x = (int) pos.x/8;
@@ -419,7 +419,7 @@ public class MilitaryManager extends Module {
 				if (s.isRallied(frame)){
 					s.status = 'a';
 				}
-			}else if (s.status == 'a'){
+			}else if (s.status == 'a' && frame % 150 == 0){
 				AIFloat3 target = getTarget(s.getPos(), true);
 				// reduce redundant order spam.
 				if (!target.equals(s.target)) {

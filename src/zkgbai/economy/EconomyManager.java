@@ -73,7 +73,6 @@ public class EconomyManager extends Module {
 	private OOAICallback callback;
 	private GraphManager graphManager;
 	private MilitaryManager warManager;
-	private ArrayList<String> attackers;
 	
 	public EconomyManager( ZKGraphBasedAI parent){
 		this.parent = parent;
@@ -120,20 +119,13 @@ public class EconomyManager extends Module {
 		this.m = callback.getResourceByName("Metal");
 		this.e = callback.getResourceByName("Energy");
 
+		this.raiderSpam = ((int) Math.ceil((Math.random()*10.0)+6.0)*-1);
+
 		// find out how many allies we have to weight resource income
 		/*if (callback.getTeams().getSize() > 2){
 			this.teamcount++;
 			parent.debug("Number of teams detected: " + callback.getTeams().getSize());
 		}*/
-		
-		this.attackers = new ArrayList<String>();
-		attackers.add("armrock");
-		attackers.add("armrock");
-		attackers.add("armwar");
-		attackers.add("armpw");
-		attackers.add("armpw");
-		attackers.add("armpw");
-		attackers.add("armzeus");
 	}
 	
 	
@@ -432,19 +424,9 @@ public class EconomyManager extends Module {
 	}
 
 	private void setPriorities() {
-		// set nanos to high prio so that they get built quickly.
+		// set the first fusion to high prio so it gets built quickly.
 		ArrayList<Float> params = new ArrayList<>();
 		params.add((float) 2);
-
-		for (Unit n: nanos){
-			n.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 30);
-		}
-
-		for (ConstructionTask ft:factoryTasks){
-			if (ft.target != null){
-				ft.target.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 30);
-			}
-		}
 
 		if (fusions.size() == 1){
 			// set fusions to high prio if energy isn't full
@@ -453,7 +435,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		// set facs to high prio if resources are available, low prio otherwise.
+		// set facs+nanos to high prio if resources are available, low or normal prio otherwise.
 		params.clear();
 		if (effectiveIncome > 20 && energy > 100 && nanos.size() + factories.size() < effectiveIncome/10) {
 			params.add(2f);
@@ -463,13 +445,19 @@ public class EconomyManager extends Module {
 			params.add(3f);
 		}
 
+		for (Unit n: nanos){
+			n.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 30);
+		}
+
 		for (Worker f : factories) {
 			f.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 30);
 		}
 	}
 
 	private Boolean needWorkers(){
-		if (((float) numWorkers-1 < Math.floor(((effectiveIncome)/5)) + fusions.size() && (numFighters > numWorkers || metal > 250 || numWorkers == 0) && (effectiveIncome > 9 || numWorkers == 0))) {
+		if (((float) numWorkers-1 < Math.floor(effectiveIncome/5) + fusions.size() || numWorkers < reclaimTasks.size())
+				&& (numFighters > numWorkers || numWorkers == 0)
+				&& (effectiveIncome > 9 || numWorkers == 0)) {
 			return true;
 		}
 		return false;
@@ -480,16 +468,12 @@ public class EconomyManager extends Module {
 			return "armrectr";
 		}
 
-		if (effectiveIncome < 10) {
-			return "armpw";
-		}
-
 		if (enemyHasAir && (Math.random() > 0.75 || warManager.AAs.size() < 3)){
 			return "armjeth";
 		}
 
-		if (raiderSpam < 8) {
-			if ((effectiveIncome < 30 && Math.random() > 0.75)
+		if (raiderSpam < 0) {
+			if ((effectiveIncome > 10 && effectiveIncome < 30 && Math.random() > 0.75)
 					|| (effectiveIncome > 30 && effectiveIncome < 45 && Math.random() > 0.5)
 					|| (effectiveIncome > 45 && Math.random() > 0.25)) {
 				raiderSpam += 2;
@@ -704,8 +688,10 @@ public class EconomyManager extends Module {
 				isExpensive = true;
 			}else if (ctask.buildType.getName().equals("cormex")){
 				isMex = true;
-			}else if (ctask.buildType.isAbleToAttack() || ctask.buildType.getName().equals("armnanotc")){
+			}else if (ctask.buildType.isAbleToAttack()){
 				isPorc = true;
+			}else if(ctask.buildType.getName().equals("armnanotc")){
+				return dist/(float) Math.log(dist)+250*(costMod-1);
 			}
 		}
 
@@ -861,17 +847,26 @@ public class EconomyManager extends Module {
 		}
 		workers.removeAll(invalidworkers);
 
+		boolean needunstick = false;
+		if (frame % 150 == 0){
+			needunstick = true;
+		}
 		for (Worker w: workers){
-			// unstick workers that were interrupted by random things
+			// unstick workers that were interrupted by random things and lost their orders.
 			if (w.getUnit().getCurrentCommands().size() == 0 && w.getTask() != null){
 					w.getTask().removeWorker(w);
 					w.clearTask();
 			}
 
+			// detect and unstick workers that get stuck on pathing obstacles.
+			if (needunstick) {
+				w.unstick(frame);
+			}
+
 			// stop workers from chickening for too long.
 			if (w.isChicken && frame - w.chickenFrame > 600){
 				w.isChicken = false;
-				w.getUnit().stop((short) 0, frame+30);
+				w.getUnit().stop((short) 0, frame + 30);
 			}
 		}
 		// remove old com unit after morphs complete
@@ -923,7 +918,7 @@ public class EconomyManager extends Module {
 
     	
     	// do we need caretakers?
-    	if((float)nanos.size() < (effectiveIncome/10)-2.5 && factories.size() > 0 && nanoTasks.isEmpty()){
+    	if((float)nanos.size()+factories.size() < (effectiveIncome/10)-1.5 && factories.size() > 0 && nanoTasks.isEmpty()){
 			 Worker target = getCaretakerTarget();
 			createNanoTurretTask(target.getUnit());
     	}

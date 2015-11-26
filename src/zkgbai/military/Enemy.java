@@ -88,7 +88,7 @@ public class Enemy {
 		float health = 0;
 		float danger = 0;
 		if (ud != null) {
-			if (ud.getName().equals("arm_venom")) {
+			if (ud.getName().equals("arm_venom") || ud.getName().equals("corpyro")) {
 				danger += 300;
 			}
 			if (unit.getHealth() > 0) {
