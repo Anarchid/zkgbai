@@ -49,6 +49,12 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int allyTeamID;
     public int currentFrame = 0;
     DebugView debugView;
+    boolean debugActivated;
+    
+	LosManager losManager;
+	GraphManager graphManager;
+	EconomyManager ecoManager;
+	MilitaryManager warManager;
     
     public static enum StartType{
     	SPRING_BOX,
@@ -60,7 +66,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public StartType startType;
     
 	@Override
-    public int init(int teamId, OOAICallback callback) {
+    public int init(int AIId, OOAICallback callback) {
+		this.debugActivated = false;
         this.callback = callback;
         this.teamID = callback.getGame().getMyTeam(); // teamID as passed by interface is broken 0_0
         this.allyTeamID = callback.getGame().getMyAllyTeam();
@@ -69,11 +76,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         parseStartBoxes();
         identifyEnemyTeams();
         allies = callback.getAllyTeams();
-        
-		LosManager losManager = null;
-		GraphManager graphManager = null;
-		EconomyManager ecoManager = null;
-		MilitaryManager warManager = null;
+
         try {
 			losManager = new LosManager(this);
 		} catch (Exception e){
@@ -110,32 +113,43 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         modules.add(ecoManager);
         modules.add(warManager);
 
-		try{
-        	debugView = new DebugView(this);
-		} catch (Exception e){
-			printException(e);
-		}
-        
         for (Module module : modules) {
         	try {
-        		module.init(teamId, callback);
+        		module.init(this.teamID, callback);
         		debug(module.getModuleName() + " initialized");
 	    	} catch (Exception e) {
 	    		printException(e);
 	    	}
         }
                 
-        debugView.setLosImage(losManager.getImage());
-        debugView.setThreatImage(warManager.getThreatMap());
-        debugView.setGraphImage(graphManager.getGraphImage());
-        
-        debugView.repaint();
-        
         selectRandomCommander();
 		chooseStartPos(graphManager);
         
         return 0;
     }
+	
+	private void activateDebug(){
+		if(!debugActivated){
+			try{
+	        	debugView = new DebugView(this);
+	            debugView.setLosImage(losManager.getImage());
+	            debugView.setThreatImage(warManager.getThreatMap());
+	            debugView.setGraphImage(graphManager.getGraphImage());
+	            debugView.repaint();
+	            this.debugActivated = true;
+			}
+			catch(Exception e){
+				debug(e);
+			}
+		}
+	}
+
+	private void debug(Exception e) {
+		debug(e.getMessage());
+		for(StackTraceElement ste:e.getStackTrace()){
+			debug(ste.toString());
+		}
+	}
 
 	private void selectRandomCommander(){
 		List<UnitDef> unitdefs = callback.getUnitDefs();
@@ -165,6 +179,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    		printException(e);
 	    	}
         }	        
+	        
     	return 0; //signaling: OK
     }
     
@@ -180,7 +195,12 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         }
         
 		if (frame % 15 == 0) {
-			debugView.repaint();
+			if(!debugActivated && callback.getDebug().getGraphDrawer().isEnabled()){
+				activateDebug();
+			}
+			else if(debugActivated) {
+				debugView.repaint();
+			}
 		}
         
         return 0; // signaling: OK
@@ -195,6 +215,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    		printException(e);
 	    	}
 	    }
+	    
         return 0; // signaling: OK
     }
     
