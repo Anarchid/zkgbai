@@ -329,8 +329,15 @@ public class MilitaryManager extends Module {
 	}
 
 	private void assignRaiders(){
-
+		boolean needUnstick = false;
+		if (frame % 150 == 0){
+			needUnstick = true;
+		}
 		for (Raider r: raiders){
+			if (needUnstick){
+				r.unstick(frame);
+			}
+
 			ScoutTask bestTask = null;
 			float cost = Float.MAX_VALUE;
 
@@ -406,8 +413,8 @@ public class MilitaryManager extends Module {
 			List<Fighter> tooFar = nextSquad.cutoff();
 			if (!tooFar.isEmpty()) {
 				nextSquad = new Squad();
-				nextSquad.setTarget(getRallyPoint(f.getPos()), frame);
 				nextSquad.income = ecoManager.effectiveIncome;
+				nextSquad.setTarget(getRallyPoint(f.getPos()), frame);
 				for (Fighter fi : tooFar) {
 					nextSquad.addUnit(fi, frame);
 				}
@@ -616,6 +623,16 @@ public class MilitaryManager extends Module {
 
 	private AIFloat3 getRallyPoint(AIFloat3 pos){
 		AIFloat3 target = null;
+		if (pos == null){
+			pos = graphManager.getAllyCenter();
+		}
+		if (pos == null){
+			pos = ecoManager.getNearestFac(nullpos).getPos();
+		}
+
+		if (pos == null){
+			parent.debug("pos was null after attempting to assign it!");
+		}
 		float cost = Float.MAX_VALUE;
 
 		// check for defense targets first
@@ -633,7 +650,7 @@ public class MilitaryManager extends Module {
 			return target;
 		}
 
-		//if there aren't any, then get the center of the current allied territory
+		//if there aren't any, then get the closest friendly front line spot.
 		AIFloat3 position = graphManager.getClosestFrontLineSpot(pos).getPos();
 		if (position != null) {
 			return position;
@@ -777,7 +794,7 @@ public class MilitaryManager extends Module {
 					retreatingUnits.remove(u);
 				}
 				if (!retreatingUnits.contains(u)){
-					AIFloat3 target = getTarget(st.getPos(), false);
+					AIFloat3 target = getTarget(st.getPos(), true);
 					st.fightTo(target, frame);
 				}
 			}
@@ -869,6 +886,7 @@ public class MilitaryManager extends Module {
 			ArrayList<Float> params = new ArrayList<>();
 			params.add((float) 0);
 			unit.executeCustomCommand(CMD_DONT_FIRE_AT_RADAR, params, (short) 0, frame+60);
+			unit.setMoveState(1, (short) 0, frame + 10);
 		}
 
 		// disable air strafe for brawlers
@@ -907,7 +925,7 @@ public class MilitaryManager extends Module {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			loners.put(f.id, f);
 		}else if (unitTypes.AAs.contains(defName)){
-			unit.setMoveState(2, (short) 0, frame + 10);
+			unit.setMoveState(1, (short) 0, frame + 10);
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			AAs.put(f.id, f);
 			AIFloat3 pos = graphManager.getAllyCenter();

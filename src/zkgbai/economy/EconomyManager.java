@@ -190,7 +190,9 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		assignWorkers(); // assign workers to tasks
+		if (frame % 2 == 0) {
+			assignWorkers(); // assign workers to tasks
+		}
 
 		return 0;
 	}
@@ -504,16 +506,28 @@ public class EconomyManager extends Module {
 
 		raiderSpam--;
 		double rand = Math.random();
-		if (rand > 0.5){
-			return "armrock";
-		}else if(rand > 0.3){
-			return "armzeus";
-		}else if (rand > 0.1){
-			return "armwar";
-		}else if (effectiveIncome > 30 && energy > 100){
-			return "armsnipe";
+		if (effectiveIncome < 70) {
+			if (rand > 0.5) {
+				return "armrock";
+			} else if (rand > 0.3) {
+				return "armzeus";
+			} else if (rand > 0.1) {
+				return "armwar";
+			} else if (effectiveIncome > 30 && energy > 100) {
+				return "armsnipe";
+			} else {
+				return "armzeus";
+			}
 		}else{
-			return "armzeus";
+			if (rand > 0.55) {
+				return "armrock";
+			} else if (rand > 0.35) {
+				return "armzeus";
+			} else if (rand > 0.15) {
+				return "armwar";
+			} else{
+				return "armsnipe";
+			}
 		}
 
     }
@@ -952,9 +966,9 @@ public class EconomyManager extends Module {
     	}
 
 		// do we need pylons?
-		/*if (effectiveIncomeEnergy > 150 && !tooCloseToFac){
+		if (fusions.size() > 4 && !tooCloseToFac){
 			createGridTask(worker);
-		}*/
+		}
     }
     
     void createRadarTask( Worker worker){
@@ -1279,7 +1293,7 @@ public class EconomyManager extends Module {
 		ConstructionTask ct;
 
 		// for fusions
-		if (effectiveIncome > 35 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 8 && fusionTasks.isEmpty()){
+		if (effectiveIncome > 35 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 4 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
 			position = graphManager.getOverdriveSweetSpot(position);
@@ -1298,7 +1312,7 @@ public class EconomyManager extends Module {
 			}
 		}
 		// for singus
-		if (effectiveIncome > 100 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 12 && fusionTasks.isEmpty()){
+		if (effectiveIncome > 70 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 6 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
 			position = graphManager.getOverdriveSweetSpot(position);
@@ -1468,7 +1482,7 @@ public class EconomyManager extends Module {
 	}
 
 	
-	Worker getNearestFac( AIFloat3 position){
+	public Worker getNearestFac( AIFloat3 position){
 		 Worker nearestFac = null;
 		float dist = Float.MAX_VALUE;
 		for ( Worker f:factories){

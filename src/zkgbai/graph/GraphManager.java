@@ -677,7 +677,7 @@ public class GraphManager extends Module {
 		MetalSpot bestSpot = null;
 		for (MetalSpot ms:spots){
 			float dist = groundDistance(position, ms.getPos());
-			if (dist < distance){
+			if (dist < distance && !ms.hostile){
 				bestSpot = ms;
 				distance = dist;
 			}
