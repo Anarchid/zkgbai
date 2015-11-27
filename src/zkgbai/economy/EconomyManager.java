@@ -220,7 +220,7 @@ public class EconomyManager extends Module {
 			if (ct.target != null){
 				if(ct.target.getUnitId() == unit.getUnitId()){
 					finished = ct;
-					ct.stopWorkers();
+					ct.stopWorkers(frame);
 				}
 			}
 		}
@@ -250,7 +250,7 @@ public class EconomyManager extends Module {
 		if (w.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6){
 			if (w.getTask() != null) {
 				w.getTask().removeWorker(w);
-				w.clearTask();
+				w.clearTask(frame);
 			}
 			AIFloat3 pos = graphManager.getAllyCenter();
 			h.moveTo(pos, (short) 0, frame+240);
@@ -289,7 +289,7 @@ public class EconomyManager extends Module {
 				if (ct.target != null) {
 					if (ct.target.getUnitId() == unit.getUnitId()) {
 						ct.target = null;
-						ct.stopWorkers();
+						ct.stopWorkers(frame);
 					}
 				}
 			}
@@ -325,12 +325,14 @@ public class EconomyManager extends Module {
 	    	if(worker.id == unit.getUnitId()){
 				if (worker.getTask() instanceof ReclaimTask){
 					 ReclaimTask task = (ReclaimTask) worker.getTask();
-					task.stopWorkers();
+					task.stopWorkers(frame);
 					reclaimTasks.remove(task);
 	    		}else if (worker.id == unit.getUnitId() && worker.getTask() instanceof RepairTask){
 					 RepairTask task = (RepairTask) worker.getTask();
-					task.stopWorkers();
-					repairTasks.remove(task);
+					if (task.target.getHealth() <= 0 || task.target.getHealth() == task.target.getMaxHealth()) {
+						task.stopWorkers(frame);
+						repairTasks.remove(task);
+					}
 				}else if (worker.isChicken){
 					worker.isChicken = false;
 				}
@@ -372,7 +374,7 @@ public class EconomyManager extends Module {
 					WorkerTask task = w.getTask();
 					constructionTasks.remove(task);
 					factoryTasks.remove(task);
-					w.clearTask();
+					w.clearTask(frame);
 				}
 			}
 		}
@@ -483,9 +485,8 @@ public class EconomyManager extends Module {
 		}
 
 		if (raiderSpam < 0) {
-			if ((effectiveIncome > 10 && effectiveIncome < 30 && Math.random() > 0.75)
-					|| (effectiveIncome > 30 && effectiveIncome < 45 && Math.random() > 0.5)
-					|| (effectiveIncome > 45 && Math.random() > 0.25)) {
+			if ((effectiveIncome > 10 && effectiveIncome < 30 && Math.random() > 0.5)
+					|| (effectiveIncome > 30 && effectiveIncome < 45 && Math.random() > 0.25)) {
 				raiderSpam += 2;
 				return "spherepole";
 			} else {
@@ -600,7 +601,7 @@ public class EconomyManager extends Module {
 	}
 
 	void assignWorkers() {
-		 Worker toAssign = null;
+		Worker toAssign = null;
 		// limit the number of workers assigned at one time to prevent super lag.
 		for (Worker w : workers) {
 			if ((!assigned.contains(w) || w.isIdle)){
@@ -636,7 +637,7 @@ public class EconomyManager extends Module {
 					RepairTask rt = (RepairTask) task;
 					w.getUnit().repair(rt.target, (short) 0, frame + 500);
 				}
-				w.setTask(task);
+				w.setTask(task, frame);
 				task.addWorker(w);
 			}
 		}
@@ -828,7 +829,7 @@ public class EconomyManager extends Module {
 				}
 				if (!isNano) {
 					// if a construction job is blocked and it isn't our own nanoframe, remove it
-					t.stopWorkers();
+					t.stopWorkers(frame);
 					invalidtasks.add(t);
 				}
 			}
@@ -847,7 +848,7 @@ public class EconomyManager extends Module {
 		for (ReclaimTask r: reclaimTasks){
 			if (r.target.getDef() == null){
 				// if a reclaimable feature falls out of LOS or is destroyed, remove its task
-				r.stopWorkers();
+				r.stopWorkers(frame);
 				invalidtasks.add(r);
 			}
 		}
@@ -872,7 +873,7 @@ public class EconomyManager extends Module {
 			// unstick workers that were interrupted by random things and lost their orders.
 			if (w.getUnit().getCurrentCommands().size() == 0 && w.getTask() != null){
 					w.getTask().removeWorker(w);
-					w.clearTask();
+					w.clearTask(frame);
 			}
 
 			// detect and unstick workers that get stuck on pathing obstacles.
@@ -896,7 +897,7 @@ public class EconomyManager extends Module {
 		if (invalidcom != null) {
 			if (invalidcom.getTask() != null) {
 				invalidcom.getTask().removeWorker(invalidcom);
-				invalidcom.clearTask();
+				invalidcom.clearTask(frame);
 			}
 			commanders.remove(invalidcom);
 		}
@@ -927,7 +928,7 @@ public class EconomyManager extends Module {
 		}
 
     	// is there sufficient energy to cover metal income?
-		if ((mexes.size() * 1.5) - 1.1 > (float) solars.size()+solarTasks.size()
+		if ((effectiveIncome < 15 && mexes.size() > solars.size()+solarTasks.size())
 				|| (effectiveIncome > 15 && energy < 400 && solarTasks.size() < numWorkers)
 				|| (effectiveIncome > 20 && (mexes.size() * ((mexes.size()/10)+1)) > solars.size()+solarTasks.size() && solarTasks.size() < numWorkers)) {
 			createEnergyTask(worker);
@@ -1345,7 +1346,7 @@ public class EconomyManager extends Module {
 			}
 
 			// prevent it from blocking the fac with solars
-			if (solars.size() > 3 && !factories.isEmpty()){
+			if (solars.size() > 2 && !factories.isEmpty()){
 				AIFloat3 pos = getNearestFac(position).getPos();
 				if (distance(pos, position) < 600){
 					return;
