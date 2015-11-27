@@ -627,12 +627,13 @@ public class MilitaryManager extends Module {
 			pos = graphManager.getAllyCenter();
 		}
 		if (pos == null){
-			pos = ecoManager.getNearestFac(nullpos).getPos();
+			List<Unit> units = callback.getFriendlyUnits();
+			for (Unit u: units){
+				pos = u.getPos();
+				break;
+			}
 		}
 
-		if (pos == null){
-			parent.debug("pos was null after attempting to assign it!");
-		}
 		float cost = Float.MAX_VALUE;
 
 		// check for defense targets first
@@ -651,7 +652,10 @@ public class MilitaryManager extends Module {
 		}
 
 		//if there aren't any, then get the closest friendly front line spot.
-		AIFloat3 position = graphManager.getClosestFrontLineSpot(pos).getPos();
+		AIFloat3 position = null;
+		try {
+			position = graphManager.getClosestFrontLineSpot(pos).getPos();
+		}catch (Exception e){}
 		if (position != null) {
 			return position;
 		}else{
