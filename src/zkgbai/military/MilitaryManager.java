@@ -352,7 +352,7 @@ public class MilitaryManager extends Module {
 			if (bestTask != null && (overThreat || bestTask != r.getTask() || r.getUnit().getCurrentCommands().isEmpty())){
 				if (!bestTask.spot.hostile){
 					if (overThreat){
-						Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 200f), pathfinder.RAIDER_PATH);
+						Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 100f), pathfinder.RAIDER_PATH);
 						r.sneak(path, frame);
 					}else {
 						r.fightTo(bestTask.target, frame);
@@ -639,7 +639,7 @@ public class MilitaryManager extends Module {
 	private void retreatCowards(){
 		AIFloat3 position = graphManager.getAllyCenter();
 		for (Unit u: retreatingUnits){
-			if(position != null){
+			if(position != null && u.getPos() != null){
 				UnitDef building = callback.getUnitDefByName("factorygunship");
 				position = callback.getMap().findClosestBuildSite(building, position, 600f, 3, 0);
 				
@@ -987,23 +987,25 @@ public class MilitaryManager extends Module {
 		// retreat scouting raiders so that they don't suicide into enemy raiders
 		for (Raider r: raiders){
 			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && r.scouting){
-				dir.x *= -100;
-				dir.z *= -100;
+				float x = -100*dir.x;
+				float z = -100*dir.z;
 				AIFloat3 pos = h.getPos();
-				pos.x += dir.x;
-				pos.z += dir.z;
-				h.moveTo(pos, (short) 0, frame);
+				AIFloat3 target = new AIFloat3();
+				 target.x = pos.x+x;
+				 target.z = pos.z+z;
+				h.moveTo(target, (short) 0, frame);
 			}
 		}
 
 		for (Raider r: raidQueue){
 			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6){
-				dir.x *= -100;
-				dir.z *= -100;
+				float x = -100*dir.x;
+				float z = -100*dir.z;
 				AIFloat3 pos = h.getPos();
-				pos.x += dir.x;
-				pos.z += dir.z;
-				h.moveTo(pos, (short) 0, frame);
+				AIFloat3 target = new AIFloat3();
+				target.x = pos.x+x;
+				target.z = pos.z+z;
+				h.moveTo(target, (short) 0, frame);
 			}
 		}
 
@@ -1017,10 +1019,12 @@ public class MilitaryManager extends Module {
 				r.fightTo(h.getPos(), frame);
 			}
 
-			if (attacker.getDef() != null){
-				if (attacker.getDef().isAbleToFly()){
-					for (Fighter f: AAs.values()){
-						f.fightTo(h.getPos(), frame);
+			if (attacker != null) {
+				if (attacker.getDef() != null) {
+					if (attacker.getDef().isAbleToFly()) {
+						for (Fighter f : AAs.values()) {
+							f.fightTo(h.getPos(), frame);
+						}
 					}
 				}
 			}
