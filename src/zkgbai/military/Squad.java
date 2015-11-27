@@ -63,7 +63,7 @@ public class Squad {
 		AIFloat3 pos = getPos();
 		boolean rallied = true;
 		for (Fighter f: fighters){
-			f.moveTo(target, frame);
+			f.moveTo(pos, frame);
 			if (distance(pos, f.getPos()) > 300){
 				rallied = false;
 			}
@@ -76,6 +76,18 @@ public class Squad {
 			return true;
 		}
 		return false;
+	}
+
+	public List<Fighter> cutoff(){
+		List<Fighter> tooFar = new ArrayList<Fighter>();
+		AIFloat3 pos = getPos();
+		for (Fighter f:fighters){
+			if (distance(pos, f.getPos()) > 2000 && distance(target, f.getPos()) > 2000){
+				tooFar.add(f);
+			}
+		}
+		fighters.removeAll(tooFar);
+		return tooFar;
 	}
 
 	float distance( AIFloat3 pos1,  AIFloat3 pos2){

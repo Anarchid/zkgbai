@@ -486,7 +486,7 @@ public class EconomyManager extends Module {
 
 		if (raiderSpam < 0) {
 			if ((effectiveIncome > 10 && effectiveIncome < 30 && Math.random() > 0.5)
-					|| (effectiveIncome > 30 && effectiveIncome < 45 && Math.random() > 0.25)) {
+					|| (effectiveIncome > 30 && Math.random() > 0.25)) {
 				raiderSpam += 2;
 				return "spherepole";
 			} else {

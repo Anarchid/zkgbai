@@ -400,11 +400,20 @@ public class MilitaryManager extends Module {
 
 		nextSquad.addUnit(f, frame);
 
-		if (nextSquad.metalValue > Math.min(nextSquad.income * 30, 1200f)){
+		if (nextSquad.metalValue > nextSquad.income * 60){
 			nextSquad.status = 'r';
 			squads.add(nextSquad);
-			nextSquad.setTarget(graphManager.getAllyCenter(), frame);
-			nextSquad = null;
+			List<Fighter> tooFar = nextSquad.cutoff();
+			if (!tooFar.isEmpty()) {
+				nextSquad = new Squad();
+				nextSquad.setTarget(graphManager.getAllyCenter(), frame);
+				nextSquad.income = ecoManager.effectiveIncome;
+				for (Fighter fi : tooFar) {
+					nextSquad.addUnit(fi, frame);
+				}
+			}else{
+				nextSquad = null;
+			}
 		}
 	}
 
@@ -418,7 +427,7 @@ public class MilitaryManager extends Module {
 
 		nextAirSquad.addUnit(f, frame);
 
-		if (nextAirSquad.metalValue > Math.min(nextAirSquad.income * 30, 1200f)){
+		if (nextAirSquad.metalValue > nextAirSquad.income * 60){
 			nextAirSquad.status = 'r';
 			squads.add(nextAirSquad);
 			nextAirSquad.setTarget(graphManager.getAllyCenter(), frame);
@@ -986,7 +995,7 @@ public class MilitaryManager extends Module {
 
 		// retreat scouting raiders so that they don't suicide into enemy raiders
 		for (Raider r: raiders){
-			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && r.scouting){
+			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && h.getDef().getCost(m) < 100 && r.scouting && r.getUnit().getUnitRulesParamByName("on_fire").getValueFloat() == 0){
 				float x = -100*dir.x;
 				float z = -100*dir.z;
 				AIFloat3 pos = h.getPos();
@@ -998,7 +1007,7 @@ public class MilitaryManager extends Module {
 		}
 
 		for (Raider r: raidQueue){
-			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6){
+			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && r.getUnit().getUnitRulesParamByName("on_fire").getValueFloat() == 0){
 				float x = -100*dir.x;
 				float z = -100*dir.z;
 				AIFloat3 pos = h.getPos();
@@ -1013,10 +1022,21 @@ public class MilitaryManager extends Module {
 
 		if ((!h.getDef().isAbleToAttack() || h.getMaxSpeed() == 0) && frame - lastDefenseFrame > 300){
 			lastDefenseFrame = frame;
-			DefenseTarget dt = new DefenseTarget(h.getPos(), frame);
+			DefenseTarget dt;
+			if (attacker != null){
+				dt = new DefenseTarget(attacker.getPos(), frame);
+			}else{
+				float x = 500*dir.x;
+				float z = 500*dir.z;
+				AIFloat3 pos = h.getPos();
+				AIFloat3 target = new AIFloat3();
+				target.x = pos.x+x;
+				target.z = pos.z+z;
+				dt = new DefenseTarget(target, frame);
+			}
 			defenseTargets.add(dt);
 			for (Raider r: raidQueue){
-				r.fightTo(h.getPos(), frame);
+				r.fightTo(dt.position, frame);
 			}
 
 			if (attacker != null) {

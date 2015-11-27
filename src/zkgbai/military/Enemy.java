@@ -3,6 +3,8 @@ package zkgbai.military;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
+import com.springrts.ai.oo.clb.WeaponDef;
+import com.springrts.ai.oo.clb.WeaponMount;
 
 public class Enemy {
 	Unit unit;
@@ -74,7 +76,14 @@ public class Enemy {
 				this.isRiot = true;
 			}
 
-			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm")) && !u.getName().contains("Riot")){
+			for (WeaponMount w:u.getWeaponMounts()){
+				WeaponDef wd = w.getWeaponDef();
+				if (wd.getCustomParams().containsKey("setunitsonfire")){
+					this.isRiot = true;
+				}
+			}
+
+			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm")) && !u.getTooltip().contains("Riot")){
 				// identify riots
 				this.isArty = true;
 			}
