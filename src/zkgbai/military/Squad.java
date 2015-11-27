@@ -26,6 +26,7 @@ public class Squad {
 		fighters.add(f);
 		f.squad = this;
 		metalValue = metalValue + f.metalValue;
+		f.getUnit().setMoveState(1, (short) 0, frame+30);
 		f.fightTo(target, frame);
 	}
 
@@ -63,6 +64,7 @@ public class Squad {
 		AIFloat3 pos = getPos();
 		boolean rallied = true;
 		for (Fighter f: fighters){
+			f.getUnit().setMoveState(2, (short) 0, frame+30);
 			f.moveTo(pos, frame);
 			if (distance(pos, f.getPos()) > 300){
 				rallied = false;
@@ -82,7 +84,7 @@ public class Squad {
 		List<Fighter> tooFar = new ArrayList<Fighter>();
 		AIFloat3 pos = getPos();
 		for (Fighter f:fighters){
-			if (distance(pos, f.getPos()) > 2000 && distance(target, f.getPos()) > 2000){
+			if (distance(pos, f.getPos()) > 1000 && distance(target, f.getPos()) > 1000){
 				tooFar.add(f);
 			}
 		}

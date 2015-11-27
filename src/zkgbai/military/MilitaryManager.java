@@ -390,7 +390,7 @@ public class MilitaryManager extends Module {
 		return cost;
 	}
 
-	private void addToSquad( Fighter f){
+	private void addToSquad(Fighter f){
 		// create a new squad if there isn't one
 		if (nextSquad == null){
 			nextSquad = new Squad();
@@ -406,7 +406,7 @@ public class MilitaryManager extends Module {
 			List<Fighter> tooFar = nextSquad.cutoff();
 			if (!tooFar.isEmpty()) {
 				nextSquad = new Squad();
-				nextSquad.setTarget(graphManager.getAllyCenter(), frame);
+				nextSquad.setTarget(getRallyPoint(f.getPos()), frame);
 				nextSquad.income = ecoManager.effectiveIncome;
 				for (Fighter fi : tooFar) {
 					nextSquad.addUnit(fi, frame);
@@ -634,7 +634,7 @@ public class MilitaryManager extends Module {
 		}
 
 		//if there aren't any, then get the center of the current allied territory
-		AIFloat3 position = graphManager.getAllyCenter();
+		AIFloat3 position = graphManager.getClosestFrontLineSpot(pos).getPos();
 		if (position != null) {
 			return position;
 		}else{
