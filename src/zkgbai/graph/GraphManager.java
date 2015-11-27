@@ -702,7 +702,7 @@ public class GraphManager extends Module {
 	}
     
     public AIFloat3 getOverdriveSweetSpot(AIFloat3 position){
-    	float radius = 190;
+    	float radius = 180;
 		float minWeight = Float.MAX_VALUE;
     	Link link = null;
     	for(Link l:links){

@@ -734,7 +734,7 @@ public class EconomyManager extends Module {
 			UnitDef def = rptask.target.getDef();
 			if (def != null) {
 				if (def.isAbleToAttack() && def.getBuildOptions().isEmpty() && rptask.target.getMaxSpeed() > 0) {
-					return (dist/(float) Math.log(dist)) + distance(graphManager.getAllyCenter(), rptask.getPos()) - (rptask.target.getDef().getCost(m)/costMod);
+					return dist + distance(graphManager.getAllyCenter(), rptask.getPos()) - (rptask.target.getMaxHealth()-rptask.target.getHealth())/costMod;
 				}
 			}else{
 				return 100000;
@@ -1273,9 +1273,12 @@ public class EconomyManager extends Module {
 
 		ConstructionTask ct;
 
+		// for fusions
 		if (effectiveIncome > 35 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 8 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
+			position = graphManager.getOverdriveSweetSpot(position);
+			position = callback.getMap().findClosestBuildSite(fusion,position,600f, 3, 0);
 
 			// don't build fusions too close to the fac
 			AIFloat3 pos = getNearestFac(position).getPos();
@@ -1283,17 +1286,18 @@ public class EconomyManager extends Module {
 				return;
 			}
 
-			position = graphManager.getOverdriveSweetSpot(position);
-			position = callback.getMap().findClosestBuildSite(fusion,position,600f, 3, 0);
 			ct = new ConstructionTask(fusion, position, 0);
 			if (buildCheck(ct)){
 				constructionTasks.add(ct);
 				fusionTasks.add(ct);
 			}
 		}
+		// for singus
 		if (effectiveIncome > 100 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 12 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
+			position = graphManager.getOverdriveSweetSpot(position);
+			position = callback.getMap().findClosestBuildSite(singu,position,600f, 3, 0);
 
 			// don't build fusions too close to the fac
 			AIFloat3 pos = getNearestFac(position).getPos();
@@ -1301,15 +1305,13 @@ public class EconomyManager extends Module {
 				return;
 			}
 
-			position = graphManager.getOverdriveSweetSpot(position);
-			position = callback.getMap().findClosestBuildSite(singu,position,600f, 3, 0);
 			ct = new ConstructionTask(singu, position, 0);
 			if (buildCheck(ct)){
 				constructionTasks.add(ct);
 				fusionTasks.add(ct);
 			}
 		}
-		else {
+		else { // for solars
 
 			if (solars.size() > 3) {
 				position = graphManager.getNearestUnconnectedLink(position);
@@ -1346,9 +1348,9 @@ public class EconomyManager extends Module {
 			}
 
 			// prevent it from blocking the fac with solars
-			if (solars.size() > 2 && !factories.isEmpty()){
+			if (!factories.isEmpty()){
 				AIFloat3 pos = getNearestFac(position).getPos();
-				if (distance(pos, position) < 600){
+				if (distance(pos, position) < 300){
 					return;
 				}
 			}

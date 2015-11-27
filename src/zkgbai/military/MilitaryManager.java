@@ -978,7 +978,16 @@ public class MilitaryManager extends Module {
     
     @Override
     public int unitDamaged(Unit h, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {
-    	if(cowardUnits.contains(h)){
+		// check if the damaged unit is on fire.
+		boolean on_fire = false;
+		List<UnitRulesParam> urps = h.getUnitRulesParams();
+		for (UnitRulesParam urp: urps) {
+			if (urp.getName().equals("on_fire")){
+				on_fire = true;
+			}
+		}
+
+		if(cowardUnits.contains(h)){
 			if(h.getHealth()/h.getMaxHealth() < 0.4){
 				if(!retreatingUnits.contains(h)){
 					retreatingUnits.add(h);
@@ -995,7 +1004,7 @@ public class MilitaryManager extends Module {
 
 		// retreat scouting raiders so that they don't suicide into enemy raiders
 		for (Raider r: raiders){
-			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && h.getDef().getCost(m) < 100 && r.scouting && r.getUnit().getUnitRulesParamByName("on_fire").getValueFloat() == 0){
+			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && h.getDef().getCost(m) < 100 && r.scouting && !on_fire){
 				float x = -100*dir.x;
 				float z = -100*dir.z;
 				AIFloat3 pos = h.getPos();
@@ -1007,7 +1016,7 @@ public class MilitaryManager extends Module {
 		}
 
 		for (Raider r: raidQueue){
-			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && r.getUnit().getUnitRulesParamByName("on_fire").getValueFloat() == 0){
+			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && !on_fire){
 				float x = -100*dir.x;
 				float z = -100*dir.z;
 				AIFloat3 pos = h.getPos();
@@ -1018,14 +1027,16 @@ public class MilitaryManager extends Module {
 			}
 		}
 
-
-
-		if ((!h.getDef().isAbleToAttack() || h.getMaxSpeed() == 0) && frame - lastDefenseFrame > 300){
+		// create a defense task, if appropriate.
+		if ((!h.getDef().isAbleToAttack() || h.getMaxSpeed() == 0) && frame - lastDefenseFrame > 300 && !on_fire){
 			lastDefenseFrame = frame;
-			DefenseTarget dt;
+			DefenseTarget dt = null;
 			if (attacker != null){
-				dt = new DefenseTarget(attacker.getPos(), frame);
-			}else{
+				if (attacker.getPos() != null) {
+					dt = new DefenseTarget(attacker.getPos(), frame);
+				}
+			}
+			if (dt == null){
 				float x = 500*dir.x;
 				float z = 500*dir.z;
 				AIFloat3 pos = h.getPos();
