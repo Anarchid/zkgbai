@@ -56,6 +56,8 @@ public class EconomyManager extends Module {
 	int numErasers = 0;
 	int raiderSpam = 0;
 
+	public int raiderCount = 0;
+
 	int teamcount = 1;
 
 	boolean enemyHasAir = false;
@@ -121,7 +123,8 @@ public class EconomyManager extends Module {
 		this.m = callback.getResourceByName("Metal");
 		this.e = callback.getResourceByName("Energy");
 
-		this.raiderSpam = ((int) Math.ceil((Math.random()*10.0)+6.0)*-1);
+		this.raiderSpam = ((int) Math.ceil(Math.random()*15.0)*-1);
+		this.raiderCount = Math.min(5, raiderSpam*-1);
 
 		// find out how many allies we have to weight resource income
 		/*if (callback.getTeams().getSize() > 2){
@@ -711,8 +714,10 @@ public class EconomyManager extends Module {
 				isMex = true;
 			}else if (ctask.buildType.isAbleToAttack()){
 				isPorc = true;
-			}else if(ctask.buildType.getName().equals("armnanotc")){
+			}else if (ctask.buildType.getName().equals("armnanotc")){
 				return dist-1000 + (500*(costMod-1));
+			}else if (ctask.buildType.getName().equals("armsolar") && energy < 100){
+				return (dist/(float) Math.log(dist)) + (600 * (costMod-1));
 			}
 		}
 

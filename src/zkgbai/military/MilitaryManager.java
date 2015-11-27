@@ -736,10 +736,12 @@ public class MilitaryManager extends Module {
 		}
 
 		if(frame%15 == 0) {
-			if (raidQueue.size() > 5){
+			// move raiders from the holding squad into the main raider pool.
+			if (raidQueue.size() > ecoManager.raiderCount){
 				raiders.addAll(raidQueue);
 				raidQueue.clear();
 			}
+
 			paintThreatMap();
 
 			updateTargets();
