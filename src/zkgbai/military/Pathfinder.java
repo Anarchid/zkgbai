@@ -91,8 +91,10 @@ public class Pathfinder extends Object {
      */
     public Deque<AIFloat3> findPath(Unit u, AIFloat3 target, CostSupplier costs) {
         AIFloat3 start = u.getPos();
-        float maxSlope = 0;
-        if (!u.getDef().isAbleToFly()) {
+        Deque<AIFloat3> result = new ArrayDeque<AIFloat3>();
+
+        float maxSlope = 1;
+        if (u.getDef().getMoveData() != null) {
             maxSlope = u.getDef().getMoveData().getMaxSlope();
         }
         
@@ -102,7 +104,7 @@ public class Pathfinder extends Object {
         int[] offset = new int[]{-1, 1, smwidth, -smwidth, smwidth + 1, smwidth - 1, -smwidth + 1, -smwidth - 1};
         float[] offsetCostMod = new float[]{1, 1, 1, 1, 1.42f, 1.42f, 1.42f, 1.42f};
 
-        Deque<AIFloat3> result = new ArrayDeque<AIFloat3>();
+
 
         Comparator<pqEntry> pqComp = new Comparator<pqEntry>() {
 

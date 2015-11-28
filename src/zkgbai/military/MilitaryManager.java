@@ -156,7 +156,9 @@ public class MilitaryManager extends Module {
 
 			AIFloat3 position = t.position;
 
-			if (position != null && t.ud != null && !t.ud.getTooltip().contains("Anti-Air") && !unitTypes.planes.contains(t.ud.getName()) && !t.isArty) {
+			if (position != null && t.ud != null
+					&& !t.ud.getTooltip().contains("Anti-Air") && !unitTypes.planes.contains(t.ud.getName())
+					&& t.unit != null && !t.unit.isBeingBuilt()) {
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
 				int r = (int) ((t.threatRadius) / 8);
@@ -444,10 +446,10 @@ public class MilitaryManager extends Module {
 
 	private void updateSquads(){
 		// set the rally point for the next forming squad for defense
-		if (nextSquad != null && frame % 600 == 0){
+		if (nextSquad != null && frame % 200 == 0){
 			nextSquad.setTarget(getRallyPoint(nextSquad.getPos()), frame);
 		}
-		if (nextAirSquad != null && frame % 600 == 0){
+		if (nextAirSquad != null && frame % 200 == 0){
 			nextAirSquad.setTarget(getRallyPoint(nextAirSquad.getPos()), frame);
 		}
 
@@ -585,16 +587,19 @@ public class MilitaryManager extends Module {
 				}
 			}
 		}
-		TargetMarker tm = new TargetMarker(target, frame);
-		targetMarkers.add(tm);
-		return target;
+		if (target != null) {
+			TargetMarker tm = new TargetMarker(target, frame);
+			targetMarkers.add(tm);
+			return target;
+		}
+		return nullpos;
     }
 
 	private void dgunStriders(){
 		for (Strider s:striders){
 			AIFloat3 target = getDgunTarget(s.getPos());
 			if (target != null && frame > s.lastDgunFrame + s.dgunReload){
-				s.getUnit().dGunPosition(target, (short) 0, frame + 300);
+				s.getUnit().dGunPosition(target, (short) 0, frame + 3000);
 				s.lastDgunFrame = frame;
 			}
 		}
@@ -1052,7 +1057,7 @@ public class MilitaryManager extends Module {
 		}
 
 		// create a defense task, if appropriate.
-		if ((!h.getDef().isAbleToAttack() || h.getMaxSpeed() == 0) && frame - lastDefenseFrame > 300 && !on_fire){
+		if ((!h.getDef().isAbleToAttack() || h.getMaxSpeed() == 0 || getThreat(h.getPos()) < 0.3) && frame - lastDefenseFrame > 150 && !on_fire){
 			lastDefenseFrame = frame;
 			DefenseTarget dt = null;
 			if (attacker != null){

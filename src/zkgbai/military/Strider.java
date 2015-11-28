@@ -21,6 +21,6 @@ public class Strider extends Fighter{
     @Override
     public void fightTo(AIFloat3 pos, int frame){
         AIFloat3 target = getRadialPoint(pos, 50f);
-        unit.moveTo(target, (short) 0, frame+1000);
+        unit.moveTo(target, (short) 0, frame+6000);
     }
 }

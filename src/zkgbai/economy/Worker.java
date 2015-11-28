@@ -10,7 +10,6 @@ public class Worker {
 	private WorkerTask task;
 	public int id;
 	public boolean isChicken;
-	public boolean isIdle;
 	public int chickenFrame;
 	AIFloat3 lastpos = null;
 	int lastTaskFrame = 0;
@@ -20,14 +19,12 @@ public class Worker {
 		this.task = null;
 		this.id = unit.getUnitId();
 		this.isChicken = false;
-		this.isIdle = true;
 		this.chickenFrame = 0;
 		this.lastpos = unit.getPos();
 	}
 	
 	public void setTask(WorkerTask task, int frame){
 		this.task = task;
-		this.isIdle = false;
 		this.lastpos = unit.getPos();
 		lastTaskFrame = frame;
 	}
@@ -46,11 +43,8 @@ public class Worker {
 
 	public void clearTask(int frame){
 		this.task = null;
-		this.isIdle = true;
-		try {
-			unit.stop((short) 0, frame+30);
-		}catch (Exception e){
-
+		if (unit.getHealth() > 0) {
+			unit.stop((short) 0, frame + 300);
 		}
 	}
 
@@ -58,9 +52,9 @@ public class Worker {
 		if (task != null && frame - lastTaskFrame > 150){
 			float movedist = distance(unit.getPos(), lastpos);
 			float jobdist = distance(unit.getPos(), task.getPos());
-			if (movedist < 50 && jobdist > unit.getDef().getBuildDistance()+20){
+			if (movedist < 50 && jobdist > unit.getDef().getBuildDistance()+5){
 				AIFloat3 unstickPoint = getRadialPoint(unit.getPos(), 75f);
-				unit.moveTo(unstickPoint, (short) 0, frame+60);
+				unit.moveTo(unstickPoint, (short) 0, frame+6000);
 				clearTask(frame);
 			}
 			lastTaskFrame = frame;

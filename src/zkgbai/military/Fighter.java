@@ -29,11 +29,11 @@ public class Fighter {
 
     public void fightTo(AIFloat3 pos, int frame){
         AIFloat3 target = getRadialPoint(pos, 200f);
-        unit.fight(target, (short) 0, frame+1000);
+        unit.fight(target, (short) 0, frame+6000);
     }
 
     public void moveTo(AIFloat3 pos, int frame){
-        unit.moveTo(pos, (short) 0, frame+1000);
+        unit.moveTo(pos, (short) 0, frame+6000);
     }
 
     protected AIFloat3 getRadialPoint(AIFloat3 position, Float radius){

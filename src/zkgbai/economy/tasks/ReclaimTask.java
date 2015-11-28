@@ -8,6 +8,7 @@ public class ReclaimTask extends WorkerTask {
 	public ReclaimTask(Feature feat){
 		super();
 		this.target = feat;
+		this.position = target.getPosition();
 	}
 	
 	@Override
@@ -26,6 +27,6 @@ public class ReclaimTask extends WorkerTask {
 
 	@Override
 	public AIFloat3 getPos(){
-		return this.target.getPosition();
+		return this.position;
 	}
 }

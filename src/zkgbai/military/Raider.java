@@ -43,18 +43,18 @@ public class Raider extends Fighter {
     public void raid(Deque<AIFloat3> path, int frame) {
         scouting = false;
         unit.stop((short) 0, frame);
-        unit.setMoveState(1, (short) 0, frame + 10); // set to maneuver
-        unit.fight(path.poll(), (short) 0, frame + 300); // skip first waypoint if target actually found to prevent stuttering
+        unit.setMoveState(1, (short) 0, frame + 30); // set to maneuver
+        unit.fight(path.poll(), (short) 0, frame + 3000); // skip first waypoint if target actually found to prevent stuttering
 
         if (path.isEmpty()) {
             return; // pathing failed
         } else {
-            unit.fight(path.poll(), (short) 0, frame + 300); // immediately move to first waypoint
+            unit.fight(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
 
             int pathSize = Math.min(5, path.size());
             int i = 0;
             while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
-                unit.fight(path.poll(), OPTION_SHIFT_KEY, frame + 300); // queue the rest with shift.
+                unit.fight(path.poll(), OPTION_SHIFT_KEY, frame + 3000); // queue the rest with shift.
                 i++;
                 // skip every other waypoint except the last, since they're not very far apart.
                 if (path.size() > 1) {
@@ -70,16 +70,16 @@ public class Raider extends Fighter {
         scouting = false;
         unit.stop((short) 0, frame);
         unit.setMoveState(2, (short) 0, frame + 10); // set to maneuver
-        unit.moveTo(path.poll(), (short) 0, frame + 300); // skip first waypoint if target actually found to prevent stuttering, otherwise use it.
+        unit.moveTo(path.poll(), (short) 0, frame + 3000); // skip first waypoint if target actually found to prevent stuttering, otherwise use it.
 
         if (path.isEmpty()) {
             return; // pathing failed
         } else {
-            unit.moveTo(path.poll(), (short) 0, frame + 300); // immediately move to first waypoint
+            unit.moveTo(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
 
             int pathSize = Math.min(5, path.size());
             for (int i = 0; i < pathSize; i++) { // queue up to the first 5 waypoints
-                unit.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 300); // queue the rest with shift.
+                unit.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 3000); // queue the rest with shift.
             }
         }
         lastTaskFrame = frame;
@@ -92,7 +92,7 @@ public class Raider extends Fighter {
             float jobdist = distance(unit.getPos(), task.spot.getPos());
             if (movedist < 25 && jobdist > unit.getMaxRange()) {
                 AIFloat3 unstickPoint = getRadialPoint(unit.getPos(), 75f);
-                unit.moveTo(unstickPoint, (short) 0, frame + 60);
+                unit.moveTo(unstickPoint, (short) 0, frame + 6000);
                 clearTask(frame);
             }
             lastTaskFrame = frame;

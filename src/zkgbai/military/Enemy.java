@@ -21,6 +21,7 @@ public class Enemy {
 	boolean isRadarVisible = false;
 	boolean identified = false;
 	boolean isRiot = false;
+	boolean isFlamer = false;
 	boolean isArty = false;
 	float maxObservedSpeed = 0;
 	
@@ -79,12 +80,15 @@ public class Enemy {
 			for (WeaponMount w:u.getWeaponMounts()){
 				WeaponDef wd = w.getWeaponDef();
 				if (wd.getCustomParams().containsKey("setunitsonfire")){
-					this.isRiot = true;
+					if (!u.getTooltip().contains("Arti")){
+						this.isRiot = true;
+					}
+					this.isFlamer = true;
 				}
 			}
 
 			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm")) && !u.getTooltip().contains("Riot")){
-				// identify riots
+				// identify arty/skirms
 				this.isArty = true;
 			}
 		}		
@@ -103,7 +107,7 @@ public class Enemy {
 		float health = 0;
 		float danger = 0;
 		if (ud != null) {
-			if (ud.getName().equals("arm_venom") || ud.getName().equals("corpyro")) {
+			if (ud.getName().equals("arm_venom")) {
 				danger += 300;
 			}
 			if (unit.getHealth() > 0) {
@@ -113,8 +117,17 @@ public class Enemy {
 				health = ud.getHealth();
 				danger = ud.getPower() + health;
 			}
+			if (isFlamer){
+				danger += 400;
+			}
 			if (isRiot){
 				danger *= 2;
+			}
+			if (isArty){
+				danger /= 2;
+			}
+			if (isStatic){
+				danger *= 1.5f;
 			}
 		}
 		return danger;
