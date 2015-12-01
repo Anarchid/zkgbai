@@ -12,10 +12,12 @@ public class UnitClasses {
     public List<String> arties;
     public List<String> striders;
     public List<String> airMobs;
+    public List<String> shieldMobs;
     public List<String> mobSupports;
     public List<String> loners;
     public List<String> AAs;
     public List<String> planes;
+    public List<String> sappers;
 
     public UnitClasses(){
         this.raiders = new ArrayList<String>();
@@ -23,15 +25,18 @@ public class UnitClasses {
         this.arties = new ArrayList<String>();
         this.striders = new ArrayList<String>();
         this.airMobs = new ArrayList<String>();
+        this.shieldMobs = new ArrayList<String>();
         this.mobSupports = new ArrayList<String>();
         this.loners = new ArrayList<String>();
         this.AAs = new ArrayList<String>();
         this.planes = new ArrayList<String>();
+        this.sappers = new ArrayList<String>();
 
         // raiders
         raiders.add("armpw");
         raiders.add("spherepole");
         raiders.add("corak");
+        raiders.add("corclog");
         raiders.add("armkam");
 
         // assaults; stuff that attacks in mobs
@@ -44,9 +49,16 @@ public class UnitClasses {
         airMobs.add("armbrawl");
         airMobs.add("blackdawn");
 
+        // Shield mobs
+        shieldMobs.add("cormak");
+        shieldMobs.add("shieldarty");
+        shieldMobs.add("corthud");
+        shieldMobs.add("shieldfelon");
+        shieldMobs.add("core_spectre");
+        shieldMobs.add("funnelweb");
+
         // mobSupport: things that increase the strength of mobs
         mobSupports.add("spherecloaker");
-        mobSupports.add("core_spectre");
 
         // striders; stuff that can dgun
         striders.add("dante");
@@ -54,6 +66,8 @@ public class UnitClasses {
 
         // strider-like stuff that does better on its own than in mobs
         loners.add("armsnipe");
+        loners.add("corstorm");
+        loners.add("armham");
 
         // Anti-air units
         AAs.add("armjeth");
@@ -77,5 +91,11 @@ public class UnitClasses {
         planes.add("corhurc2");
         planes.add("armcybr");
         planes.add("corawac");
+
+        // Sappers
+        sappers.add("armtick");
+        sappers.add("corroach");
+        sappers.add("corsktl");
+        sappers.add("blastwing");
     }
 }

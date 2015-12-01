@@ -61,7 +61,9 @@ public class GraphManager extends Module {
 	
 	BufferedImage threatMap;
 
-	AIFloat3 allyCenter = null;
+	static AIFloat3 nullpos = new AIFloat3(0,0,0);
+	AIFloat3 allyCenter = nullpos;
+	AIFloat3 enemyCenter = nullpos;
 	
 	public HashMap<String, Integer> pylonDefs; 
 	int pylonCounter;
@@ -289,7 +291,7 @@ public class GraphManager extends Module {
     		
     	}
 
-    	calcAllyCenter();
+    	calcCenters();
     	paintGraph();
 
 		return 0;
@@ -472,7 +474,14 @@ public class GraphManager extends Module {
 			avgMexValue += ms.value / metalSpots.size();
 		}
 		for (MetalSpot ms: metalSpots){
-			ms.weight = ms.value/avgMexValue;
+			float var = ms.value/avgMexValue;
+			if (var > 1.2){
+				ms.weight = 3;
+			}else if (var < 0.8){
+				ms.weight = 0;
+			}else{
+				ms.weight = 1;
+			}
 		}
     }
     
@@ -585,12 +594,8 @@ public class GraphManager extends Module {
 		return spots;
 	}
 
-	private void calcAllyCenter(){
-		List<MetalSpot> spots = new ArrayList<MetalSpot>();
-		for(MetalSpot ms:metalSpots){
-			if(ms.owned || ms.allyShadowed) spots.add(ms);
-		}
-
+	private void calcCenters(){
+		List<MetalSpot> spots = getAllyTerritory();
 		if (spots.size() > 0){
 			AIFloat3 position = new AIFloat3();
 			int count = spots.size();
@@ -606,12 +611,34 @@ public class GraphManager extends Module {
 			position = callback.getMap().findClosestBuildSite(factory, position, 600f, 3, 0);
 			allyCenter = position;
 		}else {
-			allyCenter = null;
+			allyCenter = nullpos;
+		}
+
+		spots = getEnemyTerritory();
+		if (spots.size() > 0){
+			AIFloat3 position = new AIFloat3();
+			int count = spots.size();
+			float x = 0;
+			float z = 0;
+			for (MetalSpot ms : spots) {
+				x += (ms.getPos().x) / count;
+				z += (ms.getPos().z) / count;
+			}
+			position.x = x;
+			position.z = z;
+			UnitDef factory = callback.getUnitDefByName("factorygunship");
+			position = callback.getMap().findClosestBuildSite(factory, position, 600f, 3, 0);
+			enemyCenter = position;
+		}else {
+			enemyCenter = nullpos;
 		}
 	}
 
 	public AIFloat3 getAllyCenter(){
 		return allyCenter;
+	}
+	public AIFloat3 getEnemyCenter(){
+		return enemyCenter;
 	}
 
 	public List<MetalSpot> getUnownedSpots(){
@@ -676,10 +703,12 @@ public class GraphManager extends Module {
 		float distance = Float.MAX_VALUE;
 		MetalSpot bestSpot = null;
 		for (MetalSpot ms:spots){
-			float dist = groundDistance(position, ms.getPos());
-			if (dist < distance && !ms.hostile){
-				bestSpot = ms;
-				distance = dist;
+			if (ms.owned) {
+				float dist = groundDistance(position, ms.getPos());
+				if (dist < distance) {
+					bestSpot = ms;
+					distance = dist;
+				}
 			}
 		}
 		return bestSpot;

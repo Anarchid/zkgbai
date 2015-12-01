@@ -185,7 +185,7 @@ public class Pathfinder extends Object {
         //result.add(target);//add twice to confirm path
         time = System.currentTimeMillis() - time;
         if (time > 10) {
-            ai.parent.debug("pathfinder took " + time + "ms");
+            //ai.parent.debug("pathfinder took " + time + "ms");
         }
         
         return result;
