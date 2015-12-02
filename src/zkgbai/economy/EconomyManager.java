@@ -446,6 +446,56 @@ public class EconomyManager extends Module {
     }
 
 	@Override
+	public int unitCaptured(Unit unit, int oldTeamID, int newTeamID){
+		if (oldTeamID == myTeamID){
+			return unitDestroyed(unit, null);
+		}else if (newTeamID == myTeamID){
+			checkWorker(unit);
+
+			if (unit.isBeingBuilt()){
+				RepairTask rp = new RepairTask(unit);
+				if (!repairTasks.contains(rp)) {
+					repairTasks.add(rp);
+				}
+			}
+
+			String defName = unit.getDef().getName();
+			if(defName.equals("corrl") || defName.equals("corllt") || defName.equals("corhlt") || defName.equals("armartic")){
+				porcs.add(unit);
+			}
+
+			if (defName.equals("corrazor")){
+				AAs.add(unit);
+			}
+
+			if (defName.equals("armnanotc")){
+				nanos.add(unit);
+			}
+
+			if(defName.equals("cormex")){
+				mexes.add(unit);
+			}
+
+			if(defName.equals("armsolar")){
+				solars.add(unit);
+			}
+
+			if(defName.equals("armestor")){
+				pylons.add(unit);
+			}
+
+			if (defName.equals("armfus")){
+				fusions.add(unit);
+			}
+
+			if (defName.equals("cafus")){
+				fusions.add(unit);
+			}
+		}
+		return 0;
+	}
+
+	@Override
 	public int enemyEnterLOS(Unit unit){
 		if (unit.getDef().isAbleToFly()){
 			enemyHasAir = true;
@@ -576,7 +626,7 @@ public class EconomyManager extends Module {
 			return "corclog";
 		}
 
-		if (effectiveIncome > 30 && numFelons == 0 && Math.random() > 0.5){
+		if (numFelons < (effectiveIncome/15)-2 && Math.random() > 0.5){
 			return "shieldfelon";
 		}
 
@@ -598,7 +648,7 @@ public class EconomyManager extends Module {
 			}else{
 				return "corstorm";
 			}
-		}else if (effectiveIncome > 30 && effectiveIncome < 70){
+		}else {
 			// don't spam extra felons unless mega income.
 			if (rand > 0.5) {
 				return "corthud";
@@ -608,18 +658,6 @@ public class EconomyManager extends Module {
 				return "corstorm";
 			}else{
 				return "shieldarty";
-			}
-		}else{
-			if (rand > 0.5) {
-				return "corthud";
-			}else if (rand > 0.4){
-				return "cormak";
-			}else if (rand > 0.25){
-				return "corstorm";
-			}else if (rand > 0.1){
-				return "shieldarty";
-			}else{
-				return "shieldfelon";
 			}
 		}
 	}
