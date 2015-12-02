@@ -40,8 +40,7 @@ public class ShieldSquad extends Squad{
             params.add((float)leader.id);
             params.add(50f);
             for (Fighter fi: fighters){
-                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);
-            }
+                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);}
         }else{
             f.getUnit().setMoveState(0, (short) 0, frame+300);
             fighters.add(f);
@@ -69,7 +68,11 @@ public class ShieldSquad extends Squad{
             params.add((float)leader.id);
             params.add(50f);
             for (Fighter fi:fighters){
-                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
+                if (getUnitWeight(fi) == 0){
+                    fi.getUnit().guard(leader.getUnit(), (short) 0, Integer.MAX_VALUE);
+                }else {
+                    fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
+                }
             }
         }else{
             super.removeUnit(f);

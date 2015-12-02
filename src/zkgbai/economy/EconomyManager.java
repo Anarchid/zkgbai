@@ -897,7 +897,6 @@ public class EconomyManager extends Module {
 
 		if (task instanceof RepairTask){
 			RepairTask rptask = (RepairTask) task;
-			UnitDef def = rptask.target.getDef();
 			if (rptask.target.getHealth() > 0) {
 				if (rptask.target.getMaxSpeed() > 0) {
 					AIFloat3 repairCenter = null;
