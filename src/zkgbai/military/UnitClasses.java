@@ -54,11 +54,11 @@ public class UnitClasses {
         shieldMobs.add("shieldarty");
         shieldMobs.add("corthud");
         shieldMobs.add("shieldfelon");
-        shieldMobs.add("core_spectre");
         shieldMobs.add("funnelweb");
 
         // mobSupport: things that increase the strength of mobs
         mobSupports.add("spherecloaker");
+        mobSupports.add("core_spectre");
 
         // striders; stuff that can dgun
         striders.add("dante");

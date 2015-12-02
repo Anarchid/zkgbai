@@ -100,6 +100,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         
         graphManager.setLosManager(losManager);
         warManager.setLosManager(losManager);
+		ecoManager.setLosManager(losManager);
         
         ecoManager.setGraphManager(graphManager);
         warManager.setGraphManager(graphManager);

@@ -629,7 +629,7 @@ public class GraphManager extends Module {
 			UnitDef factory = callback.getUnitDefByName("factorygunship");
 			position = callback.getMap().findClosestBuildSite(factory, position, 600f, 3, 0);
 			enemyCenter = position;
-		}else {
+		}else{
 			enemyCenter = nullpos;
 		}
 	}

@@ -40,11 +40,7 @@ public class ShieldSquad extends Squad{
             params.add((float)leader.id);
             params.add(50f);
             for (Fighter fi: fighters){
-                if (getUnitWeight(fi) == 0){
-                    fi.getUnit().guard(leader.getUnit(), (short) 0, frame+300);
-                }else {
-                    fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);
-                }
+                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);
             }
         }else{
             f.getUnit().setMoveState(0, (short) 0, frame+300);
@@ -52,11 +48,7 @@ public class ShieldSquad extends Squad{
             List<Float> params = new ArrayList<>();
             params.add((float)leader.id);
             params.add(50f);
-            if (getUnitWeight(f) == 0){
-                f.getUnit().guard(leader.getUnit(), (short) 0, frame+300);
-            }else {
-                f.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);
-            }
+            f.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);
         }
     }
 
@@ -77,11 +69,7 @@ public class ShieldSquad extends Squad{
             params.add((float)leader.id);
             params.add(50f);
             for (Fighter fi:fighters){
-                if (getUnitWeight(fi) == 0){
-                    fi.getUnit().guard(leader.getUnit(), (short) 0, Integer.MAX_VALUE);
-                }else {
-                    fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
-                }
+                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
             }
         }else{
             super.removeUnit(f);
@@ -154,7 +142,6 @@ public class ShieldSquad extends Squad{
     int getUnitWeight(Fighter f){
         String type = f.getUnit().getDef().getName();
         switch (type){
-            case "core_spectre": return 0;
             case "cormak": return 1; // outlaws are too fast for other units to keep up with
             case "shieldarty": return 2;
             case "corthud": return 3;

@@ -115,7 +115,7 @@ public class LosManager extends Module {
 		
 		int index = Math.min(gridX + gridZ * gridWidth,losMap.size()-1);  
 		
-		if(index > losMap.size()){
+		if(index >= losMap.size()){
 			return false;
 		}
 		return (losMap.get(index) > level);

@@ -77,7 +77,7 @@ public class MilitaryManager extends Module {
 	static int CMD_DONT_FIRE_AT_RADAR = 38372;
 	static int CMD_AIR_STRAFE = 39381;
 	static int CMD_AP_FLY_STATE = 34569;
-	static int CMD_UNIT_FLOAT_STATE = 33412;
+	static int CMD_UNIT_AI = 36214;
 	
 	@Override
 	public String getModuleName() {
@@ -338,7 +338,7 @@ public class MilitaryManager extends Module {
 
 	private void assignRaiders(){
 		boolean needUnstick = false;
-		if (frame % 100 == 0){
+		if (frame % 90 == 0){
 			needUnstick = true;
 		}
 		for (Raider r: raiders){
@@ -437,6 +437,7 @@ public class MilitaryManager extends Module {
 		if (nextShieldSquad == null){
 			nextShieldSquad = new ShieldSquad();
 			nextShieldSquad.setTarget(getRallyPoint(f.getPos()), frame);
+			nextShieldSquad.status = 'a';
 		}
 		nextShieldSquad.addUnit(f, frame);
 	}
@@ -472,7 +473,7 @@ public class MilitaryManager extends Module {
 				// shields only get one squad into which it dumps all of its mobs.
 				if (nextShieldSquad.getHealth() < 0.9){
 					nextShieldSquad.setTarget(graphManager.getAllyCenter(), frame);
-				}else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30){
+				}else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1000){
 					AIFloat3 target = getTarget(nextShieldSquad.getPos(), true);
 					// reduce redundant order spam.
 					if (!target.equals(nextShieldSquad.target)) {
@@ -514,8 +515,8 @@ public class MilitaryManager extends Module {
 					if (!s.squad.isDead()) {
 						if (s.squad.status == 'f') {
 							s.moveTo(s.squad.target, frame);
-						} else {
-							s.moveTo(s.squad.getPos(), frame);
+						} else if (s.squad.getPos() != null){
+								s.moveTo(s.squad.getPos(), frame);
 						}
 					} else {
 						s.squad = null;
@@ -539,7 +540,7 @@ public class MilitaryManager extends Module {
 					if (s.squad != null) {
 						if (s.squad.status == 'f') {
 							s.moveTo(s.squad.target, frame);
-						} else {
+						} else if (s.squad.getPos() != null){
 							s.moveTo(s.squad.getPos(), frame);
 						}
 					}
@@ -776,6 +777,20 @@ public class MilitaryManager extends Module {
 	void updateSappers(){
 		for (Unit s : sappers.values()) {
 			if (s.getHealth() <= 0 || !s.getCurrentCommands().isEmpty()){continue;}
+
+			List<Unit> enemies = callback.getEnemyUnitsIn(s.getPos(), 350f);
+			Unit enemy = null;
+			for (Unit e:enemies){
+				if (e.getDef() != null && e.getDef().getCost(m) > 100){
+					enemy = e;
+					break;
+				}
+			}
+			if (enemy != null){
+				s.attack(enemy, (short) 0, frame+300);
+				continue;
+			}
+
 			MetalSpot ms = graphManager.getClosestFrontLineSpot(s.getPos());
 
 			if (ms == null){
@@ -783,12 +798,7 @@ public class MilitaryManager extends Module {
 			}
 
 			if (ms != null && graphManager.groundDistance(s.getPos(), ms.getPos()) > 500) {
-				AIFloat3 pos = getDirection(ms.getPos(), graphManager.getEnemyCenter());
-				pos.x *= 400;
-				pos.z *= 400;
-				pos.x += ms.getPos().x;
-				pos.z += ms.getPos().z;
-				s.fight(pos, (short) 0, frame + 300);
+				s.fight(getDirectionalPoint(ms.getPos(), graphManager.getEnemyCenter(), 350f), (short) 0, frame + 300);
 			}
 		}
 	}
@@ -837,7 +847,7 @@ public class MilitaryManager extends Module {
 		if (frame % 300 == 0){
 			for (Fighter l:loners.values()){
 				Unit u = l.getUnit();
-				if (retreatingUnits.contains(u) && u.getHealth() / u.getMaxHealth() > 0.95) {
+				if (retreatingUnits.contains(u) && u.getHealth() == u.getMaxHealth()) {
 					retreatingUnits.remove(u);
 				}
 				if (!retreatingUnits.contains(u)){
@@ -848,12 +858,12 @@ public class MilitaryManager extends Module {
 
 			for (Fighter s:supports.values()){
 				Unit u = s.getUnit();
-				if (retreatingUnits.contains(u) && u.getHealth() / u.getMaxHealth() > 0.95) {
+				if (retreatingUnits.contains(u) && u.getHealth() == u.getMaxHealth()) {
 					retreatingUnits.remove(u);
 				}
 			}
 
-			updateSappers();
+
 		}
 
 		if(frame%15 == 0) {
@@ -875,6 +885,7 @@ public class MilitaryManager extends Module {
 			assignRaiders();
 			updateSquads();
 			updateSupports();
+			updateSappers();
 
 			retreatCowards();
 
@@ -882,7 +893,7 @@ public class MilitaryManager extends Module {
 			while (iter.hasNext()) {
 				Fighter f = iter.next();
 				Unit u = f.getUnit();
-				if (retreatingUnits.contains(u) && u.getHealth() / u.getMaxHealth() > 0.95) {
+				if (retreatingUnits.contains(u) && u.getHealth() == u.getMaxHealth()) {
 					retreatingUnits.remove(u);
 					if (unitTypes.airMobs.contains(u.getDef().getName())){
 						addToAirSquad(f);
@@ -894,7 +905,7 @@ public class MilitaryManager extends Module {
 
 			for (Strider st:striders){
 				Unit u = st.getUnit();
-				if (retreatingUnits.contains(u) && u.getHealth() / u.getMaxHealth() > 0.95) {
+				if (retreatingUnits.contains(u) && u.getHealth() == u.getMaxHealth()) {
 					retreatingUnits.remove(u);
 				}
 				if (!retreatingUnits.contains(u)){
@@ -1053,7 +1064,10 @@ public class MilitaryManager extends Module {
 		}else if (unitTypes.sappers.contains(defName)){
 			unit.setMoveState(2, (short) 0, frame + 10);
 			unit.setFireState(2, (short) 0, frame + 10);
-			unit.fight(getRallyPoint(unit.getPos()), (short) 0, frame+300);
+			ArrayList<Float> params = new ArrayList<>();
+			params.add((float) 0);
+			unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, frame+30);
+			unit.fight(getRadialPoint(graphManager.getAllyCenter(), 800f), (short) 0, frame+300);
 			sappers.put(unit.getUnitId(), unit);
 		}
     	
@@ -1271,15 +1285,15 @@ public class MilitaryManager extends Module {
 		return pos;
 	}
 
-	private AIFloat3 getDirection(AIFloat3 start, AIFloat3 dest){
+	private AIFloat3 getDirectionalPoint(AIFloat3 start, AIFloat3 dest, float distance){
 		AIFloat3 dir = new AIFloat3();
 		float x = dest.x - start.x;
 		float z = dest.z - start.z;
 		float d = (float) Math.sqrt((x*x) + (z*z));
 		x /= d;
 		z /= d;
-		dir.x = x;
-		dir.z = z;
+		dir.x = start.x + (x * distance);
+		dir.z = start.z + (z * distance);
 		return dir;
 	}
 }
