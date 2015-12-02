@@ -40,7 +40,11 @@ public class ShieldSquad extends Squad{
             params.add((float)leader.id);
             params.add(50f);
             for (Fighter fi: fighters){
-                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame+300);
+                if (getUnitWeight(fi) == 0){
+                    fi.getUnit().guard(leader.getUnit(), (short) 0, frame+300);
+                }else {
+                    fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);
+                }
             }
         }else{
             f.getUnit().setMoveState(0, (short) 0, frame+300);
@@ -48,7 +52,11 @@ public class ShieldSquad extends Squad{
             List<Float> params = new ArrayList<>();
             params.add((float)leader.id);
             params.add(50f);
-            f.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame+300);
+            if (getUnitWeight(f) == 0){
+                f.getUnit().guard(leader.getUnit(), (short) 0, frame+300);
+            }else {
+                f.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);
+            }
         }
     }
 
@@ -69,7 +77,11 @@ public class ShieldSquad extends Squad{
             params.add((float)leader.id);
             params.add(50f);
             for (Fighter fi:fighters){
-                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
+                if (getUnitWeight(fi) == 0){
+                    fi.getUnit().guard(leader.getUnit(), (short) 0, Integer.MAX_VALUE);
+                }else {
+                    fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
+                }
             }
         }else{
             super.removeUnit(f);
@@ -107,10 +119,7 @@ public class ShieldSquad extends Squad{
 
     @Override
     public boolean isDead(){
-        if (fighters.size() == 0 && leader == null){
-            return true;
-        }
-        return false;
+        return (fighters.isEmpty() && leader == null);
     }
 
     public float getHealth(){

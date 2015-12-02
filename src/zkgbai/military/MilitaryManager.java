@@ -1126,6 +1126,37 @@ public class MilitaryManager extends Module {
 		}
 		striders.remove(dead);
 
+		// create a defense task, if appropriate.
+		if ((!unit.getDef().isAbleToAttack() || unit.getMaxSpeed() == 0 || graphManager.groundDistance(unit.getPos(), graphManager.getAllyCenter()) < graphManager.groundDistance(unit.getPos(), graphManager.getEnemyCenter()))
+				&& frame - lastDefenseFrame > 150){
+			lastDefenseFrame = frame;
+			DefenseTarget dt = null;
+			if (attacker != null){
+				if (attacker.getPos() != null) {
+					dt = new DefenseTarget(attacker.getPos(), 2000, frame);
+				}
+			}
+			if (dt == null){
+				dt = new DefenseTarget(unit.getPos(), 2000, frame);
+			}
+			defenseTargets.add(dt);
+			for (Raider r: raidQueue){
+				r.fightTo(dt.position, frame);
+			}
+
+			if (attacker != null) {
+				if (attacker.getDef() != null) {
+					if (attacker.getDef().isAbleToFly()) {
+						for (Fighter f : AAs.values()) {
+							if (f.getUnit().getHealth() > 0 && f.getUnit().getTeam() == parent.teamID) {
+								f.fightTo(unit.getPos(), frame);
+							}
+						}
+					}
+				}
+			}
+		}
+
         return 0; // signaling: OK
     }
     
@@ -1218,6 +1249,16 @@ public class MilitaryManager extends Module {
 		}
 		return 0;
     }
+
+	@Override
+	public int unitCaptured(Unit unit, int oldTeamID, int newTeamID){
+		if (oldTeamID == parent.teamID){
+			return unitDestroyed(unit, null);
+		}else if (newTeamID == parent.teamID){
+			return unitFinished(unit);
+		}
+		return 0;
+	}
 
 	private AIFloat3 getRadialPoint(AIFloat3 position, Float radius){
 		// returns a random point lying on a circle around the given position.
