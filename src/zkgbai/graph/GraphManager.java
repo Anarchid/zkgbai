@@ -674,6 +674,22 @@ public class GraphManager extends Module {
     	return bestMS;
     }
 
+	public MetalSpot getClosestEnemySpot(AIFloat3 position){
+		float minRange = Float.MAX_VALUE;
+		MetalSpot bestMS = null;
+		for(MetalSpot ms:metalSpots){
+			if(ms.hostile){
+				float dist = groundDistance(position,ms.position);
+				if(dist < minRange){
+					bestMS = ms;
+					minRange = dist;
+				}
+			}
+		}
+
+		return bestMS;
+	}
+
 	public MetalSpot getClosestSpot(AIFloat3 position){
 		float minRange = Float.MAX_VALUE;
 		MetalSpot bestMS = null;

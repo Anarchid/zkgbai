@@ -174,6 +174,9 @@ public class EconomyManager extends Module {
 				defendMexes();
 			}
 			setPriorities();
+
+			// remove finished or invalidated tasks
+			cleanOrders();
 		}
 
 		if (frame % 300 == 0){
@@ -182,8 +185,6 @@ public class EconomyManager extends Module {
 
 
 		if (frame % 10 == 0) {
-			// remove bad building tasks
-			cleanOrders();
 			//create new building tasks.
 			boolean pop = false;
 			for (Worker w : workers) {
@@ -199,7 +200,9 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		assignWorkers(); // assign workers to tasks
+		if (frame % 6 == 0) {
+			assignWorkers(); // assign workers to tasks
+		}
 
 		return 0;
 	}
@@ -582,11 +585,11 @@ public class EconomyManager extends Module {
 		raiderSpam--;
 		double rand = Math.random();
 		if (effectiveIncome < 70) {
-			if (rand > 0.6) {
+			if (rand > 0.5) {
 				return "armrock";
-			} else if (rand > 0.4) {
+			} else if (rand > 0.3) {
 				return "armzeus";
-			} else if (rand > 0.2) {
+			} else if (rand > 0.1) {
 				return "armwar";
 			} else if (effectiveIncome > 30 && energy > 100) {
 				return "armsnipe";
@@ -617,14 +620,16 @@ public class EconomyManager extends Module {
 		}
 
 		if (raiderSpam < 0){
-			raiderSpam++;
-			if (Math.random() > 0.1){
+			if (Math.random() > 0.25){
+				raiderSpam++;
 				return "corak";
 			}
 			return "corclog";
 		}
 
-		if (numFelons < Math.min((effectiveIncome/15)-2, 3) && Math.random() > 0.5){
+		raiderSpam--;
+
+		if (numFelons < Math.min((effectiveIncome/15)-2, 3) && numFelons * 4 < numThugs && Math.random() > 0.5){
 			return "shieldfelon";
 		}
 
@@ -636,7 +641,6 @@ public class EconomyManager extends Module {
 			return "corroach";
 		}
 
-		raiderSpam--;
 		double rand = Math.random();
 		if (effectiveIncome < 30) {
 			if (rand > 0.15) {
@@ -942,7 +946,7 @@ public class EconomyManager extends Module {
 			if (isExpensive && task instanceof ReclaimTask && metal < 300){
 				return (dist/(float) Math.log(dist)) + (600*(costMod-2));
 			}else if (isExpensive) {
-				return (dist/(float)Math.log(dist))+100*costMod;
+				return (dist/(float)Math.log(dist)) - 500 + (100*costMod);
 			}else if (isPorc){
 				return dist + (600*(costMod-2)) - 300;
 			}else{
@@ -1148,7 +1152,7 @@ public class EconomyManager extends Module {
     	}
 
 		// do we need pylons?
-		if (fusions.size() > 4 && !tooCloseToFac){
+		if (fusions.size() > 3 && !tooCloseToFac){
 			createGridTask(worker);
 		}
     }
@@ -1209,7 +1213,7 @@ public class EconomyManager extends Module {
 		}
 	}
     
-    void createFactoryTask( Worker worker){
+    void createFactoryTask(Worker worker){
 		UnitDef cloak = callback.getUnitDefByName("factorycloak");
 		UnitDef gunship = callback.getUnitDefByName("factorygunship");
 		UnitDef strider = callback.getUnitDefByName("striderhub");
@@ -1231,12 +1235,11 @@ public class EconomyManager extends Module {
 		}
 
 		if(factories.size() == 0){
-			factory = shields;
-			/*if (Math.random() > 0.5) {
+			if (Math.random() > 0.5) {
 				factory = cloak;
 			}else {
 				factory = shields;
-			}*/
+			}
 		}else if (factories.size() == 1){
 			factory = gunship;
 		}else{
@@ -1480,7 +1483,7 @@ public class EconomyManager extends Module {
 		ConstructionTask ct;
 
 		// for fusions
-		if (effectiveIncome > 35 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 4 && fusionTasks.isEmpty()){
+		if (effectiveIncome > 35 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 3 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
 			position = graphManager.getOverdriveSweetSpot(position);
@@ -1499,7 +1502,7 @@ public class EconomyManager extends Module {
 			}
 		}
 		// for singus
-		if (effectiveIncome > 70 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 6 && fusionTasks.isEmpty()){
+		if (effectiveIncome > 70 && !factories.isEmpty() && !warManager.isFrontLine(position) && fusions.size() < 5 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
 			position = graphManager.getOverdriveSweetSpot(position);

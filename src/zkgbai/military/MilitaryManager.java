@@ -39,6 +39,7 @@ public class MilitaryManager extends Module {
 	public java.util.Map<Integer, Fighter> AAs;
 	List<Unit> cowardUnits;
 	List<Unit> retreatingUnits;
+	List<Unit> retreatedUnits;
 	List<Unit> havens;
 	
 	Squad nextSquad;
@@ -113,6 +114,7 @@ public class MilitaryManager extends Module {
 		this.nextAirSquad = null;
 		this.cowardUnits = new ArrayList<Unit>();
 		this.retreatingUnits = new ArrayList<Unit>();
+		this.retreatedUnits = new ArrayList<Unit>();
 		this.havens = new ArrayList<Unit>();
 		this.scoutTasks = new ArrayList<ScoutTask>();
 		this.raidTasks = new ArrayList<RaidTask>();
@@ -462,48 +464,61 @@ public class MilitaryManager extends Module {
 
 	private void updateSquads(){
 		// set the rally point for the next forming squad for defense
-		if (frame % 300 == 0) {
-			if (nextSquad != null) {
-				nextSquad.setTarget(getRallyPoint(nextSquad.getPos()), frame);
-			}
-			if (nextAirSquad != null) {
-				nextAirSquad.setTarget(getRallyPoint(nextAirSquad.getPos()), frame);
-			}
-			if (nextShieldSquad != null) {
-				// shields only get one squad into which it dumps all of its mobs.
-				if (nextShieldSquad.getHealth() < 0.9){
-					nextShieldSquad.setTarget(graphManager.getAllyCenter(), frame);
-				}else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1000){
-					AIFloat3 target = getTarget(nextShieldSquad.getPos(), true);
-					// reduce redundant order spam.
-					if (!target.equals(nextShieldSquad.target)) {
-						nextShieldSquad.setTarget(target, frame);
-					}
-				}else {
-					nextShieldSquad.setTarget(getRallyPoint(nextShieldSquad.getPos()), frame);
+		if (nextSquad != null && frame % 270 == 0) {
+			nextSquad.setTarget(getRallyPoint(nextSquad.getPos()), frame);
+		}
+		if (nextAirSquad != null && frame % 450 == 0) {
+			nextAirSquad.setTarget(getRallyPoint(nextAirSquad.getPos()), frame);
+		}
+		if (nextShieldSquad != null && frame % 180 == 0) {
+			// shields only get one squad into which it dumps all of its mobs.
+			if (nextShieldSquad.getHealth() < 0.9){
+				nextShieldSquad.setTarget(graphManager.getAllyCenter(), frame);
+			}else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1000){
+				AIFloat3 target = getTarget(nextShieldSquad.getPos(), true);
+				// reduce redundant order spam.
+				if (!target.equals(nextShieldSquad.target)) {
+					nextShieldSquad.setTarget(target, frame);
 				}
+			}else {
+				nextShieldSquad.setTarget(getRallyPoint(nextShieldSquad.getPos()), frame);
 			}
 		}
 
 		List<Squad> deadSquads = new ArrayList<Squad>();
+		boolean assigned = false;
+
 		for (Squad s: squads){
+			if (s.isDead()){
+				deadSquads.add(s);
+				continue;
+			}
+
 			// set rallying for squads that are finished forming and gathering to attack
-			if (s.status == 'r' && frame % 60 == 0){
+			if (s.status == 'r' && !s.assigned){
+				assigned = true;
+				s.assigned = true;
 				if (s.isRallied(frame)){
 					s.status = 'a';
 				}
-			}else if (s.status == 'a' && frame % 150 == 0){
+				break;
+			}else if (s.status == 'a' && !s.assigned){
 				AIFloat3 target = getTarget(s.getPos(), true);
 				// reduce redundant order spam.
 				if (!target.equals(s.target)) {
+					assigned = true;
+					s.assigned = true;
 					s.setTarget(target, frame);
-				}
-				if (s.isDead()){
-					deadSquads.add(s);
+					break;
 				}
 			}
 		}
 		squads.removeAll(deadSquads);
+		if (!assigned){
+			for (Squad s: squads){
+				s.assigned = false;
+			}
+		}
 	}
 
 	private void updateSupports(){
@@ -703,8 +718,9 @@ public class MilitaryManager extends Module {
 
 	private void retreatCowards(){
 		AIFloat3 position = graphManager.getAllyCenter();
+		boolean retreated = false;
 		for (Unit u: retreatingUnits){
-			if(position != null && u.getPos() != null){
+			if(u.getHealth() > 0 && !retreatedUnits.contains(u)){
 				UnitDef building = callback.getUnitDefByName("factorygunship");
 				position = callback.getMap().findClosestBuildSite(building, position, 600f, 3, 0);
 				
@@ -723,7 +739,13 @@ public class MilitaryManager extends Module {
 					}
 					// let the rest of the waypoints get handled the next time around.
 				}
+				retreatedUnits.add(u);
+				retreated = true;
+				break;
 			}
+		}
+		if (!retreated){
+			retreatedUnits.clear();
 		}
 	}
 
@@ -746,18 +768,12 @@ public class MilitaryManager extends Module {
 					}*/
 				}
 				t.position = tpos;
-			} else if (frame - t.lastSeen > 1800 && !t.isStatic) {
-				// remove mobiles that haven't been seen for 60 seconds
+			}else if (frame - t.lastSeen > 1800 && !t.isStatic) {
+				// remove mobiles that haven't been seen for over 60 seconds.
 				outdated.add(t);
-			}else if (t.position != null) {
-				if (losManager.isInLos(t.position) && !t.visible) {
-					// remove units that aren't where they were last seen, if that position is visible
-					outdated.add(t);
-				}
-			} else if (t.isStatic && t.position != null){
-				if (losManager.isInLos(t.position) && !t.visible) {
-					outdated.add(t);
-				}
+			}else if (t.position != null && losManager.isInLos(t.position)) {
+				// remove targets that aren't where we last saw them.
+				outdated.add(t);
 			}
 		}
 
@@ -791,7 +807,16 @@ public class MilitaryManager extends Module {
 				continue;
 			}
 
-			MetalSpot ms = graphManager.getClosestFrontLineSpot(s.getPos());
+			MetalSpot ms = null;
+			if (s.getDef().getName().equals("blastwing")){
+				ms = graphManager.getClosestEnemySpot(s.getPos());
+				if (ms != null) {
+					s.fight(ms.getPos(), (short) 0, frame + 300);
+				}
+				continue;
+			}else {
+				ms = graphManager.getClosestFrontLineSpot(s.getPos());
+			}
 
 			if (ms == null){
 				ms = graphManager.getClosestNeutralSpot(s.getPos());
@@ -862,8 +887,14 @@ public class MilitaryManager extends Module {
 					retreatingUnits.remove(u);
 				}
 			}
+		}
 
+		if (frame % 6 == 0){
+			retreatCowards();
+		}
 
+		if (frame % 90 == 0){
+			updateSquads();
 		}
 
 		if(frame%15 == 0) {
@@ -883,11 +914,8 @@ public class MilitaryManager extends Module {
 			checkScoutTasks();
 
 			assignRaiders();
-			updateSquads();
 			updateSupports();
 			updateSappers();
-
-			retreatCowards();
 
 			Iterator<Fighter> iter = fighters.values().iterator();
 			while (iter.hasNext()) {

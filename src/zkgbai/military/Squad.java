@@ -11,11 +11,13 @@ public class Squad {
 	public float metalValue;
 	public char status;
 	public float income;
+	public boolean assigned;
 	public AIFloat3 target;
 	
 	public Squad(){
 		this.fighters = new ArrayList<Fighter>();
 		this.metalValue = 0;
+		this.assigned = false;
 		this.status = 'f';
 		// f = forming
 		// r = rallying
