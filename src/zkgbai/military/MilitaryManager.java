@@ -340,7 +340,7 @@ public class MilitaryManager extends Module {
 
 	private void assignRaiders(){
 		boolean needUnstick = false;
-		if (frame % 90 == 0){
+		if (frame % 30 == 0){
 			needUnstick = true;
 		}
 		for (Raider r: raiders){

@@ -200,7 +200,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if (frame % 6 == 0) {
+		if (frame % 3 == 0) {
 			assignWorkers(); // assign workers to tasks
 		}
 
@@ -946,7 +946,7 @@ public class EconomyManager extends Module {
 			if (isExpensive && task instanceof ReclaimTask && metal < 300){
 				return (dist/(float) Math.log(dist)) + (600*(costMod-2));
 			}else if (isExpensive) {
-				return (dist/(float)Math.log(dist)) - 500 + (100*costMod);
+				return (dist/(float)Math.log(dist)) - 500 + (150*costMod);
 			}else if (isPorc){
 				return dist + (600*(costMod-2)) - 300;
 			}else{
