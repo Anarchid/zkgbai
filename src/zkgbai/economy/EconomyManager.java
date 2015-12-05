@@ -668,6 +668,45 @@ public class EconomyManager extends Module {
 		}
 	}
 
+	private String getAmphs() {
+		if (needWorkers()) {
+			return "amphcon";
+		}
+
+		if (enemyHasAir && (Math.random() > 0.75 || warManager.AAs.size() < 3)){
+			return "amphaa";
+		}
+
+		if (raiderSpam < 0) {
+			raiderSpam++;
+			if (Math.random() > 0.2) {
+				return "amphraider3";
+			}else{
+				return "amphraider2";
+			}
+
+		}
+
+		raiderSpam--;
+		double rand = Math.random();
+		if (effectiveIncome < 30) {
+			if (rand > 0.50) {
+				return "amphfloater";
+			} else {
+				return "amphriot";
+			}
+		}else{
+			if (rand > 0.55) {
+				return "amphfloater";
+			} else if (rand > 0.1) {
+				return "amphriot";
+			} else {
+				return "amphassault";
+			}
+		}
+
+	}
+
 	private String getGunship(){
 		if(needWorkers()) {
 			return "armca";
@@ -733,7 +772,7 @@ public class EconomyManager extends Module {
 		}
     }
 
-	void assignFactoryTask( Worker fac){
+	void assignFactoryTask(Worker fac){
 		UnitDef unit;
 		if (fac.getUnit().getDef().getName().equals("factorycloak")){
 			unit = callback.getUnitDefByName(getCloaky());
@@ -743,6 +782,9 @@ public class EconomyManager extends Module {
 			fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
 		}else if (fac.getUnit().getDef().getName().equals("factorygunship")){
 			unit = callback.getUnitDefByName(getGunship());
+			fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+		}else if (fac.getUnit().getDef().getName().equals("factoryamph")){
+			unit = callback.getUnitDefByName(getAmphs());
 			fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
 		}else if (fac.getUnit().getDef().getName().equals("striderhub")){
 			unit = callback.getUnitDefByName(getStrider());
@@ -1218,6 +1260,7 @@ public class EconomyManager extends Module {
 		UnitDef gunship = callback.getUnitDefByName("factorygunship");
 		UnitDef strider = callback.getUnitDefByName("striderhub");
 		UnitDef shields = callback.getUnitDefByName("factoryshield");
+		UnitDef amph = callback.getUnitDefByName("factoryamph");
 		UnitDef factory;
 		AIFloat3 position = worker.getUnit().getPos();
 		position.x = position.x + 120;
@@ -1235,10 +1278,13 @@ public class EconomyManager extends Module {
 		}
 
 		if(factories.size() == 0){
-			if (Math.random() > 0.5) {
+			double rand = Math.random();
+			if (rand > 0.66) {
 				factory = cloak;
-			}else {
+			}else if (rand > 0.33){
 				factory = shields;
+			}else{
+				factory = amph;
 			}
 		}else if (factories.size() == 1){
 			factory = gunship;
@@ -1282,7 +1328,7 @@ public class EconomyManager extends Module {
 		}
 
     	 ConstructionTask ct =  new ConstructionTask(factory, position, facing);
-    	if (buildCheck(ct) && !factoryTasks.contains(ct)){
+		if (buildCheck(ct) && !factoryTasks.contains(ct)){
 			constructionTasks.add(ct);
 			factoryTasks.add(ct);
 		}

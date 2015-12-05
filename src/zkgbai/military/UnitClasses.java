@@ -7,7 +7,9 @@ import java.util.List;
  * Created by haplo on 11/14/2015.
  */
 public class UnitClasses {
-    public List<String> raiders;
+    public List<String> smallRaiders;
+    public List<String> mediumRaiders;
+    public List<String> soloRaiders;
     public List<String> assaults;
     public List<String> arties;
     public List<String> striders;
@@ -20,7 +22,9 @@ public class UnitClasses {
     public List<String> sappers;
 
     public UnitClasses(){
-        this.raiders = new ArrayList<String>();
+        this.smallRaiders = new ArrayList<String>();
+        this.mediumRaiders = new ArrayList<String>();
+        this.soloRaiders = new ArrayList<String>();
         this.assaults = new ArrayList<String>();
         this.arties = new ArrayList<String>();
         this.striders = new ArrayList<String>();
@@ -33,16 +37,22 @@ public class UnitClasses {
         this.sappers = new ArrayList<String>();
 
         // raiders
-        raiders.add("armpw");
-        raiders.add("spherepole");
-        raiders.add("corak");
-        raiders.add("corclog");
-        raiders.add("armkam");
+        smallRaiders.add("armpw");
+        smallRaiders.add("corak");
+        smallRaiders.add("corclog");
+        smallRaiders.add("armkam");
+        smallRaiders.add("amphraider3");
+        smallRaiders.add("amphraider2");
+
+        soloRaiders.add("spherepole");
 
         // assaults; stuff that attacks in mobs
         assaults.add("armzeus");
         assaults.add("armwar");
         assaults.add("armrock");
+        assaults.add("amphfloater");
+        assaults.add("amphriot");
+
 
         // Air mobs
         airMobs.add("gunshipsupport");
@@ -64,10 +74,11 @@ public class UnitClasses {
         striders.add("dante");
         striders.add("scorpion");
 
-        // strider-like stuff that does better on its own than in mobs
+        // loners; strider-like stuff that does better on its own than in mobs
         loners.add("armsnipe");
         loners.add("corstorm");
         loners.add("armham");
+        loners.add("amphassault");
 
         // Anti-air units
         AAs.add("armjeth");

@@ -1052,17 +1052,14 @@ public class MilitaryManager extends Module {
 		if (unitTypes.striders.contains(defName)){
 			Strider st = new Strider(unit, unit.getDef().getCost(m));
 			striders.add(st);
-		}else if (unitTypes.raiders.contains(defName)) {
+		}else if (unitTypes.smallRaiders.contains(defName)) {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
-			if (unit.getDef().getCost(m) > 100){
-				raiders.add(r);
-			}else {
-				raidQueue.add(r);
-				AIFloat3 pos = graphManager.getAllyCenter();
-				if (pos != null){
-					unit.fight(pos, (short) 0, frame + 300);
-				}
-			}
+			raidQueue.add(r);
+			AIFloat3 pos = graphManager.getAllyCenter();
+			unit.fight(pos, (short) 0, frame + 300);
+		}else if (unitTypes.soloRaiders.contains(defName)) {
+			Raider r = new Raider(unit, unit.getDef().getCost(m));
+			raiders.add(r);
 		}else if (unitTypes.assaults.contains(defName)) {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			fighters.put(f.id, f);
@@ -1100,7 +1097,7 @@ public class MilitaryManager extends Module {
 		}
     	
     	if(unit.getMaxSpeed() > 0 && (unit.getDef().getCost(m) > 200 || unit.getDef().getTooltip().contains("Anti-Air")) && unit.getDef().getBuildOptions().size() == 0
-				&& !unitTypes.raiders.contains(defName) && !unitTypes.shieldMobs.contains(defName)){
+				&& !unitTypes.smallRaiders.contains(defName) && !unitTypes.mediumRaiders.contains(defName) && !unitTypes.soloRaiders.contains(defName) && !unitTypes.shieldMobs.contains(defName)){
     		cowardUnits.add(unit);
     	}
         return 0; // signaling: OK
