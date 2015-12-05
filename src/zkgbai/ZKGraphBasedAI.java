@@ -605,8 +605,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			int rand = (int) Math.floor(Math.random() * spots.size());
 			MetalSpot spot = spots.get(rand);
 			callback.getGame().sendStartPosition(true, spot.getPos());
+			gm.setStartPos(spot.getPos());
 		}else{
-			debug("chooseStartPos: Startbox inference failed, or there we no mexes within the startbox.");
+			debug("chooseStartPos: Startbox inference failed, or there were no mexes within the startbox.");
 		}
 	}
 }

@@ -11,9 +11,9 @@ public class Link {
 		public ArrayList<Pylon> pylons;
 		boolean connected = false;
 		float weight;
-		float length;
-		MetalSpot v0;
-		MetalSpot v1;
+		public float length;
+		public MetalSpot v0;
+		public MetalSpot v1;
 		AIFloat3 centerPos;
 		
 		Link(MetalSpot v0,MetalSpot v1){

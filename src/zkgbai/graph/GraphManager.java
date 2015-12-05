@@ -64,6 +64,7 @@ public class GraphManager extends Module {
 	static AIFloat3 nullpos = new AIFloat3(0,0,0);
 	AIFloat3 allyCenter = nullpos;
 	AIFloat3 enemyCenter = nullpos;
+	AIFloat3 startPos = nullpos;
 	
 	public HashMap<String, Integer> pylonDefs; 
 	int pylonCounter;
@@ -567,6 +568,18 @@ public class GraphManager extends Module {
 
 	private void paintCircle(int x, int y, int r){
 		graphGraphics.fillOval(x - r, y - r, 2 * r, 2 * r);
+	}
+
+	public void setStartPos(AIFloat3 pos){
+		startPos = pos;
+	}
+
+	public AIFloat3 getStartPos(){
+		return startPos;
+	}
+
+	public List<Link> getLinks(){
+		return links;
 	}
     
     public List<MetalSpot> getEnemySpots(){

@@ -82,6 +82,7 @@ public class EconomyManager extends Module {
 	private GraphManager graphManager;
 	private MilitaryManager warManager;
 	private LosManager losManager;
+	private TerrainAnalyzer terrainManager;
 	
 	public EconomyManager( ZKGraphBasedAI parent){
 		this.parent = parent;
@@ -1748,6 +1749,7 @@ public class EconomyManager extends Module {
     
 	public void setGraphManager(GraphManager graphManager) {
 		this.graphManager = graphManager;
+		this.terrainManager = new TerrainAnalyzer(callback, graphManager);
 	}
 
 	public void setLosManager(LosManager los){
