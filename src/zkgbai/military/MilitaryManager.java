@@ -279,9 +279,13 @@ public class MilitaryManager extends Module {
 	public float getFriendlyThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
-		Color c = new Color(threatmap.getRGB(x,y));
-		float pthreat = (float) c.getGreen();
-		return pthreat/255;
+		try {
+			Color c = new Color(threatmap.getRGB(x, y));
+			float pthreat = (float) c.getGreen();
+			return pthreat / 255;
+		}catch (Exception e){
+			return 0;
+		}
 	}
 
 	public boolean isFrontLine(AIFloat3 position){

@@ -86,7 +86,7 @@ public class TerrainAnalyzer {
         PathResult spider = checkPathing(spiderPath, 5f);
         if ((!bot.result || spider.avgCostRatio < bot.avgCostRatio - 0.05f) && spider.result){
             debug(taMsg + "Spider path check succeeded, enabling spiders and jumps!");
-            //initialFacList.add("factoryspider");
+            initialFacList.add("factoryspider");
             if (!initialFacList.contains("factoryjump")) {
                 //initialFacList.add("factoryjump");
             }
