@@ -145,11 +145,11 @@ public class ShieldSquad extends Squad{
     int getUnitWeight(Fighter f){
         String type = f.getUnit().getDef().getName();
         switch (type){
-            case "cormak": return 1; // outlaws are too fast for other units to keep up with
-            case "shieldarty": return 2;
-            case "corthud": return 3;
-            case "shieldfelon": return 4;
-            case "funnelweb": return 5;
+            case "funnelweb": return 1;
+            case "cormak": return 2; // outlaws are too fast for other units to keep up with
+            case "shieldarty": return 3;
+            case "corthud": return 4;
+            case "shieldfelon": return 5;
         }
         return 0;
     }

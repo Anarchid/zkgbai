@@ -40,11 +40,19 @@ public class UnitClasses {
         smallRaiders.add("armpw");
         smallRaiders.add("corak");
         smallRaiders.add("corclog");
-        smallRaiders.add("armkam");
         smallRaiders.add("amphraider3");
         smallRaiders.add("amphraider2");
 
+        mediumRaiders.add("corgator");
+        mediumRaiders.add("armkam");
+        mediumRaiders.add("corsh");
+        mediumRaiders.add("panther");
+
         soloRaiders.add("spherepole");
+        soloRaiders.add("hoverassault");
+        soloRaiders.add("logkoda");
+        soloRaiders.add("armflea");
+        soloRaiders.add("corfav");
 
         // assaults; stuff that attacks in mobs
         assaults.add("armzeus");
@@ -52,6 +60,17 @@ public class UnitClasses {
         assaults.add("armrock");
         assaults.add("amphfloater");
         assaults.add("amphriot");
+        assaults.add("corlevlr");
+        assaults.add("corraid");
+        assaults.add("capturecar");
+        assaults.add("nsaclash");
+        assaults.add("hoverriot");
+        assaults.add("correap");
+        assaults.add("tawf114");
+        assaults.add("spiderassault");
+        assaults.add("armsptk");
+        assaults.add("arm_venom");
+        assaults.add("spiderriot");
 
 
         // Air mobs
@@ -79,6 +98,15 @@ public class UnitClasses {
         loners.add("corstorm");
         loners.add("armham");
         loners.add("amphassault");
+        loners.add("cormist");
+        loners.add("corgarp");
+        loners.add("armmerl");
+        loners.add("armmanni");
+        loners.add("cormart");
+        loners.add("corgol");
+        loners.add("armbanth");
+        loners.add("armcrabe");
+        loners.add("armorco");
 
         // Anti-air units
         AAs.add("armjeth");

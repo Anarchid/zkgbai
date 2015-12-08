@@ -46,15 +46,16 @@ public class Raider extends Fighter {
         unit.setMoveState(1, (short) 0, frame + 30); // set to maneuver
         unit.fight(path.poll(), (short) 0, frame + 3000); // skip first waypoint if target actually found to prevent stuttering
 
+
         if (path.isEmpty()) {
             return; // pathing failed
         } else {
-            unit.fight(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
+            unit.fight(path.poll(), (short) 0, frame + 3000); // skip first waypoint if target actually found to prevent stuttering
 
             int pathSize = Math.min(5, path.size());
             int i = 0;
             while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
-                unit.fight(path.poll(), OPTION_SHIFT_KEY, frame + 3000); // queue the rest with shift.
+                unit.fight(path.poll(), OPTION_SHIFT_KEY, frame + 3000); // skip first waypoint if target actually found to prevent stuttering
                 i++;
                 // skip every other waypoint except the last, since they're not very far apart.
                 if (path.size() > 1) {

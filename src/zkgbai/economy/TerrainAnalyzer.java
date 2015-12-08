@@ -6,6 +6,7 @@ import com.springrts.ai.oo.clb.Pathing;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.Link;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +25,7 @@ public class TerrainAnalyzer {
     int hoverPath;
     int amphPath;
     int boatPath;
+    static String taMsg = "Terrain Analysis: ";
 
     public TerrainAnalyzer(OOAICallback callback, GraphManager graphManager){
         this.callback = callback;
@@ -38,62 +40,119 @@ public class TerrainAnalyzer {
         amphPath = callback.getUnitDefByName("amphcon").getMoveData().getPathType();
         boatPath = callback.getUnitDefByName("shipcon").getMoveData().getPathType();
 
-        populateFacLists();
+        populateFacList();
     }
 
-    private void populateFacLists(){
+    private void populateFacList(){
         float mapZ = callback.getMap().getHeight();
         float mapX = callback.getMap().getWidth();
-        debug("Map Height: " + mapZ + " Map Width: " + mapX);
+        if (mapX > 1024 || mapZ > 1024){
+            debug(taMsg + "Large Map Detected: Enabling Air Starts.");
+            initialFacList.add("factorygunship");
+            //initialFacList.add("factoryplane");
+        }
 
-        debug("Checking Veh Pathability..");
-        if (checkPathing(vehPath, true)){
-            debug("Veh pathability succeeded, going veh!");
+        debug(taMsg + "Checking Veh Pathability..");
+        PathResult veh = checkPathing(vehPath, 1.35f);
+        if (veh.result){
+            debug(taMsg + "Veh path check succeeded, enabling veh!");
             initialFacList.add("factoryveh");
             initialFacList.add("factorytank");
             initialFacList.add("factoryhover");
-            return;
         }
 
-        debug("Checking Bot Pathability..");
-        if (checkPathing(botPath, true)){
-            debug("Bot pathability succeeded, going bots!");
+        if (!veh.result){
+            debug(taMsg + "Checking Hover Pathability..");
+            PathResult hover = checkPathing(hoverPath, 1.35f);
+            if (hover.result){
+                debug(taMsg + "Hover path check succeeded, enabling hovers!");
+                initialFacList.add("factoryhover");
+            }
+        }
+
+        debug(taMsg + "Checking Bot Pathability..");
+        PathResult bot = checkPathing(botPath, 1.4f);
+        if ((!veh.result || bot.avgCostRatio < veh.avgCostRatio - 0.05f) && bot.result){
+            debug(taMsg + "Bot path check succeeded, enabling bots!");
             initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");
             initialFacList.add("factoryamph");
-            initialFacList.add("factoryspider");
-            initialFacList.add("factoryjump");
+            //initialFacList.add("factoryjump");
+        } else if (veh.result && bot.avgCostRatio >= veh.avgCostRatio - 0.05f) {
+            debug(taMsg + "Bots not cost competitive, skipping!");
+        }
+
+        debug(taMsg + "Checking Spider Pathability..");
+        PathResult spider = checkPathing(spiderPath, 5f);
+        if ((!bot.result || spider.avgCostRatio < bot.avgCostRatio - 0.05f) && spider.result){
+            debug(taMsg + "Spider path check succeeded, enabling spiders and jumps!");
+            //initialFacList.add("factoryspider");
+            if (!initialFacList.contains("factoryjump")) {
+                //initialFacList.add("factoryjump");
+            }
+            return;
+        } else if (bot.result && spider.avgCostRatio >= bot.avgCostRatio - 0.05f) {
+            debug(taMsg + "Spiders not cost competitive, skipping!");
             return;
         }
 
-        debug("Checking Spider/Jump Pathability..");
-        if (checkPathing(spiderPath, false)){
-            debug("Spider pathability succeeded, going spiders/jumps!");
-            initialFacList.add("factoryspider");
-            initialFacList.add("factoryjump");
+        debug(taMsg + "Checking Boat Pathability..");
+        PathResult boat = checkPathing(boatPath, 5f);
+        if (boat.result){
+            debug(taMsg + "Boat path check succeeded, enabling boats!");
+            initialFacList.add("factoryship");
             return;
         }
 
+        debug(taMsg + "Checking Amph Pathability..");
+        PathResult amph = checkPathing(amphPath, 5f);
+        if (amph.result){
+            debug(taMsg + "Amph path check succeeded, stopping!");
+            initialFacList.add("factoryamph");
+            return;
+        }
+
+        if (initialFacList.isEmpty()) {
+            debug(taMsg + "Analysis Failed! Going air by default.");
+            if (!initialFacList.contains("factorygunship")) {
+                initialFacList.add("factorygunship");
+                //initialFacList.add("factoryplane");
+            }
+        }
     }
 
-    private boolean checkPathing(int pathType, boolean useAvgRelCost){
+    private PathResult checkPathing(int pathType, float maxRelCost){
         float avgRelCost = 0.0f;
+        boolean success = true;
         List<Link> links = graphManager.getLinks();
         for (Link l:links){
-            float linkCost = path.getApproximateLength(l.v0.getPos(), l.v1.getPos(), pathType, 100f)/l.length;
+            float linkCost = path.getApproximateLength(l.v0.getPos(), l.v1.getPos(), pathType, 0f)/l.length;
             if (linkCost < 1.0f){
-                return false;
+                success = false;
+                linkCost = 5;
             }
             avgRelCost += linkCost/links.size();
         }
-        debug("Average Relative Path Cost: " + avgRelCost);
-        if (useAvgRelCost && avgRelCost > 1.5f){
-            return false;
+        if (!success){
+            debug(taMsg + "Path Check Failed: unreachable mexes.");
         }
-        return true;
+        debug(taMsg + "Average Relative Path Cost: " + avgRelCost);
+        if (success && avgRelCost > maxRelCost){
+            debug(taMsg + "Path Check Failed: high path costs.");
+            success = false;
+        }
+        return new PathResult(success, avgRelCost);
+    }
+
+    public List<String> getInitialFacList(){
+        if (initialFacList.isEmpty()){
+            populateFacList();
+        }
+        return initialFacList;
     }
 
     private void debug(String s) {
         callback.getGame().sendTextMessage(s, 0);
     }
+
 }

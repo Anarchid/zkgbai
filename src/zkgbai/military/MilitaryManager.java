@@ -47,6 +47,7 @@ public class MilitaryManager extends Module {
 	public ShieldSquad nextShieldSquad;
 	public List<Squad> squads;
 	List<Raider> raidQueue;
+	List<Raider> mediumRaidQueue;
 	public List<Raider> raiders;
 	List<Strider> striders;
 
@@ -107,6 +108,7 @@ public class MilitaryManager extends Module {
 		this.AAs = new HashMap<Integer, Fighter>();
 		this.raiders = new ArrayList<Raider>();
 		this.raidQueue = new ArrayList<Raider>();
+		this.mediumRaidQueue = new ArrayList<Raider>();
 		this.striders = new ArrayList<Strider>();
 		this.squads = new ArrayList<Squad>();
 		this.nextSquad = null;
@@ -154,6 +156,19 @@ public class MilitaryManager extends Module {
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 			int rad = 50;
+
+			threatGraphics.setColor(new Color(0f, power, 0f));
+			paintCircle(x, y, rad);
+		}
+
+		// paint allythreat for fighters
+		for (Fighter f:raiders){
+			float power = Math.min(1.0f, (f.getUnit().getPower() + f.getUnit().getMaxHealth())/5000);
+			float radius = f.getUnit().getMaxRange();
+			AIFloat3 pos = f.getPos();
+			int x = (int) pos.x/8;
+			int y = (int) pos.z/8;
+			int rad = (int) radius/8;
 
 			threatGraphics.setColor(new Color(0f, power, 0f));
 			paintCircle(x, y, rad);
@@ -344,6 +359,10 @@ public class MilitaryManager extends Module {
 			needUnstick = true;
 		}
 		for (Raider r: raiders){
+			if (retreatingUnits.contains(r.getUnit()) || r.getPos() == null || r.getPos().equals(nullpos)){
+				continue;
+			}
+
 			if (needUnstick){
 				r.unstick(frame);
 			}
@@ -719,7 +738,12 @@ public class MilitaryManager extends Module {
 	private void retreatCowards(){
 		AIFloat3 position = graphManager.getAllyCenter();
 		boolean retreated = false;
+		List<Unit> healedUnits = new ArrayList<Unit>();
 		for (Unit u: retreatingUnits){
+			if (u.getHealth() == u.getMaxHealth()){
+				healedUnits.add(u);
+				continue;
+			}
 			if(u.getHealth() > 0 && !retreatedUnits.contains(u)){
 				UnitDef building = callback.getUnitDefByName("factorygunship");
 				position = callback.getMap().findClosestBuildSite(building, position, 600f, 3, 0);
@@ -747,6 +771,9 @@ public class MilitaryManager extends Module {
 		if (!retreated){
 			retreatedUnits.clear();
 		}
+
+		retreatingUnits.removeAll(healedUnits);
+		retreatedUnits.removeAll(healedUnits);
 	}
 
 	private void updateTargets() {
@@ -872,19 +899,9 @@ public class MilitaryManager extends Module {
 		if (frame % 300 == 0){
 			for (Fighter l:loners.values()){
 				Unit u = l.getUnit();
-				if (retreatingUnits.contains(u) && u.getHealth() == u.getMaxHealth()) {
-					retreatingUnits.remove(u);
-				}
 				if (!retreatingUnits.contains(u)){
 					AIFloat3 target = getTarget(l.getPos(), true);
 					l.fightTo(target, frame);
-				}
-			}
-
-			for (Fighter s:supports.values()){
-				Unit u = s.getUnit();
-				if (retreatingUnits.contains(u) && u.getHealth() == u.getMaxHealth()) {
-					retreatingUnits.remove(u);
 				}
 			}
 		}
@@ -904,6 +921,11 @@ public class MilitaryManager extends Module {
 				raidQueue.clear();
 			}
 
+			if (mediumRaidQueue.size() > 3){
+				raiders.addAll(mediumRaidQueue);
+				mediumRaidQueue.clear();
+			}
+
 			paintThreatMap();
 
 			updateTargets();
@@ -917,15 +939,12 @@ public class MilitaryManager extends Module {
 			updateSupports();
 			updateSappers();
 
-			Iterator<Fighter> iter = fighters.values().iterator();
-			while (iter.hasNext()) {
-				Fighter f = iter.next();
+			for (Fighter f:fighters.values()){
 				Unit u = f.getUnit();
-				if (retreatingUnits.contains(u) && u.getHealth() == u.getMaxHealth()) {
-					retreatingUnits.remove(u);
+				if (!retreatingUnits.contains(u) && f.squad == null) {
 					if (unitTypes.airMobs.contains(u.getDef().getName())){
 						addToAirSquad(f);
-					}else {
+					}else if (unitTypes.assaults.contains(u.getDef().getName())){
 						addToSquad(f);
 					}
 				}
@@ -933,9 +952,6 @@ public class MilitaryManager extends Module {
 
 			for (Strider st:striders){
 				Unit u = st.getUnit();
-				if (retreatingUnits.contains(u) && u.getHealth() == u.getMaxHealth()) {
-					retreatingUnits.remove(u);
-				}
 				if (!retreatingUnits.contains(u)){
 					AIFloat3 target = getTarget(st.getPos(), false);
 					st.fightTo(target, frame);
@@ -1057,6 +1073,11 @@ public class MilitaryManager extends Module {
 			raidQueue.add(r);
 			AIFloat3 pos = graphManager.getAllyCenter();
 			unit.fight(pos, (short) 0, frame + 300);
+		}else if (unitTypes.mediumRaiders.contains(defName)) {
+			Raider r = new Raider(unit, unit.getDef().getCost(m));
+			mediumRaidQueue.add(r);
+			AIFloat3 pos = graphManager.getAllyCenter();
+			unit.fight(pos, (short) 0, frame + 300);
 		}else if (unitTypes.soloRaiders.contains(defName)) {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiders.add(r);
@@ -1076,6 +1097,14 @@ public class MilitaryManager extends Module {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			supports.put(f.id, f);
     	}else if(unitTypes.loners.contains(defName)) {
+			if (defName.equals("cormist") || defName.equals("armcrabe")){
+				unit.setMoveState(0, (short) 0, frame + 10);
+				ArrayList<Float> params = new ArrayList<>();
+				params.add((float) 1);
+				unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, frame+30);
+			}else{
+				unit.setMoveState(2, (short) 0, frame + 10);
+			}
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			loners.put(f.id, f);
 		}else if (unitTypes.AAs.contains(defName)){
@@ -1096,8 +1125,8 @@ public class MilitaryManager extends Module {
 			sappers.put(unit.getUnitId(), unit);
 		}
     	
-    	if(unit.getMaxSpeed() > 0 && (unit.getDef().getCost(m) > 200 || unit.getDef().getTooltip().contains("Anti-Air")) && unit.getDef().getBuildOptions().size() == 0
-				&& !unitTypes.smallRaiders.contains(defName) && !unitTypes.mediumRaiders.contains(defName) && !unitTypes.soloRaiders.contains(defName) && !unitTypes.shieldMobs.contains(defName)){
+    	if (unit.getMaxSpeed() > 0 && unit.getDef().getBuildOptions().size() == 0
+				&& !unitTypes.smallRaiders.contains(defName) && !unitTypes.shieldMobs.contains(defName) && !defName.equals("corsh") && !defName.equals("armcrabe")){
     		cowardUnits.add(unit);
     	}
         return 0; // signaling: OK
@@ -1155,8 +1184,17 @@ public class MilitaryManager extends Module {
 				}
 			}
 		}
+		for (Raider r:mediumRaidQueue){
+			if (r.id == unit.getUnitId()){
+				dead = r;
+				if (r.getTask() != null) {
+					r.getTask().removeRaider(r);
+				}
+			}
+		}
 		raiders.remove(dead);
 		raidQueue.remove(dead);
+		mediumRaidQueue.remove(dead);
 
 		for (Strider s:striders){
 			if (s.id == unit.getUnitId()){
@@ -1227,7 +1265,8 @@ public class MilitaryManager extends Module {
 
 		// retreat scouting raiders so that they don't suicide into enemy raiders
 		for (Raider r: raiders){
-			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && attacker != null && attacker.getMaxSpeed() > 0 && getEffectiveThreat(h.getPos()) <= 0 && r.scouting && !on_fire){
+			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && attacker != null && attacker.getMaxSpeed() > 0 && getEffectiveThreat(h.getPos()) <= 0
+					&& r.scouting && !on_fire && !r.getUnit().getDef().getName().equals("corgator")){
 				float x = -100*dir.x;
 				float z = -100*dir.z;
 				AIFloat3 pos = h.getPos();
@@ -1294,7 +1333,17 @@ public class MilitaryManager extends Module {
 		if (oldTeamID == parent.teamID){
 			return unitDestroyed(unit, null);
 		}else if (newTeamID == parent.teamID){
-			return unitFinished(unit);
+			unitFinished(unit);
+			if (cowardUnits.contains(unit) && unit.getHealth()/unit.getMaxHealth() < 0.6){
+				retreatingUnits.add(unit);
+				if (fighters.containsKey(unit.getUnitId())){
+					Fighter f = fighters.get(unit.getUnitId());
+					if (f.squad != null) {
+						f.squad.removeUnit(f);
+						f.squad = null;
+					}
+				}
+			}
 		}
 		return 0;
 	}
