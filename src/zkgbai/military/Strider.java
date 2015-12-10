@@ -4,7 +4,7 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 
 /**
- * Created by haplo on 11/14/2015.
+ * Created by aeonios on 11/14/2015.
  */
 public class Strider extends Fighter{
     public int dgunReload;

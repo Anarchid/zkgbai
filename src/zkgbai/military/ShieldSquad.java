@@ -6,10 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by haplo on 11/29/2015.
+ * Created by aeonios on 11/29/2015.
  */
 public class ShieldSquad extends Squad{
     static int CMD_ORBIT = 13923;
+    static int CMD_ORBIT_DRAW = 13924;
+    static short OPTION_SHIFT_KEY = (1 << 5);
     private Fighter leader;
     private int leaderWeight;
 
@@ -37,17 +39,24 @@ public class ShieldSquad extends Squad{
             leaderWeight = getUnitWeight(f);
             leader.fightTo(target, frame);
             List<Float> params = new ArrayList<>();
+            List<Float> drawParams = new ArrayList<>();
             params.add((float)leader.id);
+            drawParams.add((float)leader.id);
             params.add(50f);
             for (Fighter fi: fighters){
-                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);}
+                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 3000);
+                fi.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, frame + 3000);
+            }
         }else{
             f.getUnit().setMoveState(0, (short) 0, frame+300);
             fighters.add(f);
             List<Float> params = new ArrayList<>();
+            List<Float> drawParams = new ArrayList<>();
             params.add((float)leader.id);
+            drawParams.add((float)leader.id);
             params.add(50f);
-            f.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 300);
+            f.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 3000);
+            f.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, frame + 3000);
         }
     }
 
@@ -65,14 +74,13 @@ public class ShieldSquad extends Squad{
             leader.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
             target = null;
             List<Float> params = new ArrayList<>();
+            List<Float> drawParams = new ArrayList<>();
             params.add((float)leader.id);
+            drawParams.add((float)leader.id);
             params.add(50f);
             for (Fighter fi:fighters){
-                if (getUnitWeight(fi) == 0){
-                    fi.getUnit().guard(leader.getUnit(), (short) 0, Integer.MAX_VALUE);
-                }else {
-                    fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
-                }
+                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
+                fi.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
             }
         }else{
             super.removeUnit(f);
@@ -94,18 +102,6 @@ public class ShieldSquad extends Squad{
             return leader.getPos();
         }
         return target;
-    }
-
-    @Override
-    public boolean isRallied(int frame){
-        AIFloat3 pos = getPos();
-        boolean rallied = true;
-        for (Fighter f: fighters){
-            if (distance(pos, f.getPos()) > 350){
-                rallied = false;
-            }
-        }
-        return rallied;
     }
 
     @Override
@@ -145,7 +141,7 @@ public class ShieldSquad extends Squad{
     int getUnitWeight(Fighter f){
         String type = f.getUnit().getDef().getName();
         switch (type){
-            case "funnelweb": return 1;
+            case "funnelweb": return 1; // funnels skimrmish from too large a range for other units to do any damage
             case "cormak": return 2; // outlaws are too fast for other units to keep up with
             case "shieldarty": return 3;
             case "corthud": return 4;

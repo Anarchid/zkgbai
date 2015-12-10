@@ -28,16 +28,7 @@ public class LosManager extends Module {
 	
 	public LosManager(ZKGraphBasedAI parent){
 		this.parent = parent;
-	}
-	
-	@Override
-	public String getModuleName() {
-		// TODO Auto-generated method stub
-		return "LosManager";
-	}
-	
-	@Override
-    public int init(int teamId, OOAICallback callback) {
+		OOAICallback callback = parent.getCallback();
 		this.map = callback.getMap();
 		this.mapHeight = map.getHeight();
 		this.mapWidth = map.getWidth();
@@ -47,11 +38,15 @@ public class LosManager extends Module {
 		this.gridWidth = mapWidth / losGridSize;
 		this.gridHeight = mapHeight / losGridSize;
 		this.losImage = new BufferedImage(gridWidth+1, gridHeight+1, BufferedImage.TYPE_BYTE_GRAY);
-		
-		this.updateLosImage();
 
-        return 0;
-    }
+		this.updateLosImage();
+	}
+	
+	@Override
+	public String getModuleName() {
+		// TODO Auto-generated method stub
+		return "LosManager";
+	}
 	
 	@Override
 	public int update(int frame){

@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by haplo on 12/5/2015.
+ * Created by aeonios on 12/5/2015.
  */
 public class TerrainAnalyzer {
     OOAICallback callback;
@@ -46,7 +46,8 @@ public class TerrainAnalyzer {
     private void populateFacList(){
         float mapZ = callback.getMap().getHeight();
         float mapX = callback.getMap().getWidth();
-        if (mapX > 1024 || mapZ > 1024){
+        if ((mapX > 1024 || mapZ > 1024)
+                || (mapX > 896 && mapZ > 896)){
             debug(taMsg + "Large Map Detected: Enabling Air Starts.");
             initialFacList.add("factorygunship");
             //initialFacList.add("factoryplane");
@@ -72,26 +73,25 @@ public class TerrainAnalyzer {
 
         debug(taMsg + "Checking Bot Pathability..");
         PathResult bot = checkPathing(botPath, 1.4f);
-        if ((!veh.result || bot.avgCostRatio < veh.avgCostRatio - 0.05f) && bot.result){
+        if (bot.avgCostRatio < veh.avgCostRatio - 0.05f && bot.result){
             debug(taMsg + "Bot path check succeeded, enabling bots!");
             initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");
             initialFacList.add("factoryamph");
-            //initialFacList.add("factoryjump");
         } else if (veh.result && bot.avgCostRatio >= veh.avgCostRatio - 0.05f) {
             debug(taMsg + "Bots not cost competitive, skipping!");
         }
 
         debug(taMsg + "Checking Spider Pathability..");
         PathResult spider = checkPathing(spiderPath, 5f);
-        if ((!bot.result || spider.avgCostRatio < bot.avgCostRatio - 0.05f) && spider.result){
+        if (spider.avgCostRatio < bot.avgCostRatio - 0.02f && spider.avgCostRatio < veh.avgCostRatio - 0.05f && spider.result){
             debug(taMsg + "Spider path check succeeded, enabling spiders and jumps!");
             initialFacList.add("factoryspider");
             if (!initialFacList.contains("factoryjump")) {
                 //initialFacList.add("factoryjump");
             }
             return;
-        } else if (bot.result && spider.avgCostRatio >= bot.avgCostRatio - 0.05f) {
+        } else if (spider.avgCostRatio >= bot.avgCostRatio - 0.02f || spider.avgCostRatio >= veh.avgCostRatio - 0.05f) {
             debug(taMsg + "Spiders not cost competitive, skipping!");
             return;
         }
@@ -131,6 +131,7 @@ public class TerrainAnalyzer {
                 success = false;
                 linkCost = 5;
             }
+
             avgRelCost += linkCost/links.size();
         }
         if (!success){

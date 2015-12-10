@@ -57,7 +57,7 @@ public class GraphManager extends Module {
 	Resource m;
 
 	float avgMexValue = 0;
-	boolean graphInitialized;
+	boolean graphInitialized = false;
 	
 	BufferedImage threatMap;
 
@@ -72,13 +72,12 @@ public class GraphManager extends Module {
 	private Graphics2D graphGraphics;
 	
 	public GraphManager(ZKGraphBasedAI parent){
-		graphInitialized = false;
+		this.parent = parent;
+		this.callback = parent.getCallback();
 		
 		this.metalSpots = new ArrayList<MetalSpot>();
 		this.links = new ArrayList<Link>();
 		this.pylons = new ArrayList<Pylon>();
-		this.parent = parent;
-		this.callback = parent.getCallback();
 		this.mexDef = parent.getCallback().getUnitDefByName("cormex");
 		this.mexDefID = mexDef.getUnitDefId();
 		this.m = parent.getCallback().getResourceByName("Metal");

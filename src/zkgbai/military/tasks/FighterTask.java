@@ -8,7 +8,7 @@ import zkgbai.military.Fighter;
 import java.util.List;
 
 /**
- * Created by haplo on 11/13/2015.
+ * Created by aeonios on 11/13/2015.
  */
 public class FighterTask {
     public AIFloat3 target;

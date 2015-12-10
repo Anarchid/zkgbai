@@ -32,6 +32,7 @@ import javax.vecmath.Tuple3f;
 
 import zkgbai.Module;
 import zkgbai.economy.EconomyManager;
+import zkgbai.economy.FactoryManager;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
 import zkgbai.gui.DebugView;
@@ -55,6 +56,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	GraphManager graphManager;
 	EconomyManager ecoManager;
 	MilitaryManager warManager;
+	FactoryManager facManager;
     
     public static enum StartType{
     	SPRING_BOX,
@@ -79,49 +81,55 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
         try {
 			losManager = new LosManager(this);
+			debug(losManager.getModuleName() + " initialized.");
 		} catch (Exception e){
 			printException(e);
 		}
 		try{
 			graphManager = new GraphManager(this);
+			debug(graphManager.getModuleName() + " initialized.");
 		} catch (Exception e){
 			printException(e);
 		}
 		try {
         	ecoManager = new EconomyManager(this);
+			debug(ecoManager.getModuleName() + " initialized.");
 		} catch (Exception e){
 			printException(e);
 		}
         try {
 			warManager = new MilitaryManager(this);
+			debug(warManager.getModuleName() + " initialized.");
+		} catch (Exception e){
+			printException(e);
+		}
+		try {
+			facManager = new FactoryManager(this);
+			debug(facManager.getModuleName() + " initialized.");
 		} catch (Exception e){
 			printException(e);
 		}
         
         graphManager.setLosManager(losManager);
-        warManager.setLosManager(losManager);
-		ecoManager.setLosManager(losManager);
-        
-        ecoManager.setGraphManager(graphManager);
-        warManager.setGraphManager(graphManager);
         
         ecoManager.setMilitaryManager(warManager);
+		ecoManager.setGraphManager(graphManager);
+		ecoManager.setLosManager(losManager);
+		ecoManager.setFactoryManager(facManager);
 
 		warManager.setEcoManager(ecoManager);
+		warManager.setLosManager(losManager);
+		warManager.setGraphManager(graphManager);
+		warManager.setFactoryManager(facManager);
+
+		facManager.setEconomyManager(ecoManager);
+		facManager.setMilitaryManager(warManager);
         
         modules.add(losManager);
         modules.add(graphManager);
         modules.add(ecoManager);
         modules.add(warManager);
-
-        for (Module module : modules) {
-        	try {
-        		module.init(this.teamID, callback);
-        		debug(module.getModuleName() + " initialized");
-	    	} catch (Exception e) {
-	    		printException(e);
-	    	}
-        }
+		modules.add(facManager);
                 
         selectRandomCommander();
 		chooseStartPos(graphManager);
@@ -169,6 +177,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		int index = (int) Math.floor(Math.random() * commanderNames.size());
 		String name = commanderNames.get(index);
 		callback.getLua().callRules("ai_commander:"+name, -1);
+		debug("Selected Commander: " + callback.getUnitDefByName(name).getHumanName() + ".");
 	}
 
     @Override
@@ -361,6 +370,18 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         }	    
         return 0; // signaling: OK
     }
+
+	@Override
+	public int enemyCreated(Unit enemy) {
+		for (Module module : modules) {
+			try {
+				module.enemyCreated(enemy);
+			} catch (Exception e) {
+				printException(e);
+			}
+		}
+		return 0; // signaling: OK
+	}
 
     @Override
     public int enemyEnterRadar(Unit enemy) {        
@@ -606,6 +627,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			MetalSpot spot = spots.get(rand);
 			callback.getGame().sendStartPosition(true, spot.getPos());
 			gm.setStartPos(spot.getPos());
+			debug("Start Position Selected!");
 		}else{
 			debug("chooseStartPos: Startbox inference failed, or there were no mexes within the startbox.");
 		}

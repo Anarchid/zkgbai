@@ -5,7 +5,6 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 
@@ -15,13 +14,12 @@ import com.springrts.ai.oo.clb.*;
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.EconomyManager;
+import zkgbai.economy.FactoryManager;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
 import zkgbai.gui.AdditiveComposite;
 import zkgbai.los.LosManager;
 import zkgbai.military.tasks.DefenseTarget;
-import zkgbai.military.tasks.FighterTask;
-import zkgbai.military.tasks.RaidTask;
 import zkgbai.military.tasks.ScoutTask;
 
 public class MilitaryManager extends Module {
@@ -52,7 +50,6 @@ public class MilitaryManager extends Module {
 	List<Strider> striders;
 
 	List<ScoutTask> scoutTasks;
-	List<RaidTask> raidTasks;
 
 	RadarIdentifier radarID;
 	
@@ -68,6 +65,7 @@ public class MilitaryManager extends Module {
 
 	private LosManager losManager;
 	private EconomyManager ecoManager;
+	private FactoryManager factoryManager;
 	private OOAICallback callback;
 	private UnitClasses unitTypes;
 
@@ -75,6 +73,7 @@ public class MilitaryManager extends Module {
 
 	int frame = 0;
 	int lastDefenseFrame = 0;
+	int lastAirDefenseFrame = 0;
 
 	static int CMD_DONT_FIRE_AT_RADAR = 38372;
 	static int CMD_AIR_STRAFE = 39381;
@@ -95,6 +94,10 @@ public class MilitaryManager extends Module {
 	}
 
 	public void setEcoManager(EconomyManager ecoManager){this.ecoManager = ecoManager;}
+
+	public void setFactoryManager(FactoryManager facManager) {
+		this.factoryManager = facManager;
+	}
 	
 	public MilitaryManager(ZKGraphBasedAI parent){
 		this.parent = parent;
@@ -119,7 +122,6 @@ public class MilitaryManager extends Module {
 		this.retreatedUnits = new ArrayList<Unit>();
 		this.havens = new ArrayList<Unit>();
 		this.scoutTasks = new ArrayList<ScoutTask>();
-		this.raidTasks = new ArrayList<RaidTask>();
 		this.nano = callback.getUnitDefByName("armnanotc").getUnitDefId();
 		this.unitTypes = new UnitClasses();
 		this.m = callback.getResourceByName("Metal");
@@ -162,7 +164,7 @@ public class MilitaryManager extends Module {
 		}
 
 		// paint allythreat for fighters
-		for (Fighter f:raiders){
+		for (Fighter f:fighters.values()){
 			float power = Math.min(1.0f, (f.getUnit().getPower() + f.getUnit().getMaxHealth())/5000);
 			float radius = f.getUnit().getMaxRange();
 			AIFloat3 pos = f.getPos();
@@ -333,37 +335,13 @@ public class MilitaryManager extends Module {
 		scoutTasks.removeAll(finished);
 	}
 
-	private void createRaidTasks(){
-		List<MetalSpot> enemyspots = graphManager.getEnemySpots();
-		for (MetalSpot ms:enemyspots){
-			RaidTask rt = new RaidTask(ms.getPos(), true);
-			if (!raidTasks.contains(rt)) {
-				raidTasks.add(rt);
-			}
-		}
-	}
-
-	private void checkRaidTasks(){
-		List<RaidTask> finished = new ArrayList<RaidTask>();
-		for (RaidTask rt: raidTasks){
-			if (losManager.isInLos(rt.target)){
-				List<Unit> enemies = callback.getEnemyUnitsIn(rt.target, 50f);
-				if (enemies.size() == 0){
-					rt.endTask();
-					finished.add(rt);
-				}
-			}
-		}
-		raidTasks.removeAll(finished);
-	}
-
 	private void assignRaiders(){
 		boolean needUnstick = false;
 		if (frame % 30 == 0){
 			needUnstick = true;
 		}
 		for (Raider r: raiders){
-			if (retreatingUnits.contains(r.getUnit()) || r.getPos() == null || r.getPos().equals(nullpos)){
+			if (retreatingUnits.contains(r.getUnit()) || r.getUnit().getHealth() <= 0){
 				continue;
 			}
 
@@ -551,27 +529,18 @@ public class MilitaryManager extends Module {
 			if (!retreatingUnits.contains(s.getUnit())) {
 				if (s.squad != null) {
 					if (!s.squad.isDead()) {
-						if (s.squad.status == 'f') {
-							s.moveTo(s.squad.target, frame);
-						} else if (s.squad.getPos() != null){
-								s.moveTo(s.squad.getPos(), frame);
-						}
+						s.moveTo(s.squad.getPos(), frame);
 					} else {
 						s.squad = null;
 					}
 				}
 
-				if (s.squad == null && (squads.size() > 0 || nextSquad != null || nextShieldSquad != null)) {
-					for (Squad sq : squads) {
-						if (sq.status == 'r') {
-							s.squad = sq;
-							break;
-						}
-					}
-					if (s.squad == null && nextSquad != null) {
+				if (s.squad == null && (nextSquad != null || nextShieldSquad != null)) {
+
+					if (s.getUnit().getDef().getName().equals("spherecloaker") && nextSquad != null) {
 						s.squad = nextSquad;
 					}
-					if (s.squad == null && nextShieldSquad != null && nextShieldSquad.getPos() != null){
+					if (s.squad == null && s.getUnit().getDef().getName().equals("core_spectre") && nextShieldSquad != null && nextShieldSquad.getPos() != null){
 						s.squad = nextShieldSquad;
 					}
 
@@ -666,6 +635,10 @@ public class MilitaryManager extends Module {
 
 	private void dgunStriders(){
 		for (Strider s:striders){
+			String defName = s.getUnit().getDef().getName();
+			if (!defName.equals("dante") && !defName.equals("scorpion") && !defName.equals("armbanth")){
+				continue;
+			}
 			AIFloat3 target = getDgunTarget(s.getPos());
 			if (target != null && frame > s.lastDgunFrame + s.dgunReload){
 				s.getUnit().dGunPosition(target, (short) 0, frame + 3000);
@@ -914,13 +887,9 @@ public class MilitaryManager extends Module {
 			retreatCowards();
 		}
 
-		if (frame % 90 == 0){
-			updateSquads();
-		}
-
 		if(frame%15 == 0) {
 			// move raiders from the holding squad into the main raider pool.
-			if (raidQueue.size() > ecoManager.raiderCount){
+			if (raidQueue.size() > factoryManager.raiderCount){
 				raiders.addAll(raidQueue);
 				raidQueue.clear();
 			}
@@ -933,15 +902,16 @@ public class MilitaryManager extends Module {
 			paintThreatMap();
 
 			updateTargets();
-			createRaidTasks();
 			createScoutTasks();
-
-			checkRaidTasks();
 			checkScoutTasks();
 
 			assignRaiders();
 			updateSupports();
 			updateSappers();
+
+			if (frame % 90 == 0){
+				updateSquads();
+			}
 
 			for (Fighter f:fighters.values()){
 				Unit u = f.getUnit();
@@ -1028,7 +998,7 @@ public class MilitaryManager extends Module {
     }
     
     @Override
-    public int enemyDestroyed( Unit unit, Unit attacker) {  
+    public int enemyDestroyed(Unit unit, Unit attacker) {
         if(targets.containsKey(unit.getUnitId())){
         	targets.remove(unit.getUnitId());
         }	    
@@ -1130,7 +1100,7 @@ public class MilitaryManager extends Module {
 		}
     	
     	if (unit.getMaxSpeed() > 0 && unit.getDef().getBuildOptions().size() == 0
-				&& !unitTypes.smallRaiders.contains(defName) && !unitTypes.shieldMobs.contains(defName) && !defName.equals("corsh") && !defName.equals("armcrabe")){
+				&& !unitTypes.smallRaiders.contains(defName) && !unitTypes.shieldMobs.contains(defName) && !unitTypes.noRetreat.contains(defName)){
     		cowardUnits.add(unit);
     	}
         return 0; // signaling: OK
@@ -1252,17 +1222,14 @@ public class MilitaryManager extends Module {
 			}
 		}
 
-		if(cowardUnits.contains(h)){
-			if(h.getHealth()/h.getMaxHealth() < 0.4){
-				if(!retreatingUnits.contains(h)){
-					retreatingUnits.add(h);
-					if (fighters.containsKey(h.getUnitId())){
-						Fighter f = fighters.get(h.getUnitId());
-						if (f.squad != null) {
-							f.squad.removeUnit(f);
-							f.squad = null;
-						}
-					}
+		// retreat damaged mob units
+		if(cowardUnits.contains(h) && !retreatingUnits.contains(h) && h.getHealth()/h.getMaxHealth() < 0.4){
+			retreatingUnits.add(h);
+			if (fighters.containsKey(h.getUnitId())){
+				Fighter f = fighters.get(h.getUnitId());
+				if (f.squad != null) {
+					f.squad.removeUnit(f);
+					f.squad = null;
 				}
 			}
 		}
@@ -1316,16 +1283,14 @@ public class MilitaryManager extends Module {
 			for (Raider r: raidQueue){
 				r.fightTo(dt.position, frame);
 			}
+		}
 
-			if (attacker != null) {
-				if (attacker.getDef() != null) {
-					if (attacker.getDef().isAbleToFly()) {
-						for (Fighter f : AAs.values()) {
-							if (f.getUnit().getHealth() > 0 && f.getUnit().getTeam() == parent.teamID) {
-								f.fightTo(h.getPos(), frame);
-							}
-						}
-					}
+		// Mobilize anti-air units vs enemy air
+		if (attacker != null && attacker.getDef() != null && attacker.getDef().isAbleToFly() && frame - lastAirDefenseFrame > 300){
+			lastAirDefenseFrame = frame;
+			for (Fighter f : AAs.values()) {
+				if (f.getUnit().getHealth() > 0 && f.getUnit().getTeam() == parent.teamID) {
+					f.fightTo(h.getPos(), frame);
 				}
 			}
 		}

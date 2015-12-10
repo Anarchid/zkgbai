@@ -3,7 +3,7 @@ package zkgbai.military.tasks;
 import com.springrts.ai.oo.AIFloat3;
 
 /**
- * Created by haplo on 11/16/2015.
+ * Created by aeonios on 11/16/2015.
  */
 public class DefenseTarget {
     public AIFloat3 position;

@@ -48,18 +48,23 @@ public class Worker {
 		}
 	}
 
-	public void unstick(int frame){
+	public boolean unstick(int frame){
+		boolean unstuck = false;
 		if (task != null && frame - lastTaskFrame > 150){
 			float movedist = distance(unit.getPos(), lastpos);
 			float jobdist = distance(unit.getPos(), task.getPos());
-			if (movedist < 50 && jobdist > unit.getDef().getBuildDistance()+5){
+
+			if (movedist < 50 && jobdist > unit.getDef().getBuildDistance()){
 				AIFloat3 unstickPoint = getRadialPoint(unit.getPos(), 75f);
 				unit.moveTo(unstickPoint, (short) 0, frame+6000);
+				task.removeWorker(this);
 				clearTask(frame);
+				unstuck = true;
 			}
 			lastTaskFrame = frame;
 			lastpos = unit.getPos();
 		}
+		return unstuck;
 	}
 
 	protected float distance( AIFloat3 pos1,  AIFloat3 pos2){

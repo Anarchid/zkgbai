@@ -90,7 +90,7 @@ public class Squad {
 			}
 		}
 		fighters.removeAll(tooFar);
-		if (fighters.size() < 4){
+		if (fighters.size() < 4 && metalValue < 1000){
 			tooFar.addAll(fighters);
 			fighters.clear();
 		}

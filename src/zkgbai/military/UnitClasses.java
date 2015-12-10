@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by haplo on 11/14/2015.
+ * Created by aeonios on 11/14/2015.
  */
 public class UnitClasses {
     public List<String> smallRaiders;
@@ -21,6 +21,8 @@ public class UnitClasses {
     public List<String> planes;
     public List<String> sappers;
 
+    public List<String> noRetreat;
+
     public UnitClasses(){
         this.smallRaiders = new ArrayList<String>();
         this.mediumRaiders = new ArrayList<String>();
@@ -35,6 +37,7 @@ public class UnitClasses {
         this.AAs = new ArrayList<String>();
         this.planes = new ArrayList<String>();
         this.sappers = new ArrayList<String>();
+        this.noRetreat = new ArrayList<String>();
 
         // raiders
         smallRaiders.add("armpw");
@@ -92,6 +95,8 @@ public class UnitClasses {
         // striders; stuff that can dgun
         striders.add("dante");
         striders.add("scorpion");
+        striders.add("armbanth");
+        striders.add("armorco");
 
         // loners; strider-like stuff that does better on its own than in mobs
         loners.add("armsnipe");
@@ -104,9 +109,7 @@ public class UnitClasses {
         loners.add("armmanni");
         loners.add("cormart");
         loners.add("corgol");
-        loners.add("armbanth");
         loners.add("armcrabe");
-        loners.add("armorco");
 
         // Anti-air units
         AAs.add("armjeth");
@@ -136,5 +139,11 @@ public class UnitClasses {
         sappers.add("corroach");
         sappers.add("corsktl");
         sappers.add("blastwing");
+
+        // Things that should not retreat
+        noRetreat.add("corsh");
+        noRetreat.add("armcrabe");
+        noRetreat.add("spherepole");
+        noRetreat.add("core_spectre");
     }
 }
