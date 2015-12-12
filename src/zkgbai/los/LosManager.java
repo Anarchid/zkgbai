@@ -1,13 +1,13 @@
 package zkgbai.los;
 
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
 import java.util.List;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Map;
 import com.springrts.ai.oo.clb.OOAICallback;
 
+import org.newdawn.slick.Image;
+import org.newdawn.slick.ImageBuffer;
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 
@@ -15,7 +15,7 @@ public class LosManager extends Module {
 	ZKGraphBasedAI parent;
 	
 	private List<Integer> losMap;
-	private BufferedImage losImage;
+	private ImageBuffer losImage;
 
 	private int mapWidth;
 	private int mapHeight;
@@ -37,7 +37,7 @@ public class LosManager extends Module {
 		this.losMap = map.getLosMap();
 		this.gridWidth = mapWidth / losGridSize;
 		this.gridHeight = mapHeight / losGridSize;
-		this.losImage = new BufferedImage(gridWidth+1, gridHeight+1, BufferedImage.TYPE_BYTE_GRAY);
+		this.losImage = new ImageBuffer(gridWidth+1, gridHeight+1);
 
 		this.updateLosImage();
 	}
@@ -66,31 +66,27 @@ public class LosManager extends Module {
 	
 	private void updateLosImage(){
 		if(losImage != null){
-			WritableRaster r = (WritableRaster) losImage.getData();
 			for(int x=0;x<gridWidth;x++){
 				for(int z=0;z<gridHeight;z++){
 					int coord = Math.min(x+z*gridWidth,losMap.size()-1);
 					
-					int value = losMap.get(coord);
-					
-					float[] pixel = new float[1];
-					pixel[0] = value*4;
+					int value = losMap.get(coord) * 4;
+
 					try{
-						r.setPixel(x, z, pixel);
+						losImage.setRGBA(x, z, value, value, value, 255);
 					}catch(Exception e){
 						parent.debug("Exception when setting lospixel <"+x+","+z+"> out of <"+gridWidth+"x"+gridHeight+">");
 						parent.printException(e);
 					}
 				}
 			}
-			losImage.setData(r);
 		}else{
 			parent.debug("losImage is null!");
 		}
 	}
 	
-	public BufferedImage getImage(){
-		return this.losImage;
+	public Image getImage(){
+		return this.losImage.getImage();
 	}
 	
 	public boolean isInLos(AIFloat3 position){

@@ -91,8 +91,8 @@ public class Raider extends Fighter {
         if (task != null && frame - lastTaskFrame > 90) {
             float movedist = distance(unit.getPos(), lastpos);
             float jobdist = distance(unit.getPos(), task.spot.getPos());
-            if (movedist < 25 && jobdist > unit.getMaxRange()) {
-                AIFloat3 unstickPoint = getRadialPoint(unit.getPos(), 200f);
+            if (movedist < 50 && jobdist > 100) {
+                AIFloat3 unstickPoint = getRadialPoint(unit.getPos(), 450f);
                 unit.moveTo(unstickPoint, (short) 0, frame + 6000);
                 clearTask(frame);
             }
