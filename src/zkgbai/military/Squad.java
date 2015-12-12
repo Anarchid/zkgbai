@@ -45,6 +45,14 @@ public class Squad {
 		}
 	}
 
+	public void retreatTo(AIFloat3 pos, int frame){
+		// set a target for the squad to attack.
+		target = pos;
+		for (Fighter f:fighters){
+			f.moveTo(target, frame);
+		}
+	}
+
 	public AIFloat3 getPos(){
 		if (fighters.size() > 0){
 			int count = fighters.size();

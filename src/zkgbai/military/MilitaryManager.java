@@ -1,7 +1,5 @@
 package zkgbai.military;
 
-import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
@@ -11,13 +9,18 @@ import java.util.List;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.*;
 
+import org.newdawn.slick.Color;
+import org.newdawn.slick.Graphics;
+import org.newdawn.slick.Image;
+import org.newdawn.slick.ImageBuffer;
+import org.newdawn.slick.opengl.pbuffer.GraphicsFactory;
+
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.EconomyManager;
 import zkgbai.economy.FactoryManager;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
-import zkgbai.gui.AdditiveComposite;
 import zkgbai.los.LosManager;
 import zkgbai.military.tasks.DefenseTarget;
 import zkgbai.military.tasks.ScoutTask;
@@ -54,8 +57,8 @@ public class MilitaryManager extends Module {
 	RadarIdentifier radarID;
 	
 	int maxUnitPower = 0;
-	BufferedImage threatmap;
-	Graphics2D threatGraphics;
+	ImageBuffer threatmap;
+	Graphics threatGraphics;
 	ArrayList<TargetMarker> targetMarkers;
 	
     public static final short OPTION_SHIFT_KEY = (1 << 5); //  32
@@ -131,8 +134,13 @@ public class MilitaryManager extends Module {
 		int width = parent.getCallback().getMap().getWidth();
 		int height = parent.getCallback().getMap().getHeight();
 		
-		this.threatmap = new BufferedImage(width, height,BufferedImage.TYPE_INT_ARGB);
-		this.threatGraphics = threatmap.createGraphics();
+		this.threatmap = new ImageBuffer(width, height);
+		try {
+			this.threatGraphics = threatmap.getImage().getGraphics();
+		}catch (Exception e){
+			parent.printException(e);
+			System.exit(0);
+		}
 		
 		try{
 			radarID = new RadarIdentifier(parent.getCallback());
@@ -147,8 +155,8 @@ public class MilitaryManager extends Module {
 		int h = threatmap.getHeight();
 		
 		threatGraphics.setBackground(new Color(0, 0, 0, 0));
-        threatGraphics.clearRect(0,0, w,h);
-		threatGraphics.setComposite(new AdditiveComposite());
+        threatGraphics.clear();
+		threatGraphics.setDrawMode(Graphics.MODE_ADD);
 
 		// paint allythreat for raiders
 		for (Raider r:raiders){
@@ -166,8 +174,20 @@ public class MilitaryManager extends Module {
 		// paint allythreat for fighters
 		for (Fighter f:fighters.values()){
 			float power = Math.min(1.0f, (f.getUnit().getPower() + f.getUnit().getMaxHealth())/5000);
-			float radius = f.getUnit().getMaxRange();
 			AIFloat3 pos = f.getPos();
+			int x = (int) pos.x/8;
+			int y = (int) pos.z/8;
+			int rad = 60;
+
+			threatGraphics.setColor(new Color(0f, power, 0f));
+			paintCircle(x, y, rad);
+		}
+
+		// paint allythreat for porc
+		for (Unit p:ecoManager.porcs){
+			float power = Math.min(1.0f, ((p.getPower() + p.getMaxHealth())/5000) * 2);
+			float radius = p.getMaxRange();
+			AIFloat3 pos = p.getPos();
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 			int rad = (int) radius/8;
@@ -222,21 +242,10 @@ public class MilitaryManager extends Module {
 			paintCircle(x, y, 75); // 800 elmo radius around each frontline mex
 		}
 
-		final float[] dash = {5.0f};
-
-		float phase = 0;
 		ArrayList<TargetMarker> deadMarkers = new ArrayList<TargetMarker>();
 		for(TargetMarker tm:targetMarkers){
-			int age = parent.currentFrame - tm.frame; 
+			int age = parent.currentFrame - tm.frame;
 			if(age < 255){
-				phase = age;
-				threatGraphics.setColor(new Color(0,255,255, 255-age));
-				threatGraphics.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 5f, dash, phase));
-				AIFloat3 position = tm.position;				
-				int x = (int) (position.x / 8);
-				int y = (int) (position.z / 8);
-				
-				paintHollowCircle(x,y,5+age/50);
 
 			}else{
 				deadMarkers.add(tm);
@@ -257,14 +266,19 @@ public class MilitaryManager extends Module {
 		threatGraphics.drawOval(x-r, y-r, 2*r, 2*r);
 	}
 	
-	public BufferedImage getThreatMap(){
-		return this.threatmap;
+	public Image getThreatMap(){
+		return this.threatmap.getImage();
 	}
 	
 	public float getThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
-		Color c = new Color(threatmap.getRGB(x,y));
+		Color c;
+		try{
+			c = threatmap.getImage().getColor(x,y);
+		}catch (Exception e) {
+			return 0;
+		}
 		float threat = (float) c.getRed();
 		return threat/255;
 	}
@@ -272,7 +286,12 @@ public class MilitaryManager extends Module {
 	public float getEffectiveThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
-		Color c = new Color(threatmap.getRGB(x,y));
+		Color c;
+		try{
+			c = threatmap.getImage().getColor(x,y);
+		}catch (Exception e) {
+			return 0;
+		}
 		float threat = (float) c.getRed();
 		float pthreat = (float) c.getGreen();
 		return (threat-(2*pthreat))/255;
@@ -282,7 +301,7 @@ public class MilitaryManager extends Module {
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
 		try {
-			Color c = new Color(threatmap.getRGB(x, y));
+			Color c = threatmap.getImage().getColor(x,y);
 			float pthreat = (float) c.getGreen();
 			return pthreat / 255;
 		}catch (Exception e){
@@ -293,7 +312,7 @@ public class MilitaryManager extends Module {
 	public boolean isFrontLine(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
-		Color c = new Color(threatmap.getRGB(x,y));
+		Color c = threatmap.getImage().getColor(x,y);
 		float value = (float) c.getBlue();
 		if (value/255 > 0){
 			return true;
@@ -403,7 +422,7 @@ public class MilitaryManager extends Module {
 		}
 
 		if (getThreat(task.target) > getFriendlyThreat(raider.getPos())){
-			cost += 1000;
+			cost += 9001;
 		}
 		return cost;
 	}
@@ -466,15 +485,19 @@ public class MilitaryManager extends Module {
 	private void updateSquads(){
 		// set the rally point for the next forming squad for defense
 		if (nextSquad != null && frame % 270 == 0) {
-			nextSquad.setTarget(getRallyPoint(nextSquad.getPos()), frame);
+			if (getEffectiveThreat(nextSquad.getPos()) > 0 || getEffectiveThreat(nextSquad.target) > 0) {
+				nextSquad.retreatTo(graphManager.getAllyCenter(), frame);
+			}else {
+				nextSquad.setTarget(getRallyPoint(nextSquad.getPos()), frame);
+			}
 		}
 		if (nextAirSquad != null && frame % 450 == 0) {
 			nextAirSquad.setTarget(getRallyPoint(nextAirSquad.getPos()), frame);
 		}
 		if (nextShieldSquad != null && frame % 180 == 0) {
 			// shields only get one squad into which it dumps all of its mobs.
-			if (nextShieldSquad.getHealth() < 0.9){
-				nextShieldSquad.setTarget(graphManager.getAllyCenter(), frame);
+			if (nextShieldSquad.getHealth() < 0.95){
+				nextShieldSquad.retreatTo(graphManager.getAllyCenter(), frame);
 			}else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1000){
 				AIFloat3 target = getTarget(nextShieldSquad.getPos(), true);
 				// reduce redundant order spam.
@@ -504,6 +527,12 @@ public class MilitaryManager extends Module {
 				}
 				break;
 			}else if (s.status == 'a' && !s.assigned){
+				if (getEffectiveThreat(s.getPos()) > 0){
+					s.retreatTo(graphManager.getAllyCenter(), frame);
+					assigned = true;
+					s.assigned = true;
+					break;
+				}
 				AIFloat3 target = getTarget(s.getPos(), true);
 				// reduce redundant order spam.
 				if (!target.equals(s.target)) {
@@ -566,7 +595,7 @@ public class MilitaryManager extends Module {
 		// first check defense targets
 		if (defend) {
 			for (DefenseTarget d : defenseTargets) {
-				float tmpcost = graphManager.groundDistance(origin, d.position) - d.damage;
+				float tmpcost = (graphManager.groundDistance(origin, d.position) - d.damage)/1+(2 * getThreat(d.position));
 
 				if (tmpcost < cost) {
 					cost = tmpcost;
@@ -685,6 +714,9 @@ public class MilitaryManager extends Module {
 
 		// check for defense targets first
 		for (DefenseTarget d : defenseTargets) {
+			if (getThreat(d.position) > getFriendlyThreat(pos)){
+				continue;
+			}
 			float tmpcost = graphManager.groundDistance(pos, d.position) - d.damage;
 
 			if (tmpcost < cost) {
@@ -775,7 +807,7 @@ public class MilitaryManager extends Module {
 			}else if (frame - t.lastSeen > 1800 && !t.isStatic) {
 				// remove mobiles that haven't been seen for over 60 seconds.
 				outdated.add(t);
-			}else if (t.position != null && losManager.isInLos(t.position)) {
+			}else if (t.position != null && t.isStatic && losManager.isInLos(t.position)) {
 				// remove targets that aren't where we last saw them.
 				outdated.add(t);
 			}
@@ -1236,10 +1268,14 @@ public class MilitaryManager extends Module {
 
 		// retreat scouting raiders so that they don't suicide into enemy raiders
 		for (Raider r: raiders){
-			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6 && attacker != null && attacker.getMaxSpeed() > 0 && getEffectiveThreat(h.getPos()) <= 0
+			if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.8 && attacker != null && (attacker.getMaxSpeed() > 0 || getEffectiveThreat(h.getPos()) > 0) && getEffectiveThreat(h.getPos()) <= 0
 					&& r.scouting && !on_fire && !r.getUnit().getDef().getName().equals("corgator")){
-				float x = -100*dir.x;
-				float z = -100*dir.z;
+				float movdist = -100;
+				if (r.getUnit().getDef().getName().equals("spherepole") || r.getUnit().getDef().getName().equals("corsh") || getEffectiveThreat(h.getPos()) > 0){
+					movdist = -450;
+				}
+				float x = movdist*dir.x;
+				float z = movdist*dir.z;
 				AIFloat3 pos = h.getPos();
 				AIFloat3 target = new AIFloat3();
 				 target.x = pos.x+x;
@@ -1261,7 +1297,7 @@ public class MilitaryManager extends Module {
 		}
 
 		// create a defense task, if appropriate.
-		if ((!h.getDef().isAbleToAttack() || h.getMaxSpeed() == 0 || graphManager.groundDistance(h.getPos(), graphManager.getAllyCenter()) < graphManager.groundDistance(h.getPos(), graphManager.getEnemyCenter()))
+		if ((h.getMaxSpeed() == 0 || !h.getDef().isAbleToAttack() || graphManager.groundDistance(h.getPos(), graphManager.getAllyCenter()) < graphManager.groundDistance(h.getPos(), graphManager.getEnemyCenter()) || (attacker == null || attacker.getPos() == null || attacker.getPos().equals(nullpos)))
 				&& frame - lastDefenseFrame > 150 && !on_fire){
 			lastDefenseFrame = frame;
 			DefenseTarget dt = null;
