@@ -6,8 +6,8 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Map;
 import com.springrts.ai.oo.clb.OOAICallback;
 
-import org.newdawn.slick.Image;
-import org.newdawn.slick.ImageBuffer;
+import org.starfire.shine.Image;
+import org.starfire.shine.ImageBuffer;
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 

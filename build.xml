@@ -8,7 +8,6 @@
   <property name="dist"  location="dist"/>
   <property name="metadata"  location="metadata"/>
   <property name="jlib"  location="jlib"/>
-    <property name="lib"  location="lib"/>
   <property name="installDir" location="/home/anarchid/.spring/AI/Skirmish/ZKGBAI/"/>
 
   <target name="init">
@@ -33,16 +32,12 @@
   <target name="dist" depends="compile" description="generate the distribution SkirmishAI.jar" >
     <jar jarfile="${dist}/SkirmishAI.jar" basedir="${build}"/>
     <mkdir dir="${dist}/jlib"/>
-      <mkdir dir="${dist}/lib"/>
   	<copy overwrite="true" todir="${dist}">
   	    <fileset dir="${metadata}"/>
   	</copy>
   	<copy overwrite="true" todir="dist/jlib">
   	    <fileset dir="${jlib}"/>
   	</copy>
-      <copy overwrite="true" todir="dist/lib">
-          <fileset dir="${lib}"/>
-      </copy>
   </target>
 
   <target name="install" depends="dist">

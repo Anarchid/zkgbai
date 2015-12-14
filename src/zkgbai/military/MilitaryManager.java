@@ -9,12 +9,14 @@ import java.util.List;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.*;
 
-import org.newdawn.slick.Color;
-import org.newdawn.slick.Graphics;
-import org.newdawn.slick.Image;
-import org.newdawn.slick.ImageBuffer;
-import org.newdawn.slick.opengl.pbuffer.GraphicsFactory;
+import org.lwjgl.glfw.GLFW;
+import org.starfire.shine.Color;
+import org.starfire.shine.Graphics;
+import org.starfire.shine.Image;
+import org.starfire.shine.ImageBuffer;
+import org.starfire.shine.opengl.pbuffer.GraphicsFactory;
 
+import org.starfire.shine.util.*;
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.EconomyManager;
@@ -173,7 +175,7 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for fighters
 		for (Fighter f:fighters.values()){
-			float power = Math.min(1.0f, (f.getUnit().getPower() + f.getUnit().getMaxHealth())/5000);
+			float power = Math.min(1.0f, ((f.getUnit().getPower() + f.getUnit().getMaxHealth())/5000) * 1.5f);
 			AIFloat3 pos = f.getPos();
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
@@ -241,6 +243,8 @@ public class MilitaryManager extends Module {
 			threatGraphics.setColor(new Color(0f, 0f, 0.5f)); // front line territory color, blue
 			paintCircle(x, y, 75); // 800 elmo radius around each frontline mex
 		}
+
+		threatGraphics.flush();
 
 		ArrayList<TargetMarker> deadMarkers = new ArrayList<TargetMarker>();
 		for(TargetMarker tm:targetMarkers){

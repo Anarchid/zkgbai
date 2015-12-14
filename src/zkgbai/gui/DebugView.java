@@ -1,13 +1,13 @@
 package zkgbai.gui;
 
-import javax.swing.JFrame;
-
-import org.newdawn.slick.*;
-import org.newdawn.slick.opengl.pbuffer.GraphicsFactory;
+import org.starfire.shine.Color;
+import org.starfire.shine.Graphics;
+import org.starfire.shine.Image;
+import org.starfire.shine.ImageBuffer;
 import zkgbai.ZKGraphBasedAI;
 
 
-public class DebugView extends BasicGame {
+public class DebugView {
 	/**
 	 * 
 	 */
@@ -18,15 +18,18 @@ public class DebugView extends BasicGame {
 	Image mapTexture;
 	ImageBuffer backbuffer;
 	Graphics bufferGraphics;
+	Graphics display;
 	int mapWidth;
 	int mapHeight;
 	private Image graphImage;
+	private Boolean visible = false;
 	
 	public DebugView(ZKGraphBasedAI parent){
-		super("ZKGBAI");
 		this.ai = parent;
 		this.mapWidth  =  parent.getCallback().getMap().getWidth();
 		this.mapHeight = parent.getCallback().getMap().getHeight();
+
+		this.display = new Graphics();
 		backbuffer = new ImageBuffer(mapWidth, mapHeight);
 		try {
 			bufferGraphics = backbuffer.getImage().getGraphics();
@@ -35,9 +38,8 @@ public class DebugView extends BasicGame {
 			System.exit(0);
 		}
 	}
-	
-	@Override
-	public void render(GameContainer gc ,Graphics g){
+
+	public void render(){
 		Color threatColor = new Color(1f, 1f, 1f, 0.5f);
 		Color graphColor = new Color(1f, 1f, 1f, 1f);
 
@@ -51,18 +53,9 @@ public class DebugView extends BasicGame {
 		bufferGraphics.drawImage(losImage, 0, 0, graphColor);
 		bufferGraphics.drawImage(threatImage, 0, 0, threatColor);
 		bufferGraphics.drawImage(graphImage, 0, 0, graphColor);
+		bufferGraphics.flush();
 
-		g.drawImage(backbuffer.getImage(), 0, 0);
-	}
-
-	@Override
-	public void init(GameContainer gc){
-		// required to implement the slick game interface
-	}
-
-	@Override
-	public void update(GameContainer gc, int delta){
-		// required to implement the slick game interface
+		display.drawImage(backbuffer.getImage(), 0, 0);
 	}
 	
 	public void setLosImage(Image bu){

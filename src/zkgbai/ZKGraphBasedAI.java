@@ -1,35 +1,25 @@
 package zkgbai;
 
-import java.io.File;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.security.CodeSource;
 import java.util.*;
 
-import com.springrts.ai.Enumerations.UnitCommandOptions;
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.CommandDescription;
 import com.springrts.ai.oo.clb.Game;
 import com.springrts.ai.oo.clb.GameRulesParam;
 import com.springrts.ai.oo.clb.OOAICallback;
-import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Team;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.WeaponDef;
 
-import java.awt.image.BufferedImage;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.vecmath.Tuple3f;
-
-import org.newdawn.slick.AppGameContainer;
-import org.newdawn.slick.SlickException;
-import zkgbai.Module;
+import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.system.MemoryUtil;
+import org.starfire.shine.SWindow;
 import zkgbai.economy.EconomyManager;
 import zkgbai.economy.FactoryManager;
 import zkgbai.graph.GraphManager;
@@ -39,7 +29,10 @@ import zkgbai.los.LosManager;
 import zkgbai.military.MilitaryManager;
 
 public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
-    private OOAICallback callback;
+    static {LibLoader.load();} // loads OS-dependent native libraries
+	static long NULL = MemoryUtil.NULL;
+
+	private OOAICallback callback;
     private List<Module> modules = new LinkedList<Module>();
     public HashMap<Integer, StartArea> startBoxes;
 	HashSet<Integer> enemyTeams = new HashSet<Integer>();
@@ -48,8 +41,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int teamID;
     public int allyTeamID;
     public int currentFrame = 0;
+	public SWindow window;
     DebugView debugView;
-	AppGameContainer debugWindow;
     boolean debugActivated;
     
 	LosManager losManager;
@@ -79,24 +72,15 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         identifyEnemyTeams();
         allies = callback.getAllyTeams();
 
-		// load native libraries
-		String system = System.getProperty("os.name");
+		// create our debugging window and openGL context
 
-		String path = null;
-		path = new File("lib").getAbsolutePath();
-
-		if(path == null) {
-			System.out.println("Couldn't load native libraries!");
+		// init openGL
+		if (GLFW.glfwInit() != GL11.GL_TRUE) {
+			debug("OpenGL failed to init");
+			System.exit(19);
 		}
-
-		path += "\\";
-
-		if (system.contains("Windows")) {
-			System.setProperty("org.lwjgl.librarypath", path + "windows");
-		}
-		else if (system.contains("Linux")) {
-			System.setProperty("org.lwjgl.librarypath", path + "linux");
-		}
+		window = new SWindow(callback.getMap().getWidth(), callback.getMap().getHeight(), "ZKGBAI Debug", false);
+		window.hide();
 
 		// load modules
         try {
@@ -144,8 +128,19 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
 		facManager.setEconomyManager(ecoManager);
 		facManager.setMilitaryManager(warManager);
-        
-        modules.add(losManager);
+
+		try{
+			debugView = new DebugView(this);
+			debugView.setLosImage(losManager.getImage());
+			debugView.setThreatImage(warManager.getThreatMap());
+			debugView.setGraphImage(graphManager.getGraphImage());
+		}
+		catch(Exception e){
+			debug(e);
+		}
+
+
+		modules.add(losManager);
         modules.add(graphManager);
         modules.add(ecoManager);
         modules.add(warManager);
@@ -156,26 +151,6 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         
         return 0;
     }
-	
-	private void activateDebug(){
-		if(!debugActivated){
-			try{
-	        	debugView = new DebugView(this);
-	            debugView.setLosImage(losManager.getImage());
-	            debugView.setThreatImage(warManager.getThreatMap());
-	            debugView.setGraphImage(graphManager.getGraphImage());
-
-				debugWindow = new AppGameContainer(debugView);
-				debugWindow.setDisplayMode(callback.getMap().getWidth(), callback.getMap().getHeight(), false); // set windowed mode
-				debugWindow.start();
-
-	            this.debugActivated = true;
-			}
-			catch(Exception e){
-				debug(e);
-			}
-		}
-	}
 
 	private void debug(Exception e) {
 		debug(e.getMessage());
@@ -230,7 +205,15 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         
 		if (frame % 15 == 0) {
 			if(!debugActivated && callback.getDebug().getGraphDrawer().isEnabled()){
-				activateDebug();
+				window.show();
+				debugActivated = true;
+			}else if (debugActivated && !callback.getDebug().getGraphDrawer().isEnabled()){
+				window.hide();
+				debugActivated = false;
+			}
+
+			if (debugActivated) {
+				debugView.render();
 			}
 		}
         

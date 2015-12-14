@@ -7,11 +7,8 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.newdawn.slick.*;
-import org.newdawn.slick.opengl.pbuffer.FBOGraphics;
-import org.newdawn.slick.opengl.pbuffer.GraphicsFactory;
-
-import org.newdawn.slick.opengl.pbuffer.PBufferGraphics;
+import org.lwjgl.glfw.GLFW;
+import org.starfire.shine.*;
 import org.poly2tri.Poly2Tri;
 import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
@@ -67,8 +64,6 @@ public class GraphManager extends Module {
 		this.parent = parent;
 		this.callback = parent.getCallback();
 
-		parent.debug("GraphManager loading...");
-
 		this.metalSpots = new ArrayList<MetalSpot>();
 		this.links = new ArrayList<Link>();
 		this.pylons = new ArrayList<Pylon>();
@@ -87,15 +82,13 @@ public class GraphManager extends Module {
 		int width = callback.getMap().getWidth();
 		int height = callback.getMap().getHeight();
 
-		parent.debug("Graph image loading...");
 		this.graphImage = new ImageBuffer(width, height);
 		try{
-			parent.debug("Graph graphics loading...");
 			this.graphGraphics = graphImage.getImage().getGraphics();
 		}catch (Exception e){
 			parent.debug(e.getMessage());
 		}
-		parent.debug("Parsing metal spots...");
+		parent.debug("GraphManager: Parsing metal spots...");
 		
 		ArrayList<HashMap> grpMexes = parseMetalSpotsGRP();
 		if(grpMexes.size() > 0){
@@ -434,6 +427,7 @@ public class GraphManager extends Module {
 						AIFloat3 pos = ms.position;
 						if(s.getValue().contains(pos)){
 							setHostile(ms);
+							setNeutral(ms);
 						}
 					}
 				}else{
@@ -457,6 +451,7 @@ public class GraphManager extends Module {
 						AIFloat3 pos = ms.position;
 						if(box.contains(pos)){
 							setHostile(ms);
+							setNeutral(ms);
 						}
 					}
 				}
@@ -501,7 +496,27 @@ public class GraphManager extends Module {
 
 		Color linkLinked = new Color(0,255,255,100);
 		Color linkUnlinked = new Color(255,255,0,100);
-		
+
+		for (Link l:links){
+			Color linkColor;
+			graphGraphics.setLineWidth(2f);
+			if(l.connected){
+				linkColor = linkLinked;
+			}else{
+				linkColor = linkUnlinked;
+			}
+
+			graphGraphics.setColor(linkColor);
+
+			int x1 = (int) (l.v0.position.x / 8);
+			int y1 = (int) (l.v0.position.z / 8);
+
+			int x2 = (int) (l.v1.position.x / 8);
+			int y2 = (int) (l.v1.position.z / 8);
+
+			graphGraphics.drawLine(x1, y1, x2, y2);
+		}
+
 		for(MetalSpot ms:metalSpots){
 			AIFloat3 position = ms.position;
 			
@@ -533,25 +548,7 @@ public class GraphManager extends Module {
 			}
 		}
 
-		for (Link l:links){
-			Color linkColor;
-			graphGraphics.setLineWidth(2f);
-			if(l.connected){
-				linkColor = linkLinked;
-			}else{
-				linkColor = linkUnlinked;
-			}
-			
-			graphGraphics.setColor(linkColor);
-
-			int x1 = (int) (l.v0.position.x / 8);
-			int y1 = (int) (l.v0.position.z / 8);
-			
-			int x2 = (int) (l.v1.position.x / 8);
-			int y2 = (int) (l.v1.position.z / 8);		
-			
-			graphGraphics.drawLine(x1, y1, x2, y2);
-		}
+		graphGraphics.flush();
 	}
 	
 	private void paintCircleOutline(int x, int y, int r){
