@@ -49,11 +49,11 @@ public class UnitClasses {
         mediumRaiders.add("corgator");
         mediumRaiders.add("armkam");
         mediumRaiders.add("corsh");
-        mediumRaiders.add("panther");
 
         soloRaiders.add("spherepole");
         soloRaiders.add("hoverassault");
         soloRaiders.add("logkoda");
+        soloRaiders.add("panther");
         soloRaiders.add("armflea");
         soloRaiders.add("corfav");
 

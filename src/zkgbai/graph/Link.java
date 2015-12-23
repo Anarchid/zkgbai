@@ -67,6 +67,13 @@ public class Link {
 		public AIFloat3 getPos(){
 			return centerPos;
 		}
+
+		public boolean isOwned(){
+			if (v0.owned && v1.owned){
+				return true;
+			}
+			return false;
+		}
 		
 		public boolean checkConnected()
 		{

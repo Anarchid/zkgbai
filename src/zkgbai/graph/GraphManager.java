@@ -1,20 +1,11 @@
 package zkgbai.graph;
 
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.Stroke;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Queue;
 import java.util.Set;
-
-import com.springrts.ai.AICallback;
 
 import org.poly2tri.Poly2Tri;
 import org.poly2tri.triangulation.TriangulationPoint;
@@ -27,7 +18,6 @@ import com.json.parsers.JsonParserFactory;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Game;
 import com.springrts.ai.oo.clb.GameRulesParam;
-import com.springrts.ai.oo.clb.Map;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Team;
@@ -36,11 +26,8 @@ import com.springrts.ai.oo.clb.UnitDef;
 
 import zkgbai.Module;
 import zkgbai.StartArea;
-import zkgbai.StartBox;
 import zkgbai.ZKGraphBasedAI;
-import zkgbai.gui.DebugView;
 import zkgbai.los.LosManager;
-import zkgbai.military.Enemy;
 
 public class GraphManager extends Module {
 	private ZKGraphBasedAI parent;
@@ -58,8 +45,6 @@ public class GraphManager extends Module {
 
 	float avgMexValue = 0;
 	boolean graphInitialized = false;
-	
-	BufferedImage threatMap;
 
 	static AIFloat3 nullpos = new AIFloat3(0,0,0);
 	AIFloat3 allyCenter = nullpos;
@@ -68,13 +53,13 @@ public class GraphManager extends Module {
 	
 	public HashMap<String, Integer> pylonDefs; 
 	int pylonCounter;
-	private BufferedImage graphImage;
-	private Graphics2D graphGraphics;
+	//private Image graphImage;
+	//private Graphics graphGraphics;
 	
 	public GraphManager(ZKGraphBasedAI parent){
 		this.parent = parent;
 		this.callback = parent.getCallback();
-		
+
 		this.metalSpots = new ArrayList<MetalSpot>();
 		this.links = new ArrayList<Link>();
 		this.pylons = new ArrayList<Pylon>();
@@ -90,17 +75,15 @@ public class GraphManager extends Module {
 		pylonDefs.put("armfus", 150);
 		pylonDefs.put("cafus", 150);
 		
-		int width = parent.getCallback().getMap().getWidth();
-		int height = parent.getCallback().getMap().getHeight();
-		
-		this.graphImage = new BufferedImage(width, height,BufferedImage.TYPE_INT_ARGB_PRE);
-		this.graphGraphics = graphImage.createGraphics();
+		final int width = callback.getMap().getWidth();
+		final int height = callback.getMap().getHeight();
+
+		parent.debug("GraphManager: Parsing metal spots...");
 		
 		ArrayList<HashMap> grpMexes = parseMetalSpotsGRP();
 		if(grpMexes.size() > 0){
 			initializeGraph(grpMexes);
 		}
-		
 	}
 	
 	@Override
@@ -122,7 +105,7 @@ public class GraphManager extends Module {
 		
 		int numSpots = (int)mexCount.getValueFloat();
 		
-		parent.debug("Detected "+numSpots+" metal spots in GRP");
+		parent.debug("GraphManager: Detected "+numSpots+" metal spots in GRP");
 		
 		
 		if(numSpots < 0){
@@ -292,7 +275,6 @@ public class GraphManager extends Module {
     	}
 
     	calcCenters();
-    	paintGraph();
 
 		return 0;
 	}
@@ -411,7 +393,6 @@ public class GraphManager extends Module {
     	}
     	
     	doInitialInference();
-    	paintGraph();
     	graphInitialized = true;
     }
     
@@ -432,7 +413,8 @@ public class GraphManager extends Module {
 					for (MetalSpot ms:metalSpots){
 						AIFloat3 pos = ms.position;
 						if(s.getValue().contains(pos)){
-							ms.enemyShadowed = true;
+							setHostile(ms);
+							setNeutral(ms);
 						}
 					}
 				}else{
@@ -455,7 +437,8 @@ public class GraphManager extends Module {
 					for (MetalSpot ms:metalSpots){
 						AIFloat3 pos = ms.position;
 						if(box.contains(pos)){
-							ms.enemyShadowed = true;
+							setHostile(ms);
+							setNeutral(ms);
 						}
 					}
 				}
@@ -485,14 +468,9 @@ public class GraphManager extends Module {
 		}
     }
     
-	private void paintGraph(){
-		
-		int w = graphImage.getWidth();
-		int h = graphImage.getHeight();
-		
-		graphGraphics.setBackground(new Color(0, 0, 0, 0));
-		graphGraphics.clearRect(0,0, w,h);
-		graphGraphics.setStroke(new BasicStroke(2f));
+	/*public void paintGraph(){
+
+		graphGraphics.clear();
 		
 		Color spotOwned = new Color(0,255,0,255);
 		Color spotUnowned = new Color(255, 247, 90,255);
@@ -501,7 +479,27 @@ public class GraphManager extends Module {
 
 		Color linkLinked = new Color(0,255,255,100);
 		Color linkUnlinked = new Color(255,255,0,100);
-		
+
+		for (Link l:links){
+			Color linkColor;
+			graphGraphics.setLineWidth(5);
+			if(l.connected){
+				linkColor = linkLinked;
+			}else{
+				linkColor = linkUnlinked;
+			}
+
+			graphGraphics.setColor(linkColor);
+
+			int x1 = (int) (l.v0.position.x / 8);
+			int y1 = (int) (l.v0.position.z / 8);
+
+			int x2 = (int) (l.v1.position.x / 8);
+			int y2 = (int) (l.v1.position.z / 8);
+
+			graphGraphics.drawLine(x1, y1, x2, y2);
+		}
+
 		for(MetalSpot ms:metalSpots){
 			AIFloat3 position = ms.position;
 			
@@ -532,33 +530,6 @@ public class GraphManager extends Module {
 				paintCircleOutline(x, y, 8);
 			}
 		}
-
-		for (Link l:links){
-			
-			float phase = 0;
-			if(l.connected){
-				phase = parent.currentFrame/30;
-			}
-
-			final float[] dash = {10.0f};
-			Color linkColor;
-			graphGraphics.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, dash, phase));
-			if(l.connected){
-				linkColor = linkLinked;
-			}else{
-				linkColor = linkUnlinked;
-			}
-			
-			graphGraphics.setColor(linkColor);
-
-			int x1 = (int) (l.v0.position.x / 8);
-			int y1 = (int) (l.v0.position.z / 8);
-			
-			int x2 = (int) (l.v1.position.x / 8);
-			int y2 = (int) (l.v1.position.z / 8);		
-			
-			graphGraphics.drawLine(x1, y1, x2, y2);
-		}
 	}
 	
 	private void paintCircleOutline(int x, int y, int r){
@@ -567,7 +538,7 @@ public class GraphManager extends Module {
 
 	private void paintCircle(int x, int y, int r){
 		graphGraphics.fillOval(x - r, y - r, 2 * r, 2 * r);
-	}
+	}*/
 
 	public void setStartPos(AIFloat3 pos){
 		startPos = pos;
@@ -746,7 +717,7 @@ public class GraphManager extends Module {
 		AIFloat3 closest = null;
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
-			if (!l.connected && l.length < 1500){
+			if (!l.connected && l.length < 1500 && l.isOwned()){
 				float dist = groundDistance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
@@ -761,7 +732,7 @@ public class GraphManager extends Module {
 		AIFloat3 closest = null;
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
-			if (!l.connected && l.length > 900 && l.length < 1500){
+			if (!l.connected && l.isOwned() && l.length > 900 && l.length < 1500){
 				float dist = groundDistance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
@@ -823,10 +794,6 @@ public class GraphManager extends Module {
     	}else{
     		return position;
     	}	
-    }
-
-    public BufferedImage getGraphImage(){
-    	return this.graphImage;
     }
     
 	public void setLosManager(LosManager losManager) {

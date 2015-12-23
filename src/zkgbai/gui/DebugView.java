@@ -1,77 +1,54 @@
 package zkgbai.gui;
 
-
-import java.awt.AlphaComposite;
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
-
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-
 import zkgbai.ZKGraphBasedAI;
 
 
-public class DebugView extends JFrame {
+public class DebugView {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 	ZKGraphBasedAI ai;
-	BufferedImage losImage;
-	BufferedImage threatImage;
-	BufferedImage mapTexture;
-	BufferedImage backbuffer;
-	Graphics2D bufferGraphics;
+	//Image losImage;
+	//Image threatImage;
+	//Image mapTexture;
+	//Graphics bufferGraphics;
 	int mapWidth;
 	int mapHeight;
-	private BufferedImage graphImage;
+	//private Image graphImage;
+	private Boolean visible = false;
 	
 	public DebugView(ZKGraphBasedAI parent){
 		this.ai = parent;
-		this.setVisible(true);
-		this.setTitle("ZKGBAI");
-		
 		this.mapWidth  =  parent.getCallback().getMap().getWidth();
 		this.mapHeight = parent.getCallback().getMap().getHeight();
-		float aspect = mapHeight / mapWidth;
-		this.setSize(600,(int) (600*aspect));
-		backbuffer = new BufferedImage(mapWidth, mapHeight, BufferedImage.TYPE_INT_RGB);
-		bufferGraphics = backbuffer.createGraphics();
+	}
+
+	/*public void render(){
+		Color threatColor = new Color(1f, 1f, 1f, 0.5f);
+		Color graphColor = new Color(1f, 1f, 1f, 1f);
+
+		bufferGraphics.setBackground(new Color(0,0,0,1));
+		bufferGraphics.clear();
+
+		//bufferGraphics.drawImage(losImage, 0, 0, graphColor);
+		bufferGraphics.drawImage(threatImage, 0, 0, threatColor);
+		bufferGraphics.drawImage(graphImage, 0, 0, graphColor);
 	}
 	
-	@Override
-	public void paint(Graphics g){
-		AlphaComposite threatComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f);
-		AlphaComposite graphComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f);
-		int w = backbuffer.getWidth();
-		int h = backbuffer.getHeight();
-
-		bufferGraphics.setComposite(graphComposite);
-		bufferGraphics.drawImage(losImage, 0, 0, w,h, null);
-		bufferGraphics.setComposite(threatComposite);
-		bufferGraphics.drawImage(threatImage, 0, 0, w,h, null);
-		bufferGraphics.setComposite(graphComposite);
-		bufferGraphics.drawImage(graphImage, 0, 0, w,h, null);
-
-		g.drawImage(backbuffer, 0, 0, getWidth(), getHeight(), null);
-	}
-	
-	public void setLosImage(BufferedImage bu){
+	public void setLosImage(Image bu){
 		losImage = bu;
 	}
 	
-	public void setMapTexture(BufferedImage bu){
+	public void setMapTexture(Image bu){
 		mapTexture = bu;
 	}
 
-	public void setThreatImage(BufferedImage threatMap) {
+	public void setThreatImage(Image threatMap) {
 		threatImage = threatMap;
 	}
 
-	public void setGraphImage(BufferedImage graphImage) {
+	public void setGraphImage(Image graphImage) {
 		this.graphImage = graphImage;
-	}
+	}*/
 }

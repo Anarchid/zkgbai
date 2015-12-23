@@ -1,36 +1,21 @@
 package zkgbai;
 
-import java.util.HashMap;
+import java.util.*;
 
-import com.springrts.ai.Enumerations.UnitCommandOptions;
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.CommandDescription;
 import com.springrts.ai.oo.clb.Game;
 import com.springrts.ai.oo.clb.GameRulesParam;
 import com.springrts.ai.oo.clb.OOAICallback;
-import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Team;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.WeaponDef;
 
-import java.awt.image.BufferedImage;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.vecmath.Tuple3f;
-
-import zkgbai.Module;
 import zkgbai.economy.EconomyManager;
 import zkgbai.economy.FactoryManager;
 import zkgbai.graph.GraphManager;
@@ -40,7 +25,8 @@ import zkgbai.los.LosManager;
 import zkgbai.military.MilitaryManager;
 
 public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
-    private OOAICallback callback;
+
+	private OOAICallback callback;
     private List<Module> modules = new LinkedList<Module>();
     public HashMap<Integer, StartArea> startBoxes;
 	HashSet<Integer> enemyTeams = new HashSet<Integer>();
@@ -49,7 +35,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int teamID;
     public int allyTeamID;
     public int currentFrame = 0;
-    DebugView debugView;
+    //DebugView debugView;
     boolean debugActivated;
     
 	LosManager losManager;
@@ -79,6 +65,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         identifyEnemyTeams();
         allies = callback.getAllyTeams();
 
+		// load modules
         try {
 			losManager = new LosManager(this);
 			debug(losManager.getModuleName() + " initialized.");
@@ -124,34 +111,29 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
 		facManager.setEconomyManager(ecoManager);
 		facManager.setMilitaryManager(warManager);
-        
-        modules.add(losManager);
+
+		/*try{
+			debugView = new DebugView(this);
+			debugView.setLosImage(losManager.getImage());
+			debugView.setThreatImage(warManager.getThreatMap());
+			debugView.setGraphImage(graphManager.getGraphImage());
+		}
+		catch(Exception e){
+			debug(e);
+		}*/
+
+
+		modules.add(losManager);
         modules.add(graphManager);
         modules.add(ecoManager);
         modules.add(warManager);
 		modules.add(facManager);
                 
         selectRandomCommander();
-		chooseStartPos(graphManager);
+		chooseStartPos();
         
         return 0;
     }
-	
-	private void activateDebug(){
-		if(!debugActivated){
-			try{
-	        	debugView = new DebugView(this);
-	            debugView.setLosImage(losManager.getImage());
-	            debugView.setThreatImage(warManager.getThreatMap());
-	            debugView.setGraphImage(graphManager.getGraphImage());
-	            debugView.repaint();
-	            this.debugActivated = true;
-			}
-			catch(Exception e){
-				debug(e);
-			}
-		}
-	}
 
 	private void debug(Exception e) {
 		debug(e.getMessage());
@@ -196,23 +178,14 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int update(int frame) {
     	currentFrame = frame;
-        for (Module module : modules) {
-        	try {
-        		module.update(frame);
-	    	} catch (Exception e) {
-	    		printException(e);
-	    	}
-        }
-        
-		if (frame % 15 == 0) {
-			if(!debugActivated && callback.getDebug().getGraphDrawer().isEnabled()){
-				activateDebug();
-			}
-			else if(debugActivated) {
-				debugView.repaint();
+
+		for (Module module : modules) {
+			try {
+				module.update(frame);
+			} catch (Exception e) {
+				printException(e);
 			}
 		}
-        
         return 0; // signaling: OK
     }
 
@@ -230,7 +203,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
     
     @Override
-    public int unitCreated(Unit unit, Unit builder) { 
+    public int unitCreated(Unit unit, Unit builder) {
 	    for (Module module : modules) {
 	    	try {
 	            module.unitCreated(unit, builder);
@@ -242,7 +215,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int unitFinished(Unit unit) {        
+    public int unitFinished(Unit unit) {
 	    for (Module module : modules) {
 	        try {
 	            module.unitFinished(unit);
@@ -291,7 +264,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int unitDestroyed(Unit unit, Unit attacker) {  
+    public int unitDestroyed(Unit unit, Unit attacker) {
         try {
         	//this.unitManager.deRegisterUnit(unit);
     	} catch (Exception e) {
@@ -308,7 +281,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {    
+    public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
         try {
         	//this.unitManager.registerUnit(unit);
     	} catch (Exception e) {
@@ -325,7 +298,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {  
+    public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {
         try {
         	int myTeamId = callback.getGame().getMyTeam(); 
             if (myTeamId == newTeamId) {
@@ -348,7 +321,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int enemyEnterLOS(Unit enemy) {        
+    public int enemyEnterLOS(Unit enemy) {
 	    for (Module module : modules) {
 	    	try {
 	    		module.enemyEnterLOS(enemy);
@@ -365,7 +338,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
             try {
             	module.enemyLeaveLOS(enemy);
 	    	} catch (Exception e) {
-	    		printException(e);
+				printException(e);
 	    	}
         }	    
         return 0; // signaling: OK
@@ -384,7 +357,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	}
 
     @Override
-    public int enemyEnterRadar(Unit enemy) {        
+    public int enemyEnterRadar(Unit enemy) {
     	for (Module module : modules) {
     		try {
     			module.enemyEnterRadar(enemy);
@@ -396,7 +369,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int enemyLeaveRadar(Unit enemy) {        
+    public int enemyLeaveRadar(Unit enemy) {
 		for (Module module : modules) {
 			try {
 				module.enemyLeaveRadar(enemy);
@@ -408,7 +381,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int enemyDamaged(Unit enemy, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {        
+    public int enemyDamaged(Unit enemy, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {
     	for (Module module : modules) {
     		try {
     			module.enemyDamaged(enemy, attacker, damage, dir, weaponDef, paralyzed);
@@ -420,7 +393,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int enemyDestroyed(Unit enemy, Unit attacker) {        
+    public int enemyDestroyed(Unit enemy, Unit attacker) {
     	for (Module module : modules) {
     		try {
     			module.enemyDestroyed(enemy, attacker);
@@ -432,7 +405,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int weaponFired(Unit unit, WeaponDef weaponDef) {        
+    public int weaponFired(Unit unit, WeaponDef weaponDef) {
     	for (Module module : modules) {
     		try {
     			module.weaponFired(unit, weaponDef);
@@ -444,7 +417,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int commandFinished(Unit unit, int commandId, int commandTopicId) {          
+    public int commandFinished(Unit unit, int commandId, int commandTopicId) {
 	    for (Module module : modules) {
 	    	try {
 	    		module.commandFinished(unit, commandId, commandTopicId);
@@ -456,7 +429,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
 
     @Override
-    public int seismicPing(AIFloat3 pos, float strength) {        
+    public int seismicPing(AIFloat3 pos, float strength) {
     	for (Module module : modules) {
     		try {
     			module.seismicPing(pos, strength);
@@ -620,13 +593,13 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         debug("exception(" + sw.toString().replace("\n", " ") + ") " + ex);
     }
 
-	private void chooseStartPos(GraphManager gm){
-		List<MetalSpot> spots = gm.getAllyTerritory();
+	private void chooseStartPos(){
+		List<MetalSpot> spots = graphManager.getAllyTerritory();
 		if (!spots.isEmpty()) {
 			int rand = (int) Math.floor(Math.random() * spots.size());
 			MetalSpot spot = spots.get(rand);
 			callback.getGame().sendStartPosition(true, spot.getPos());
-			gm.setStartPos(spot.getPos());
+			graphManager.setStartPos(spot.getPos());
 			debug("Start Position Selected!");
 		}else{
 			debug("chooseStartPos: Startbox inference failed, or there were no mexes within the startbox.");

@@ -2,13 +2,18 @@ package zkgbai.economy.tasks;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Feature;
+import com.springrts.ai.oo.clb.FeatureDef;
+
+import java.beans.FeatureDescriptor;
 
 public class ReclaimTask extends WorkerTask {
 	public Feature target;
+	public FeatureDef def;
 	public ReclaimTask(Feature feat){
 		super();
 		this.target = feat;
-		this.position = target.getPosition();
+		this.def = feat.getDef();
+		this.position = feat.getPosition();
 	}
 	
 	@Override

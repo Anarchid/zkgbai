@@ -9,6 +9,7 @@ import com.springrts.ai.oo.clb.Unit;
 public class Fighter {
     public float metalValue;
     public int id;
+    public int index;
     public Squad squad;
     protected Unit unit;
     protected static final short OPTION_SHIFT_KEY = (1 << 5); //  32

@@ -97,6 +97,15 @@ public class ShieldSquad extends Squad{
     }
 
     @Override
+    public void retreatTo(AIFloat3 pos, int frame){
+        // set a target for the squad to attack.
+        target = pos;
+        if (leader != null && leader.getUnit().getHealth() > 0) {
+            leader.moveTo(target, frame);
+        }
+    }
+
+    @Override
     public AIFloat3 getPos(){
         if (leader != null){
             return leader.getPos();
