@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.lwjgl.glfw.GLFW;
-import org.starfire.shine.*;
 import org.poly2tri.Poly2Tri;
 import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
@@ -47,8 +45,6 @@ public class GraphManager extends Module {
 
 	float avgMexValue = 0;
 	boolean graphInitialized = false;
-	
-	ImageBuffer threatMap;
 
 	static AIFloat3 nullpos = new AIFloat3(0,0,0);
 	AIFloat3 allyCenter = nullpos;
@@ -57,8 +53,8 @@ public class GraphManager extends Module {
 	
 	public HashMap<String, Integer> pylonDefs; 
 	int pylonCounter;
-	private ImageBuffer graphImage;
-	private Graphics graphGraphics;
+	//private Image graphImage;
+	//private Graphics graphGraphics;
 	
 	public GraphManager(ZKGraphBasedAI parent){
 		this.parent = parent;
@@ -79,22 +75,15 @@ public class GraphManager extends Module {
 		pylonDefs.put("armfus", 150);
 		pylonDefs.put("cafus", 150);
 		
-		int width = callback.getMap().getWidth();
-		int height = callback.getMap().getHeight();
+		final int width = callback.getMap().getWidth();
+		final int height = callback.getMap().getHeight();
 
-		this.graphImage = new ImageBuffer(width, height);
-		try{
-			this.graphGraphics = graphImage.getImage().getGraphics();
-		}catch (Exception e){
-			parent.debug(e.getMessage());
-		}
 		parent.debug("GraphManager: Parsing metal spots...");
 		
 		ArrayList<HashMap> grpMexes = parseMetalSpotsGRP();
 		if(grpMexes.size() > 0){
 			initializeGraph(grpMexes);
 		}
-		
 	}
 	
 	@Override
@@ -286,7 +275,6 @@ public class GraphManager extends Module {
     	}
 
     	calcCenters();
-    	paintGraph();
 
 		return 0;
 	}
@@ -405,7 +393,6 @@ public class GraphManager extends Module {
     	}
     	
     	doInitialInference();
-    	paintGraph();
     	graphInitialized = true;
     }
     
@@ -481,12 +468,8 @@ public class GraphManager extends Module {
 		}
     }
     
-	private void paintGraph(){
-		
-		int w = graphImage.getWidth();
-		int h = graphImage.getHeight();
-		
-		graphGraphics.setBackground(new Color(0, 0, 0, 0));
+	/*public void paintGraph(){
+
 		graphGraphics.clear();
 		
 		Color spotOwned = new Color(0,255,0,255);
@@ -499,7 +482,7 @@ public class GraphManager extends Module {
 
 		for (Link l:links){
 			Color linkColor;
-			graphGraphics.setLineWidth(2f);
+			graphGraphics.setLineWidth(5);
 			if(l.connected){
 				linkColor = linkLinked;
 			}else{
@@ -547,8 +530,6 @@ public class GraphManager extends Module {
 				paintCircleOutline(x, y, 8);
 			}
 		}
-
-		graphGraphics.flush();
 	}
 	
 	private void paintCircleOutline(int x, int y, int r){
@@ -557,7 +538,7 @@ public class GraphManager extends Module {
 
 	private void paintCircle(int x, int y, int r){
 		graphGraphics.fillOval(x - r, y - r, 2 * r, 2 * r);
-	}
+	}*/
 
 	public void setStartPos(AIFloat3 pos){
 		startPos = pos;
@@ -736,7 +717,7 @@ public class GraphManager extends Module {
 		AIFloat3 closest = null;
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
-			if (!l.connected && l.length < 1500){
+			if (!l.connected && l.length < 1500 && l.isOwned()){
 				float dist = groundDistance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
@@ -751,7 +732,7 @@ public class GraphManager extends Module {
 		AIFloat3 closest = null;
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
-			if (!l.connected && l.length > 900 && l.length < 1500){
+			if (!l.connected && l.isOwned() && l.length > 900 && l.length < 1500){
 				float dist = groundDistance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
@@ -813,10 +794,6 @@ public class GraphManager extends Module {
     	}else{
     		return position;
     	}	
-    }
-
-    public Image getGraphImage(){
-    	return this.graphImage.getImage();
     }
     
 	public void setLosManager(LosManager losManager) {

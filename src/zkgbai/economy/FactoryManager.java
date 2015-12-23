@@ -242,7 +242,7 @@ public class FactoryManager extends Module {
     }
 
     private Boolean needWorkers(){
-        if (((float) numWorkers-1 < Math.floor(economyManager.effectiveIncome/5) + economyManager.fusions.size() || numWorkers < economyManager.reclaimTasks.size())
+        if (((float) numWorkers-1 < Math.floor(economyManager.effectiveIncome/5) + economyManager.fusions.size() || economyManager.reclaimTasks.size() > (numWorkers * 3)/2)
                 && (numFighters > numWorkers || numWorkers == 0)
                 && (economyManager.effectiveIncome > 9 || numWorkers == 0)) {
             return true;
@@ -255,7 +255,7 @@ public class FactoryManager extends Module {
             return "armrectr";
         }
 
-        if (enemyHasAir && (Math.random() > 0.75 || warManager.AAs.size() < 3)){
+        if (enemyHasAir && (Math.random() > 0.70 + (0.05 * (float) factories.size()) || warManager.AAs.size() < 3)){
             return "armjeth";
         }
 
@@ -321,7 +321,7 @@ public class FactoryManager extends Module {
             return "cornecro";
         }
 
-        if (enemyHasAir && (Math.random() > 0.66 || warManager.AAs.size() < 4)){
+        if (enemyHasAir && (Math.random() > 0.60 + (0.075 * (float) factories.size()) || warManager.AAs.size() < 4)){
             return "corcrash";
         }
 
@@ -384,7 +384,7 @@ public class FactoryManager extends Module {
             return "amphcon";
         }
 
-        if (enemyHasAir && (Math.random() > 0.85 || warManager.AAs.size() < 2)){
+        if (enemyHasAir && (Math.random() > 0.80 + (0.05 * (float) factories.size()) || warManager.AAs.size() < 2)){
             return "amphaa";
         }
 
@@ -423,7 +423,7 @@ public class FactoryManager extends Module {
             return "corned";
         }
 
-        if (enemyHasAir && (Math.random() > 0.75 || warManager.AAs.size() < 3)){
+        if (enemyHasAir && (Math.random() > 0.70 + (0.05 * (float) factories.size()) || warManager.AAs.size() < 3)){
             return "vehaa";
         }
 
@@ -462,7 +462,7 @@ public class FactoryManager extends Module {
             return "corch";
         }
 
-        if (enemyHasAir && (Math.random() > 0.75 || warManager.AAs.size() < 3)) {
+        if (enemyHasAir && (Math.random() > 0.70 + (0.05 * (float) factories.size()) || warManager.AAs.size() < 3)) {
             return "hoveraa";
         }
 
@@ -498,23 +498,28 @@ public class FactoryManager extends Module {
             return "coracv";
         }
 
-        if (enemyHasAir && (Math.random() > 0.75 || warManager.AAs.size() < 3)){
+        if (enemyHasAir && (Math.random() > 0.70 + (0.05 * (float) factories.size()) || warManager.AAs.size() < 3)){
             return "corsent";
         }
 
         if (raiderSpam < 0) {
-            if (economyManager.adjustedIncome > 20){
+            if (economyManager.adjustedIncome > 20 && Math.random() > 0.5){
                 raiderSpam++;
                 return "panther";
+            }else {
+                if (economyManager.adjustedIncome < 20) {
+                    raiderSpam += 3;
+                }else{
+                    raiderSpam++;
+                }
+                return "logkoda";
             }
-            raiderSpam += 3;
-            return "logkoda";
         }
 
         raiderSpam -= 2;
         double rand = Math.random();
         if (economyManager.adjustedIncome < 35) {
-            if (rand > 0.25) {
+            if (rand > 0.35) {
                 return "correap";
             } else {
                 return "tawf114";
@@ -535,7 +540,7 @@ public class FactoryManager extends Module {
             return "arm_spider";
         }
 
-        if (enemyHasAir && (Math.random() > 0.85 || warManager.AAs.size() < 3)){
+        if (enemyHasAir && (Math.random() > 0.80 + (0.05 * (float) factories.size()) || warManager.AAs.size() < 3)){
             return "spideraa";
         }
 
@@ -585,7 +590,7 @@ public class FactoryManager extends Module {
             return "armca";
         }
 
-        if (enemyHasAir && (Math.random() > 0.75 || warManager.AAs.size() < 3)){
+        if (enemyHasAir && (Math.random() > 0.70 + (0.05 * (float) factories.size()) || warManager.AAs.size() < 3)){
             return "gunshipaa";
         }
 

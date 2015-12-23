@@ -9,14 +9,6 @@ import java.util.List;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.*;
 
-import org.lwjgl.glfw.GLFW;
-import org.starfire.shine.Color;
-import org.starfire.shine.Graphics;
-import org.starfire.shine.Image;
-import org.starfire.shine.ImageBuffer;
-import org.starfire.shine.opengl.pbuffer.GraphicsFactory;
-
-import org.starfire.shine.util.*;
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.EconomyManager;
@@ -59,9 +51,14 @@ public class MilitaryManager extends Module {
 	RadarIdentifier radarID;
 	
 	int maxUnitPower = 0;
-	ImageBuffer threatmap;
-	Graphics threatGraphics;
-	ArrayList<TargetMarker> targetMarkers;
+	//Image threatmap;
+	//Graphics threatGraphics;
+	ArrayGraphics threatGraphics;
+	ArrayGraphics allyThreatGraphics;
+	ArrayGraphics frontLineGraphics;
+	public ArrayList<TargetMarker> targetMarkers;
+	final int width;
+	final int height;
 	
     public static final short OPTION_SHIFT_KEY = (1 << 5); //  32
 	static AIFloat3 nullpos = new AIFloat3(0,0,0);
@@ -133,16 +130,12 @@ public class MilitaryManager extends Module {
 		this.pathfinder = new Pathfinder(this);
 		
 		targetMarkers = new ArrayList<TargetMarker>();
-		int width = parent.getCallback().getMap().getWidth();
-		int height = parent.getCallback().getMap().getHeight();
-		
-		this.threatmap = new ImageBuffer(width, height);
-		try {
-			this.threatGraphics = threatmap.getImage().getGraphics();
-		}catch (Exception e){
-			parent.printException(e);
-			System.exit(0);
-		}
+		width = parent.getCallback().getMap().getWidth();
+		height = parent.getCallback().getMap().getHeight();
+
+		this.threatGraphics = new ArrayGraphics(width, height);
+		this.allyThreatGraphics = new ArrayGraphics(width, height);
+		this.frontLineGraphics = new ArrayGraphics(width, height);
 		
 		try{
 			radarID = new RadarIdentifier(parent.getCallback());
@@ -151,55 +144,47 @@ public class MilitaryManager extends Module {
 		}
 	}
 	
-	private void paintThreatMap(){
-		
-		int w = threatmap.getWidth();
-		int h = threatmap.getHeight();
-		
-		threatGraphics.setBackground(new Color(0, 0, 0, 0));
-        threatGraphics.clear();
-		threatGraphics.setDrawMode(Graphics.MODE_ADD);
+	public void paintThreatMap(){
+		threatGraphics.clear();
+		allyThreatGraphics.clear();
+		frontLineGraphics.clear();
 
 		// paint allythreat for raiders
 		for (Raider r:raiders){
-			float power = Math.min(1.0f, (r.getUnit().getPower() + r.getUnit().getMaxHealth())/5000);
-			float radius = r.getUnit().getMaxRange();
+			float power = 1.5f * (r.getUnit().getPower() + r.getUnit().getMaxHealth())/5000;
 			AIFloat3 pos = r.getPos();
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
-			int rad = 50;
+			int rad = 65;
 
-			threatGraphics.setColor(new Color(0f, power, 0f));
-			paintCircle(x, y, rad);
+			allyThreatGraphics.paintCircle(x, y, rad, power);
 		}
 
 		// paint allythreat for fighters
 		for (Fighter f:fighters.values()){
-			float power = Math.min(1.0f, ((f.getUnit().getPower() + f.getUnit().getMaxHealth())/5000) * 1.5f);
+			float power = 3f * (f.getUnit().getPower() + f.getUnit().getMaxHealth())/5000f;
 			AIFloat3 pos = f.getPos();
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
-			int rad = 60;
+			int rad = 150;
 
-			threatGraphics.setColor(new Color(0f, power, 0f));
-			paintCircle(x, y, rad);
+			allyThreatGraphics.paintCircle(x, y, rad, power);
 		}
 
 		// paint allythreat for porc
 		for (Unit p:ecoManager.porcs){
-			float power = Math.min(1.0f, ((p.getPower() + p.getMaxHealth())/5000) * 2);
+			float power = 2 * (p.getPower() + p.getMaxHealth())/5000;
 			float radius = p.getMaxRange();
 			AIFloat3 pos = p.getPos();
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 			int rad = (int) radius/8;
 
-			threatGraphics.setColor(new Color(0f, power, 0f));
-			paintCircle(x, y, rad);
+			allyThreatGraphics.paintCircle(x, y, rad, power);
 		}
 
 		for(Enemy t:targets.values()){
-			float effectivePower = Math.min(1.0f , t.getDanger()/5000);
+			float effectivePower = t.getDanger()/5000;
 
 			AIFloat3 position = t.position;
 
@@ -212,21 +197,18 @@ public class MilitaryManager extends Module {
 
 				if (t.speed > 0) {
 					// for enemy mobiles
-					effectivePower *= 1-((frame - t.lastSeen)/1800); // reduce threat over time when enemies leave los
+					effectivePower *= 1 - ((frame - t.lastSeen)/1800); // reduce threat over time when enemies leave los
 					if (!t.isRiot) {
-						threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
-						paintCircle(x, y, r); // draw direct threat circle
+						threatGraphics.paintCircle(x, y, r, effectivePower);
 					}else{
 						// use a threat gradient for riots to improve pathing intelligence
-						threatGraphics.setColor(new Color(effectivePower/3, 0f, 0f)); //Direct Threat Color, red
-						paintCircle(x, y, r/2);
-						paintCircle(x, y, r);
-						paintCircle(x, y, (int) (r*1.5f));
+						threatGraphics.paintCircle(x, y, r/2, effectivePower/3);
+						threatGraphics.paintCircle(x, y, r, effectivePower/3);
+						threatGraphics.paintCircle(x, y, (int) (r*1.5f), effectivePower/3);
 					}
 				} else {
 					// for enemy statics
-					threatGraphics.setColor(new Color(effectivePower, 0f, 0f)); //Direct Threat Color, red
-					paintCircle(x, y, (int) (r*1.2f)); // draw direct threat circle.
+					threatGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower);
 				}
 
 
@@ -240,11 +222,8 @@ public class MilitaryManager extends Module {
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 
-			threatGraphics.setColor(new Color(0f, 0f, 0.5f)); // front line territory color, blue
-			paintCircle(x, y, 75); // 800 elmo radius around each frontline mex
+			frontLineGraphics.paintCircle(x, y, 75, 0.1f);
 		}
-
-		threatGraphics.flush();
 
 		ArrayList<TargetMarker> deadMarkers = new ArrayList<TargetMarker>();
 		for(TargetMarker tm:targetMarkers){
@@ -262,66 +241,32 @@ public class MilitaryManager extends Module {
 		
 	}
 	
-	private void paintCircle(int x, int y, int r){
-		threatGraphics.fillOval(x-r, y-r, 2*r, 2*r);
-	}
-	
-	private void paintHollowCircle(int x, int y, int r){
-		threatGraphics.drawOval(x-r, y-r, 2*r, 2*r);
-	}
-	
-	public Image getThreatMap(){
-		return this.threatmap.getImage();
-	}
-	
 	public float getThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
-		Color c;
-		try{
-			c = threatmap.getImage().getColor(x,y);
-		}catch (Exception e) {
-			return 0;
-		}
-		float threat = (float) c.getRed();
-		return threat/255;
+
+		return threatGraphics.getValue(x, y);
 	}
 
 	public float getEffectiveThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
-		Color c;
-		try{
-			c = threatmap.getImage().getColor(x,y);
-		}catch (Exception e) {
-			return 0;
-		}
-		float threat = (float) c.getRed();
-		float pthreat = (float) c.getGreen();
-		return (threat-(2*pthreat))/255;
+
+		return threatGraphics.getValue(x, y) - allyThreatGraphics.getValue(x, y);
 	}
 
 	public float getFriendlyThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
-		try {
-			Color c = threatmap.getImage().getColor(x,y);
-			float pthreat = (float) c.getGreen();
-			return pthreat / 255;
-		}catch (Exception e){
-			return 0;
-		}
+
+		return allyThreatGraphics.getValue(x, y);
 	}
 
 	public boolean isFrontLine(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
-		Color c = threatmap.getImage().getColor(x,y);
-		float value = (float) c.getBlue();
-		if (value/255 > 0){
-			return true;
-		}
-		return false;
+
+		return (frontLineGraphics.getValue(x, y) > 0);
 	}
 
 	private void createScoutTasks(){
@@ -474,6 +419,7 @@ public class MilitaryManager extends Module {
 			nextAirSquad = new Squad();
 			nextAirSquad.setTarget(getRallyPoint(f.getPos()), frame);
 			nextAirSquad.income = ecoManager.effectiveIncome;
+			nextAirSquad.isAirSquad = true;
 		}
 
 		nextAirSquad.addUnit(f, frame);
@@ -500,7 +446,7 @@ public class MilitaryManager extends Module {
 		}
 		if (nextShieldSquad != null && frame % 180 == 0) {
 			// shields only get one squad into which it dumps all of its mobs.
-			if (nextShieldSquad.getHealth() < 0.95){
+			if (nextShieldSquad.getHealth() < 0.85){
 				nextShieldSquad.retreatTo(graphManager.getAllyCenter(), frame);
 			}else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1000){
 				AIFloat3 target = getTarget(nextShieldSquad.getPos(), true);
@@ -531,7 +477,7 @@ public class MilitaryManager extends Module {
 				}
 				break;
 			}else if (s.status == 'a' && !s.assigned){
-				if (getEffectiveThreat(s.getPos()) > 0){
+				if (getEffectiveThreat(s.getPos()) > 0 && !s.isAirSquad){
 					s.retreatTo(graphManager.getAllyCenter(), frame);
 					assigned = true;
 					s.assigned = true;
@@ -757,24 +703,28 @@ public class MilitaryManager extends Module {
 				healedUnits.add(u);
 				continue;
 			}
-			if(u.getHealth() > 0 && !retreatedUnits.contains(u)){
+			if(u.getHealth() > 0 && !retreatedUnits.contains(u)) {
 				UnitDef building = callback.getUnitDefByName("factorygunship");
 				position = callback.getMap().findClosestBuildSite(building, position, 600f, 3, 0);
-				
-				Deque<AIFloat3> path = pathfinder.findPath(u, position, pathfinder.AVOID_ENEMIES);
-				u.moveTo(path.poll(), (short) 0, frame + 300); // skip first waypoint if target actually found to prevent stuttering, otherwise use it.
 
-				if (path.isEmpty()){
-					// pathing failed
-				}else{
-					u.moveTo(path.poll(), (short) 0, frame + 300); // immediately move to first non-redundant waypoint
+				if (!u.getDef().isAbleToFly()) {
+					Deque<AIFloat3> path = pathfinder.findPath(u, position, pathfinder.AVOID_ENEMIES);
+					u.moveTo(path.poll(), (short) 0, frame + 300); // skip first waypoint if target actually found to prevent stuttering, otherwise use it.
 
-					int pathSize = Math.min(5, path.size());
-					for(int i=0;i<pathSize;i++){ // queue up to the next 5 waypoints with shift
-						u.moveTo(path.poll(), OPTION_SHIFT_KEY, frame+300);
-						if(path.isEmpty()) break;
+					if (path.isEmpty()) {
+						// pathing failed
+					} else {
+						u.moveTo(path.poll(), (short) 0, frame + 300); // immediately move to first non-redundant waypoint
+
+						int pathSize = Math.min(5, path.size());
+						for (int i = 0; i < pathSize; i++) { // queue up to the next 5 waypoints with shift
+							u.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 300);
+							if (path.isEmpty()) break;
+						}
+						// let the rest of the waypoints get handled the next time around.
 					}
-					// let the rest of the waypoints get handled the next time around.
+				}else{
+					u.moveTo(position, (short) 0, frame + 300); // don't use pathing for air units.
 				}
 				retreatedUnits.add(u);
 				retreated = true;
@@ -935,9 +885,8 @@ public class MilitaryManager extends Module {
 				mediumRaidQueue.clear();
 			}
 
-			paintThreatMap();
-
 			updateTargets();
+			paintThreatMap();
 			createScoutTasks();
 			checkScoutTasks();
 
@@ -1306,6 +1255,9 @@ public class MilitaryManager extends Module {
 			lastDefenseFrame = frame;
 			DefenseTarget dt = null;
 			if (attacker != null){
+				if (attacker.getDef() != null && attacker.getDef().getName().equals("wolverine_mine")){
+					return 0; // ignore wolverine mines, since they don't lead back to the wolv that spawned them.
+				}
 				if (attacker.getPos() != null) {
 					dt = new DefenseTarget(attacker.getPos(), damage, frame);
 				}

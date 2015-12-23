@@ -6,16 +6,15 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Map;
 import com.springrts.ai.oo.clb.OOAICallback;
 
-import org.starfire.shine.Image;
-import org.starfire.shine.ImageBuffer;
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 
 public class LosManager extends Module {
 	ZKGraphBasedAI parent;
-	
+
 	private List<Integer> losMap;
-	private ImageBuffer losImage;
+	//private Image losImage;
+	//private Graphics losGraphics;
 
 	private int mapWidth;
 	private int mapHeight;
@@ -37,9 +36,12 @@ public class LosManager extends Module {
 		this.losMap = map.getLosMap();
 		this.gridWidth = mapWidth / losGridSize;
 		this.gridHeight = mapHeight / losGridSize;
-		this.losImage = new ImageBuffer(gridWidth+1, gridHeight+1);
 
-		this.updateLosImage();
+		//losImage = new Image(gridWidth+1, gridHeight+1);
+		//losGraphics = losImage.getGraphics();
+
+
+		//this.updateLosImage();
 	}
 	
 	@Override
@@ -52,28 +54,19 @@ public class LosManager extends Module {
 	public int update(int frame){
 		this.losMap = map.getLosMap();
 		
-		try{
-			if(frame%5 == 0){
-				updateLosImage();
-			}
-		}
-		catch(Exception e){
-			parent.printException(e);
-		}
-		
 		return 0;
 	}
 	
-	private void updateLosImage(){
+	/*private void updateLosImage(){
 		if(losImage != null){
 			for(int x=0;x<gridWidth;x++){
 				for(int z=0;z<gridHeight;z++){
 					int coord = Math.min(x+z*gridWidth,losMap.size()-1);
 					
-					int value = losMap.get(coord) * 4;
+					float value = ((float) losMap.get(coord) * 4f)/255f;
 
 					try{
-						losImage.setRGBA(x, z, value, value, value, 255);
+						//losGraphics.setPixel(x, z, new Color(value, value, value, 255));
 					}catch(Exception e){
 						parent.debug("Exception when setting lospixel <"+x+","+z+"> out of <"+gridWidth+"x"+gridHeight+">");
 						parent.printException(e);
@@ -83,11 +76,11 @@ public class LosManager extends Module {
 		}else{
 			parent.debug("losImage is null!");
 		}
-	}
+	}*/
 	
-	public Image getImage(){
-		return this.losImage.getImage();
-	}
+	/*public Image getImage(){
+		return this.losImage;
+	}*/
 	
 	public boolean isInLos(AIFloat3 position){
 		return isInLos(position,0);
