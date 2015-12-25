@@ -2,6 +2,7 @@ package zkgbai.military;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
+import zkgbai.ZKGraphBasedAI;
 import zkgbai.military.tasks.FighterTask;
 import zkgbai.military.tasks.ScoutTask;
 
@@ -13,12 +14,14 @@ public class Raider extends Fighter {
     public boolean scouting = true;
     private int lastTaskFrame;
     private AIFloat3 lastpos;
+    private static ZKGraphBasedAI parent;
 
-    public Raider(Unit u, float metal) {
+    public Raider(Unit u, float metal, ZKGraphBasedAI ai) {
         super(u, metal);
         this.task = null;
         this.lastTaskFrame = 0;
         this.lastpos = getPos();
+        parent = ai;
     }
 
     public void setTask(ScoutTask t) {
@@ -44,18 +47,22 @@ public class Raider extends Fighter {
         scouting = false;
         unit.stop((short) 0, frame);
         unit.setMoveState(1, (short) 0, frame + 30); // set to maneuver
-        unit.fight(path.poll(), (short) 0, frame + 3000); // skip first waypoint if target actually found to prevent stuttering
+        unit.fight(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
+        if (path.size() > 2){
+            path.poll();
+            path.poll();
+        }
 
 
         if (path.isEmpty()) {
             return; // pathing failed
         } else {
-            unit.fight(path.poll(), (short) 0, frame + 3000); // skip first waypoint if target actually found to prevent stuttering
+            unit.fight(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
 
             int pathSize = Math.min(5, path.size());
             int i = 0;
             while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
-                unit.fight(path.poll(), OPTION_SHIFT_KEY, frame + 3000); // skip first waypoint if target actually found to prevent stuttering
+                unit.fight(path.poll(), OPTION_SHIFT_KEY, frame + 3000);
                 i++;
                 // skip every other waypoint except the last, since they're not very far apart.
                 if (path.size() > 1) {
@@ -71,7 +78,14 @@ public class Raider extends Fighter {
         scouting = false;
         unit.stop((short) 0, frame);
         unit.setMoveState(2, (short) 0, frame + 10); // set to maneuver
-        unit.moveTo(path.poll(), (short) 0, frame + 3000); // skip first waypoint if target actually found to prevent stuttering, otherwise use it.
+        lastTaskFrame = frame;
+        lastpos = unit.getPos();
+
+        unit.moveTo(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
+        if (path.size() > 2){
+            path.poll();
+            path.poll();
+        }
 
         if (path.isEmpty()) {
             return; // pathing failed
@@ -79,12 +93,16 @@ public class Raider extends Fighter {
             unit.moveTo(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
 
             int pathSize = Math.min(5, path.size());
-            for (int i = 0; i < pathSize; i++) { // queue up to the first 5 waypoints
-                unit.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 3000); // queue the rest with shift.
+            int i = 0;
+            while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
+                unit.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 3000);
+                i++;
+                // skip every other waypoint except the last, since they're not very far apart.
+                if (path.size() > 1) {
+                    path.poll();
+                }
             }
         }
-        lastTaskFrame = frame;
-        lastpos = unit.getPos();
     }
 
     public void unstick(int frame) {

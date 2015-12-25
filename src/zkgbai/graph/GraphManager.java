@@ -50,6 +50,7 @@ public class GraphManager extends Module {
 	AIFloat3 allyCenter = nullpos;
 	AIFloat3 enemyCenter = nullpos;
 	AIFloat3 startPos = nullpos;
+	public boolean isWaterMap = false;
 	
 	public HashMap<String, Integer> pylonDefs; 
 	int pylonCounter;
@@ -457,6 +458,10 @@ public class GraphManager extends Module {
 			avgMexValue += ms.value / metalSpots.size();
 		}
 		for (MetalSpot ms: metalSpots){
+			if (callback.getMap().getElevationAt(ms.getPos().x, ms.getPos().z) < 10f){
+				this.isWaterMap = true;
+			}
+
 			float var = ms.value/avgMexValue;
 			if (var > 1.2){
 				ms.weight = 3;

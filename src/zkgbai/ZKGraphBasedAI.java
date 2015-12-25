@@ -356,6 +356,18 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		return 0; // signaling: OK
 	}
 
+	@Override
+	public int enemyFinished(Unit enemy) {
+		for (Module module : modules) {
+			try {
+				module.enemyFinished(enemy);
+			} catch (Exception e) {
+				printException(e);
+			}
+		}
+		return 0; // signaling: OK
+	}
+
     @Override
     public int enemyEnterRadar(Unit enemy) {
     	for (Module module : modules) {
@@ -592,6 +604,13 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         ex.printStackTrace(pw);
         debug("exception(" + sw.toString().replace("\n", " ") + ") " + ex);
     }
+
+	public void printException(Throwable ex) {
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		ex.printStackTrace(pw);
+		debug("exception(" + sw.toString().replace("\n", " ") + ") " + ex);
+	}
 
 	private void chooseStartPos(){
 		List<MetalSpot> spots = graphManager.getAllyTerritory();

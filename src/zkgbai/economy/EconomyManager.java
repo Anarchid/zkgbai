@@ -34,7 +34,6 @@ public class EconomyManager extends Module {
 	List<ConstructionTask> porcTasks;
 	List<ConstructionTask> nanoTasks;
 	List<ConstructionTask> AATasks;
-	List<ConstructionTask> berthaTasks;
 	List<Unit> radars;
 	public List<Unit> porcs;
 	List<Unit> nanos;
@@ -45,7 +44,7 @@ public class EconomyManager extends Module {
 	List<Unit> AAs;
 	List<String> potentialFacList;
 	
-	float effectiveIncomeMetal = 0;
+	public float effectiveIncomeMetal = 0;
 	float effectiveIncomeEnergy = 0;
 	
 	public float effectiveIncome = 0;
@@ -58,6 +57,7 @@ public class EconomyManager extends Module {
 
 	boolean waterDamage = false;
 	boolean defendedFac = false;
+	boolean addedFacs = false;
 
 	
 	int frame = 0;
@@ -103,7 +103,6 @@ public class EconomyManager extends Module {
 		this.porcTasks = new ArrayList<ConstructionTask>();
 		this.nanoTasks = new ArrayList<ConstructionTask>();
 		this.AATasks = new ArrayList<ConstructionTask>();
-		this.berthaTasks = new ArrayList<ConstructionTask>();
 		this.radars = new ArrayList<Unit>();
 		this.porcs = new ArrayList<Unit>();
 		this.nanos = new ArrayList<Unit>();
@@ -160,7 +159,7 @@ public class EconomyManager extends Module {
 			if (effectiveIncome > 22) {
 				collectReclaimables();
 			}
-			if (effectiveIncome > 10){
+			if (mexes.size() > 1){
 				defendMexes();
 			}
 			setPriorities();
@@ -246,7 +245,6 @@ public class EconomyManager extends Module {
 		nanoTasks.remove(finished);
 		factoryTasks.remove(finished);
 		AATasks.remove(finished);
-		berthaTasks.remove(finished);
 
 		return 0;
     }
@@ -343,7 +341,6 @@ public class EconomyManager extends Module {
 		nanoTasks.remove(invalidtask);
 		factoryTasks.remove(invalidtask);
 		AATasks.remove(invalidtask);
-		berthaTasks.remove(invalidtask);
 
 		// if we have a dead worker or factory, remove them and their tasks.
     	 Worker deadWorker = null;
@@ -694,7 +691,7 @@ public class EconomyManager extends Module {
 			
 			if (ctask.buildType.getCost(m) > 300){
 				// give expensive stuff high prio
-				return (dist/(float)Math.log(dist)) - ctask.buildType.getCost(m) + (500 * (costMod - 1));
+				return (dist/(float)Math.log(dist)) - ctask.buildType.getCost(m) + (750 * (costMod - 2));
 			}else if (ctask.buildType.getName().equals("cormex")){
 				// for mexes
 				// favor expansion highly when not stalled
@@ -763,6 +760,11 @@ public class EconomyManager extends Module {
 	}
 
 	boolean buildCheck(ConstructionTask task){
+		// stop things from being built underwater if the map water does damage or if water pathing is bad on the map
+		if ((waterDamage || !graphManager.isWaterMap) && callback.getMap().getElevationAt(task.getPos().x, task.getPos().z) < 10f){
+			return false;
+		}
+
 		float xsize = 0;
 		float zsize = 0;
 
@@ -823,13 +825,6 @@ public class EconomyManager extends Module {
 					idlers.addAll(idle);
 					invalidtasks.add(t);
 				}
-			}
-
-			// stop things from being built underwater if the map water does damage
-			if (waterDamage && callback.getMap().getElevationAt(t.getPos().x, t.getPos().z) < 0){
-				List<Worker> idle = t.stopWorkers(frame);
-				idlers.addAll(idle);
-				invalidtasks.add(t);
 			}
 		}
 
@@ -958,7 +953,8 @@ public class EconomyManager extends Module {
 		// do we need a factory?
 		if ((facManager.factories.size() == 0 && factoryTasks.size() == 0)
 				|| (effectiveIncome > 40 && facManager.factories.size() == 1 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 65 && facManager.factories.size() == 2 && factoryTasks.size() == 0)) {
+				|| (effectiveIncome > 65 && facManager.factories.size() == 2 && factoryTasks.size() == 0)
+				|| (effectiveIncome > 120 && facManager.factories.size() == 3 && factoryTasks.size() == 0)) {
 			createFactoryTask(worker);
 		}
 
@@ -1000,11 +996,6 @@ public class EconomyManager extends Module {
 		// do we need pylons?
 		if (fusions.size() > 2 && !tooCloseToFac){
 			createGridTask(worker);
-		}
-
-		// kill the enemy!
-		if (effectiveIncome > 80 && berthaTasks.size() == 0 && fusions.size() > 4){
-			createBerthaTask(worker);
 		}
     }
     
@@ -1050,18 +1041,6 @@ public class EconomyManager extends Module {
 			porcTasks.add(ct);
 		}
     }
-
-	void createBerthaTask(Worker worker){
-		UnitDef bertha = callback.getUnitDefByName("armbrtha");
-		AIFloat3 position = getRadialPoint(graphManager.getAllyCenter(), 1000f);
-		position = callback.getMap().findClosestBuildSite(bertha, position, 600f, 3, 0);
-
-		ConstructionTask ct =  new ConstructionTask(bertha, position, 0);
-		if (buildCheck(ct)){
-			constructionTasks.add(ct);
-			berthaTasks.add(ct);
-		}
-	}
     
     void createFactoryTask(Worker worker){
 		UnitDef strider = callback.getUnitDefByName("striderhub");
@@ -1071,11 +1050,34 @@ public class EconomyManager extends Module {
 
 		if (potentialFacList.isEmpty()){
 			potentialFacList = terrainManager.getInitialFacList();
+			addedFacs = false;
 		}
 
-		if (effectiveIncome > 30 && !potentialFacList.contains("factorygunship") && !potentialFacList.contains("striderhub")){
+		if (effectiveIncome > 30 && !addedFacs){
 			potentialFacList.add("factorygunship");
 			potentialFacList.add("striderhub");
+			addedFacs = true;
+		}
+
+		boolean hasStriders = false;
+		for (Worker f:facManager.factories){
+			if (f.getUnit().getDef().getName().equals("striderhub")){
+				hasStriders = true;
+			}
+
+			if (potentialFacList.contains(f.getUnit().getDef().getName())){
+				potentialFacList.remove(f.getUnit().getDef().getName()); // don't build the same fac twice.
+			}
+		}
+
+		if (facManager.factories.size() < 3 || hasStriders) {
+			int i = (int) Math.round(Math.random() * (potentialFacList.size() - 1));
+			String facName = potentialFacList.get(i);
+			factory = callback.getUnitDefByName(facName);
+			potentialFacList.remove(i);
+		}else{
+			factory = callback.getUnitDefByName("striderhub");
+			potentialFacList.remove("striderhub");
 		}
 
 		AIFloat3 position = worker.getUnit().getPos();
@@ -1087,19 +1089,15 @@ public class EconomyManager extends Module {
 			while (!good) {
 				position = getRadialPoint(facpos, 800f);
 				position = callback.getMap().findClosestBuildSite(gunship,position,600f, 3, 0);
-				if (distance(facpos, position) > 700){
+				ConstructionTask ct =  new ConstructionTask(factory, position, 0); // only for preventing stupid placement
+				if (distance(getNearestFac(position).getPos(), position) > 700 && buildCheck(ct)){
 					good = true;
 				}
 			}
 		}
-
-		int i = (int) Math.round(Math.random() * (potentialFacList.size() - 1));
-		String facName = potentialFacList.get(i);
-		factory = callback.getUnitDefByName(facName);
-		potentialFacList.remove(i);
     	
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
-		if (distance(closest.getPos(),position)<100 || callback.getFriendlyUnitsIn(position, 150f).size() > 0){
+		if (distance(closest.getPos(),position)<100){
     		AIFloat3 mexpos = closest.getPos();
 			float distance = distance(mexpos, position);
 			float extraDistance = 150;
@@ -1108,6 +1106,10 @@ public class EconomyManager extends Module {
 			position.x = position.x+vx*extraDistance;
 			position.z = position.z+vz*extraDistance;
     	}
+
+		if (callback.getFriendlyUnitsIn(position, 150f).size() > 0){
+			position = getDirectionalPoint(position, graphManager.getAllyCenter(), 200f);
+		}
     	
     	position = callback.getMap().findClosestBuildSite(factory,position,600f, 3, 0);
     	
@@ -1223,6 +1225,10 @@ public class EconomyManager extends Module {
 	}
 
 	boolean needDefender(AIFloat3 position){
+		if (distance(position, graphManager.getClosestSpot(position).getPos()) > 600){
+			return false;
+		}
+
 		float porcdist = Float.MAX_VALUE;
 
 		for(Unit u:porcs){
@@ -1239,10 +1245,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		float minporcdist = 500;
-		if (effectiveIncome < 20){
-			minporcdist = 900;
-		}
+		float minporcdist = 460;
 
 		if (effectiveIncome > 20 && warManager.isFrontLine(position)){
 			minporcdist = 400;
@@ -1359,7 +1362,7 @@ public class EconomyManager extends Module {
 			}
 		}
 		// for singus
-		if (adjustedIncome > 70 && !facManager.factories.isEmpty() && fusions.size() < 5 && fusionTasks.isEmpty()){
+		if (adjustedIncome > 70 && !facManager.factories.isEmpty() && factoryTasks.isEmpty() && fusions.size() < 5 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
 			position = graphManager.getOverdriveSweetSpot(position);
@@ -1451,7 +1454,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if(gdist > 600) {
+		if(gdist > 500) {
 			ct = new ConstructionTask(pylon, position, 0);
 			if (buildCheck(ct) && !pylonTasks.contains(ct)){
 				constructionTasks.add(ct);
