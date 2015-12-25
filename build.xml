@@ -41,15 +41,10 @@
   </target>
 
   <target name="install" depends="dist">
-  	<exec executable="mkdir">
-		<arg value="-p"/>
-  		<arg value="${installDir}"/>
-  	</exec>
-	<exec executable="cp">
-		<arg value="-r"/>
-		<arg value="${dist}/"/>
-		<arg value="${installDir}"/>
-	</exec>
+    <mkdir dir="${installDir}" />
+    <copy overwrite="true" todir="${installDir}">
+      <fileset dir="${dist}/" />
+    </copy>
   </target>
 
   <target name="clean"
