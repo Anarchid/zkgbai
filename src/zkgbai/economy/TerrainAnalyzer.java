@@ -44,15 +44,6 @@ public class TerrainAnalyzer {
     }
 
     private void populateFacList(){
-        float mapZ = callback.getMap().getHeight();
-        float mapX = callback.getMap().getWidth();
-        if ((mapX > 1024 || mapZ > 1024)
-                || (mapX > 896 && mapZ > 896)){
-            debug(taMsg + "Large Map Detected: Enabling Air Starts.");
-            initialFacList.add("factorygunship");
-            //initialFacList.add("factoryplane");
-        }
-
         debug(taMsg + "Checking Veh Pathability..");
         PathResult veh = checkPathing(vehPath, 1.35f);
         if (veh.result){
@@ -73,7 +64,7 @@ public class TerrainAnalyzer {
 
         debug(taMsg + "Checking Bot Pathability..");
         PathResult bot = checkPathing(botPath, 1.4f);
-        if (bot.avgCostRatio < veh.avgCostRatio - 0.05f && bot.result){
+        if ((bot.avgCostRatio < veh.avgCostRatio - 0.05f || !veh.result) && bot.result){
             debug(taMsg + "Bot path check succeeded, enabling bots!");
             initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");

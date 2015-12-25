@@ -25,6 +25,7 @@ import zkgbai.graph.CostSupplier;
  */
 public class Pathfinder extends Object {
 
+    private MilitaryManager ai;
     OOAICallback callback;
     float mwidth, mheight;
     int smwidth;
@@ -32,6 +33,8 @@ public class Pathfinder extends Object {
     private final static int mapCompression = 8;
     private final static int originalMapRes = 16;
     private final static int mapRes = originalMapRes * mapCompression;
+    private Map<CostSupplier, float[]> costSupplierCosts = new HashMap<CostSupplier, float[]>();
+    private Map<CostSupplier, int[]> costSupplierLastUpdate = new HashMap<CostSupplier, int[]>();
 
     public Pathfinder(MilitaryManager ai) {
     	this.ai = ai;
@@ -53,10 +56,6 @@ public class Pathfinder extends Object {
             }
         }
     }
-
-    private Map<CostSupplier, float[]> costSupplierCosts = new HashMap<CostSupplier, float[]>();
-    private Map<CostSupplier, int[]> costSupplierLastUpdate = new HashMap<CostSupplier, int[]>();
-	private MilitaryManager ai;
 
     private float getCachedCost(CostSupplier supplier, float slope, float maxSlope, int pos) {
         if (!costSupplierCosts.containsKey(supplier)) {
@@ -90,6 +89,17 @@ public class Pathfinder extends Object {
      *
      */
     public Deque<AIFloat3> findPath(Unit u, AIFloat3 target, CostSupplier costs) {
+        try {
+            return findPathUnsafe(u, target, costs);
+        }catch (Throwable e){
+            ai.parent.printException(e);
+            Deque<AIFloat3> result = new ArrayDeque<AIFloat3>();
+            result.add(target);
+            return result;
+        }
+    }
+
+    private Deque<AIFloat3> findPathUnsafe(Unit u, AIFloat3 target, CostSupplier costs) {
         AIFloat3 start = u.getPos();
         Deque<AIFloat3> result = new ArrayDeque<AIFloat3>();
 

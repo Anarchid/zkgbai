@@ -15,6 +15,7 @@ public class Enemy {
 	float value = 0;
 	float speed = 0;
 	public int lastSeen = 0;
+	public boolean isPainted = false;
 	boolean visible = false;
 	boolean isStatic = false;
 	boolean isRadarOnly = true;
