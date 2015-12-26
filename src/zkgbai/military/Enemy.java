@@ -108,17 +108,18 @@ public class Enemy {
 		float health = 0;
 		float danger = 0;
 		if (ud != null) {
-			if (ud.getName().equals("arm_venom")) {
-				danger += 300;
+			if (!ud.isAbleToAttack()){
+				return 0;
 			}
-			if (unit.getHealth() > 0) {
+
+			if (unit.getHealth() > 0 && !isStatic) {
 				health = unit.getHealth();
 				danger = ud.getPower() + health;
 			} else {
 				health = ud.getHealth();
 				danger = ud.getPower() + health;
 			}
-			if (isFlamer){
+			if (isFlamer || ud.getName().equals("arm_venom")){
 				danger += 400;
 			}
 			if (isRiot){

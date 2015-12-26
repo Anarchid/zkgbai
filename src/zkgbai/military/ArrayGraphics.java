@@ -4,14 +4,14 @@ package zkgbai.military;
  * Created by haplo on 12/22/2015.
  */
 public class ArrayGraphics {
-    float[] data;
+    int[] data;
     int width;
     int height;
 
     public ArrayGraphics(int w, int h){
         width = w;
         height = h;
-        data = new float[width * height];
+        data = new int[width * height];
     }
 
     public void clear(){
@@ -20,7 +20,7 @@ public class ArrayGraphics {
         }
     }
 
-    public void paintCircle(int cx, int cy, int radius, float intensity){
+    public void paintCircle(int cx, int cy, int radius, int intensity){
         int beginX = Math.max(cx - radius + 1, 0);
         int endX =   Math.min(cx + radius, width);
 
@@ -42,6 +42,33 @@ public class ArrayGraphics {
 
                 if(sum < radsq) {
                     data[index] += intensity;
+                }
+            }
+        }
+    }
+
+    public void unpaintCircle(int cx, int cy, int radius, int intensity){
+        int beginX = Math.max(cx - radius + 1, 0);
+        int endX =   Math.min(cx + radius, width);
+
+        int beginY = Math.max(cy - radius + 1, 0);
+        int endY =   Math.min(cy + radius, height);
+
+        int radsq = radius * radius;
+
+        for (int x = beginX; x < endX; x++) {
+            int dX = (cx - x);
+            int dxSq = dX*dX;
+
+            for (int y = beginY; y < endY; y++) {
+                int dY = (cy - y);
+                int dySq = dY*dY;
+
+                int sum = dxSq + dySq;
+                int index = (y * width) + x;
+
+                if(sum < radsq) {
+                    data[index] = Math.max(data[index] - intensity, 0);
                 }
             }
         }

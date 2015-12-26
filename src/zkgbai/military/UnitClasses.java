@@ -141,7 +141,7 @@ public class UnitClasses {
         sappers.add("blastwing");
 
         // Things that should not retreat
-        noRetreat.add("corsh");
+        //noRetreat.add("corsh");
         noRetreat.add("armcrabe");
         noRetreat.add("spherepole");
         noRetreat.add("core_spectre");

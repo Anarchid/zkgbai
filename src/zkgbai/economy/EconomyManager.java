@@ -1043,9 +1043,6 @@ public class EconomyManager extends Module {
     }
     
     void createFactoryTask(Worker worker){
-		UnitDef strider = callback.getUnitDefByName("striderhub");
-		UnitDef gunship = callback.getUnitDefByName("factorygunship");
-
 		UnitDef factory;
 
 		if (potentialFacList.isEmpty()){
@@ -1083,33 +1080,36 @@ public class EconomyManager extends Module {
 		AIFloat3 position = worker.getUnit().getPos();
 		position.x = position.x + 150;
 		position.z = position.z + 150;
+
 		if (facManager.factories.size() > 0) {
 			boolean good = false;
-			AIFloat3 facpos = getNearestFac(position).getPos();
+
 			while (!good) {
+				AIFloat3 facpos = getNearestFac(position).getPos();
+
+				// don't cram factories together
 				position = getRadialPoint(facpos, 800f);
-				position = callback.getMap().findClosestBuildSite(gunship,position,600f, 3, 0);
+				position = graphManager.getClosestSpot(position).getPos();
+
+				// don't let factories get blocked by random crap
+				if (callback.getFriendlyUnitsIn(position, 250f).size() > 0){
+					position = getDirectionalPoint(position, graphManager.getAllyCenter(), 150f);
+				}
+				position = callback.getMap().findClosestBuildSite(factory,position,600f, 3, 0);
+
 				ConstructionTask ct =  new ConstructionTask(factory, position, 0); // only for preventing stupid placement
 				if (distance(getNearestFac(position).getPos(), position) > 700 && buildCheck(ct)){
 					good = true;
 				}
 			}
 		}
-    	
+
+		// don't block mexes with factories
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
 		if (distance(closest.getPos(),position)<100){
     		AIFloat3 mexpos = closest.getPos();
-			float distance = distance(mexpos, position);
-			float extraDistance = 150;
-			float vx = (position.x - mexpos.x)/distance; 
-			float vz = (position.z - mexpos.z)/distance; 
-			position.x = position.x+vx*extraDistance;
-			position.z = position.z+vz*extraDistance;
+			position = getDirectionalPoint(mexpos, graphManager.getMapCenter(), 150f);
     	}
-
-		if (callback.getFriendlyUnitsIn(position, 150f).size() > 0){
-			position = getDirectionalPoint(position, graphManager.getAllyCenter(), 200f);
-		}
     	
     	position = callback.getMap().findClosestBuildSite(factory,position,600f, 3, 0);
     	

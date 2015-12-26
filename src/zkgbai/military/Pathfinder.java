@@ -88,18 +88,8 @@ public class Pathfinder extends Object {
      * @see #AVOID_ENEMIES found.
      *
      */
-    public Deque<AIFloat3> findPath(Unit u, AIFloat3 target, CostSupplier costs) {
-        try {
-            return findPathUnsafe(u, target, costs);
-        }catch (Throwable e){
-            ai.parent.printException(e);
-            Deque<AIFloat3> result = new ArrayDeque<AIFloat3>();
-            result.add(target);
-            return result;
-        }
-    }
 
-    private Deque<AIFloat3> findPathUnsafe(Unit u, AIFloat3 target, CostSupplier costs) {
+    public Deque<AIFloat3> findPath(Unit u, AIFloat3 target, CostSupplier costs) {
         AIFloat3 start = u.getPos();
         Deque<AIFloat3> result = new ArrayDeque<AIFloat3>();
 
@@ -261,6 +251,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return Float.MAX_VALUE;
             }
+
             return 10 * (slope / maxSlope) + 20 * ai.getThreat(pos);
         }
     };

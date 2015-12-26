@@ -157,7 +157,7 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for raiders
 		for (Raider r : raiders) {
-			float power = 1.5f * (r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 5000;
+			int power = (int) (1.5f * (r.getUnit().getPower() + r.getUnit().getMaxHealth()));
 			AIFloat3 pos = r.getPos();
 			int x = (int) pos.x / 8;
 			int y = (int) pos.z / 8;
@@ -167,7 +167,7 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for fighters
 		for (Fighter f : fighters.values()) {
-			float power = 3f * (f.getUnit().getPower() + f.getUnit().getMaxHealth()) / 5000f;
+			int power = (int) (3f * (f.getUnit().getPower() + f.getUnit().getMaxHealth()));
 			AIFloat3 pos = f.getPos();
 			int x = (int) pos.x / 8;
 			int y = (int) pos.z / 8;
@@ -180,7 +180,7 @@ public class MilitaryManager extends Module {
 		// Note: threat and allythreat for porc are painted separately.
 
 		for(Enemy t:targets.values()){
-			float effectivePower = t.getDanger()/5000;
+			int effectivePower = (int) t.getDanger();
 
 			AIFloat3 position = t.position;
 
@@ -212,7 +212,7 @@ public class MilitaryManager extends Module {
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 
-			frontLineGraphics.paintCircle(x, y, 75, 0.1f);
+			frontLineGraphics.paintCircle(x, y, 75, 1);
 		}
 
 		ArrayList<TargetMarker> deadMarkers = new ArrayList<TargetMarker>();
@@ -234,18 +234,21 @@ public class MilitaryManager extends Module {
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
 
-		return threatGraphics.getValue(x, y) + enemyPorcGraphics.getValue(x, y);
+		return (threatGraphics.getValue(x, y) + enemyPorcGraphics.getValue(x, y))/5000f;
 	}
 
 	public float getEffectiveThreat(AIFloat3 position){
-		return getThreat(position) - getFriendlyThreat(position);
+		int x = (int) (position.x/8);
+		int y = (int) (position.z/8);
+
+		return ((threatGraphics.getValue(x, y) + enemyPorcGraphics.getValue(x, y)) - (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y)))/5000f;
 	}
 
 	public float getFriendlyThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
 
-		return allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y);
+		return (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y))/5000f;
 	}
 
 	public boolean isFrontLine(AIFloat3 position){
@@ -751,14 +754,14 @@ public class MilitaryManager extends Module {
 				outdated.add(t);
 
 				// Unpaint enemy threat for statics
-				if (t.getDanger() > 0 && !t.ud.getTooltip().contains("Anti-Air")) {
-					float effectivePower = t.getDanger() / 5000;
+				if (t.getDanger() > 0 && t.isPainted) {
+					int effectivePower = (int) t.getDanger();
 					AIFloat3 position = t.position;
 					int x = (int) (position.x / 8);
 					int y = (int) (position.z / 8);
 					int r = (int) ((t.threatRadius) / 8);
 
-					enemyPorcGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower * -1);
+					enemyPorcGraphics.unpaintCircle(x, y, (int) (r*1.2f), effectivePower);
 				}
 			}
 		}
@@ -933,7 +936,7 @@ public class MilitaryManager extends Module {
 
 			// paint enemy threat for statics
 			if (e.isStatic && e.getDanger() > 0 && !e.isPainted && !e.ud.getTooltip().contains("Anti-Air") && !e.unit.isBeingBuilt()) {
-				float effectivePower = e.getDanger() / 5000;
+				int effectivePower = (int) e.getDanger();
 				AIFloat3 position = e.position;
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
@@ -951,7 +954,7 @@ public class MilitaryManager extends Module {
 
 			// paint enemy threat for statics
 			if (e.isStatic && e.getDanger() > 0 &&  !e.ud.getTooltip().contains("Anti-Air") && !e.unit.isBeingBuilt()) {
-				float effectivePower = e.getDanger() / 5000;
+				int effectivePower = (int) e.getDanger();
 				AIFloat3 position = e.position;
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
@@ -969,8 +972,8 @@ public class MilitaryManager extends Module {
 		if(targets.containsKey(enemy.getUnitId())){
 			Enemy e = targets.get(enemy.getUnitId());
 			// paint enemy threat for statics
-			if (e.isStatic && e.getDanger() > 0 && !e.ud.getTooltip().contains("Anti-Air") && !e.unit.isBeingBuilt()) {
-				float effectivePower = e.getDanger() / 5000;
+			if (e.isStatic && e.getDanger() > 0 && !e.ud.getTooltip().contains("Anti-Air") && !e.isPainted) {
+				int effectivePower = (int) e.getDanger();
 				AIFloat3 position = e.position;
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
@@ -1030,14 +1033,14 @@ public class MilitaryManager extends Module {
 			Enemy e = targets.get(unit.getUnitId());
 
 			// Unpaint enemy threat for statics
-			if (e.isStatic && e.getDanger() > 0 && !e.ud.getTooltip().contains("Anti-Air")) {
-				float effectivePower = e.getDanger() / 5000;
+			if (e.isStatic && e.getDanger() > 0 && e.isPainted) {
+				int effectivePower = (int) e.getDanger();
 				AIFloat3 position = e.position;
 				int x = (int) (position.x / 8);
 				int y = (int) (position.z / 8);
 				int r = (int) ((e.threatRadius) / 8);
 
-				enemyPorcGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower * -1);
+				enemyPorcGraphics.unpaintCircle(x, y, (int) (r*1.2f), effectivePower);
 			}
 
         	targets.remove(unit.getUnitId());
@@ -1144,9 +1147,14 @@ public class MilitaryManager extends Module {
     		cowardUnits.add(unit);
     	}
 
+        return 0; // signaling: OK
+    }
+
+	@Override
+	public int unitCreated(Unit unit, Unit builder){
 		// Paint ally threat for porc
 		if (unit.getMaxSpeed() == 0 && unit.getDef().isAbleToAttack()){
-			float power = 2 * (unit.getPower() + unit.getMaxHealth())/5000;
+			int power = (int) (2 * (unit.getPower() + unit.getMaxHealth()));
 			float radius = unit.getMaxRange();
 			AIFloat3 pos = unit.getPos();
 			int x = (int) pos.x/8;
@@ -1155,9 +1163,8 @@ public class MilitaryManager extends Module {
 
 			allyPorcGraphics.paintCircle(x, y, rad, power);
 		}
-
-        return 0; // signaling: OK
-    }
+		return 0;
+	}
     
     @Override
     public int unitDestroyed(Unit unit, Unit attacker) {
@@ -1263,14 +1270,14 @@ public class MilitaryManager extends Module {
 
 		// Unpaint ally threat for porc
 		if (unit.getMaxSpeed() == 0 && unit.getDef().isAbleToAttack()){
-			float power = 2 * (unit.getPower() + unit.getMaxHealth())/5000;
+			int power = (int) (2 * (unit.getPower() + unit.getMaxHealth()));
 			float radius = unit.getMaxRange();
 			AIFloat3 pos = unit.getPos();
 			int x = (int) pos.x/8;
 			int y = (int) pos.z/8;
 			int rad = (int) radius/8;
 
-			allyPorcGraphics.paintCircle(x, y, rad, power * -1);
+			allyPorcGraphics.unpaintCircle(x, y, rad, power);
 		}
 
         return 0; // signaling: OK

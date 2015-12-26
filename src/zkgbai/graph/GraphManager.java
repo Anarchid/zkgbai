@@ -49,6 +49,7 @@ public class GraphManager extends Module {
 	static AIFloat3 nullpos = new AIFloat3(0,0,0);
 	AIFloat3 allyCenter = nullpos;
 	AIFloat3 enemyCenter = nullpos;
+	AIFloat3 mapCenter;
 	AIFloat3 startPos = nullpos;
 	public boolean isWaterMap = false;
 	
@@ -66,8 +67,13 @@ public class GraphManager extends Module {
 		this.pylons = new ArrayList<Pylon>();
 		this.mexDef = parent.getCallback().getUnitDefByName("cormex");
 		this.mexDefID = mexDef.getUnitDefId();
-		this.m = parent.getCallback().getResourceByName("Metal");
-		this.e = parent.getCallback().getResourceByName("Energy");
+		this.m = callback.getResourceByName("Metal");
+		this.e = callback.getResourceByName("Energy");
+
+		// calculate the map center
+		int x = callback.getMap().getWidth() * 4;
+		int z = callback.getMap().getHeight() * 4;
+		mapCenter = new AIFloat3(x, 0, z);
 		
 		// hardwired for now because of segfaults upon segfaults
 		pylonDefs = new java.util.HashMap<String, Integer>();
@@ -625,6 +631,11 @@ public class GraphManager extends Module {
 	public AIFloat3 getAllyCenter(){
 		return allyCenter;
 	}
+
+	public AIFloat3 getMapCenter(){
+		return mapCenter;
+	}
+
 	public AIFloat3 getEnemyCenter(){
 		return enemyCenter;
 	}

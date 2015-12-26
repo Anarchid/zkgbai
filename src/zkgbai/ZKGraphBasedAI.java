@@ -69,31 +69,31 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         try {
 			losManager = new LosManager(this);
 			debug(losManager.getModuleName() + " initialized.");
-		} catch (Exception e){
+		} catch (Throwable e){
 			printException(e);
 		}
 		try{
 			graphManager = new GraphManager(this);
 			debug(graphManager.getModuleName() + " initialized.");
-		} catch (Exception e){
+		} catch (Throwable e){
 			printException(e);
 		}
 		try {
         	ecoManager = new EconomyManager(this);
 			debug(ecoManager.getModuleName() + " initialized.");
-		} catch (Exception e){
+		} catch (Throwable e){
 			printException(e);
 		}
         try {
 			warManager = new MilitaryManager(this);
 			debug(warManager.getModuleName() + " initialized.");
-		} catch (Exception e){
+		} catch (Throwable e){
 			printException(e);
 		}
 		try {
 			facManager = new FactoryManager(this);
 			debug(facManager.getModuleName() + " initialized.");
-		} catch (Exception e){
+		} catch (Throwable e){
 			printException(e);
 		}
         
@@ -118,7 +118,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			debugView.setThreatImage(warManager.getThreatMap());
 			debugView.setGraphImage(graphManager.getGraphImage());
 		}
-		catch(Exception e){
+		catch(Throwable e){
 			debug(e);
 		}*/
 
@@ -135,7 +135,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         return 0;
     }
 
-	private void debug(Exception e) {
+	private void debug(Throwable e) {
 		debug(e.getMessage());
 		for(StackTraceElement ste:e.getStackTrace()){
 			debug(ste.toString());
@@ -167,7 +167,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    for (Module module : modules) {
 	    	try {
 	            module.luaMessage(inData);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
         }	        
@@ -182,7 +182,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		for (Module module : modules) {
 			try {
 				module.update(frame);
-			} catch (Exception e) {
+			} catch (Throwable e) {
 				printException(e);
 			}
 		}
@@ -194,7 +194,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    for (Module module : modules) {
 	    	try {
 	            module.message(player, message);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
 	    }
@@ -207,7 +207,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    for (Module module : modules) {
 	    	try {
 	            module.unitCreated(unit, builder);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
 	    } 
@@ -219,7 +219,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    for (Module module : modules) {
 	        try {
 	            module.unitFinished(unit);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
 	    }
@@ -231,7 +231,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    for (Module module : modules) {
 	    	try {
 	    		module.unitIdle(unit);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
 	    } 
@@ -243,7 +243,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    for (Module module : modules) {
 	    	try {
 	            module.unitMoveFailed(unit);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
 	    }
@@ -256,7 +256,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    for (Module module : modules) {
         	try {
         		module.unitDamaged(unit, attacker, damage, dir, weaponDef, paralyzed);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
         } 
@@ -267,13 +267,13 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int unitDestroyed(Unit unit, Unit attacker) {
         try {
         	//this.unitManager.deRegisterUnit(unit);
-    	} catch (Exception e) {
+    	} catch (Throwable e) {
     		printException(e);
     	}
 	    for (Module module : modules) {
 	    	try {
 	            module.unitDestroyed(unit, attacker);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
 	    }	    
@@ -284,13 +284,13 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
         try {
         	//this.unitManager.registerUnit(unit);
-    	} catch (Exception e) {
+    	} catch (Throwable e) {
     		printException(e);
     	}
         for (Module module : modules) {
         	try {
         		module.unitGiven(unit, oldTeamId, newTeamId);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
         }	  
@@ -299,20 +299,10 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
     @Override
     public int unitCaptured(Unit unit, int oldTeamId, int newTeamId) {
-        try {
-        	int myTeamId = callback.getGame().getMyTeam(); 
-            if (myTeamId == newTeamId) {
-            	//this.unitManager.registerUnit(unit);
-            } else if (myTeamId == oldTeamId) {
-            	//this.unitManager.registerUnit(unit);
-            }
-    	} catch (Exception e) {
-    		printException(e);
-    	}
         for (Module module : modules) {
         	try {
             	module.unitCaptured(unit, oldTeamId, newTeamId);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
         }
@@ -325,7 +315,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    for (Module module : modules) {
 	    	try {
 	    		module.enemyEnterLOS(enemy);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}    	 
 	    }	    
@@ -337,7 +327,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	for (Module module : modules) {
             try {
             	module.enemyLeaveLOS(enemy);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 				printException(e);
 	    	}
         }	    
@@ -349,7 +339,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		for (Module module : modules) {
 			try {
 				module.enemyCreated(enemy);
-			} catch (Exception e) {
+			} catch (Throwable e) {
 				printException(e);
 			}
 		}
@@ -361,7 +351,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		for (Module module : modules) {
 			try {
 				module.enemyFinished(enemy);
-			} catch (Exception e) {
+			} catch (Throwable e) {
 				printException(e);
 			}
 		}
@@ -373,7 +363,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	for (Module module : modules) {
     		try {
     			module.enemyEnterRadar(enemy);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
         }	   
@@ -385,7 +375,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		for (Module module : modules) {
 			try {
 				module.enemyLeaveRadar(enemy);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}        
 	    }	    
@@ -397,7 +387,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	for (Module module : modules) {
     		try {
     			module.enemyDamaged(enemy, attacker, damage, dir, weaponDef, paralyzed);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
         }	    
@@ -409,7 +399,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	for (Module module : modules) {
     		try {
     			module.enemyDestroyed(enemy, attacker);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
         }	    
@@ -421,7 +411,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	for (Module module : modules) {
     		try {
     			module.weaponFired(unit, weaponDef);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}		
         }	    
@@ -433,7 +423,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    for (Module module : modules) {
 	    	try {
 	    		module.commandFinished(unit, commandId, commandTopicId);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
 	    }	    
@@ -445,7 +435,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	for (Module module : modules) {
     		try {
     			module.seismicPing(pos, strength);
-	    	} catch (Exception e) {
+	    	} catch (Throwable e) {
 	    		printException(e);
 	    	}
         }	    
