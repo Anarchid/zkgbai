@@ -56,6 +56,7 @@ public class UnitClasses {
         soloRaiders.add("panther");
         soloRaiders.add("armflea");
         soloRaiders.add("corfav");
+        soloRaiders.add("corstorm");
 
         // assaults; stuff that attacks in mobs
         assaults.add("armzeus");
@@ -100,7 +101,6 @@ public class UnitClasses {
 
         // loners; strider-like stuff that does better on its own than in mobs
         loners.add("armsnipe");
-        loners.add("corstorm");
         loners.add("armham");
         loners.add("amphassault");
         loners.add("cormist");

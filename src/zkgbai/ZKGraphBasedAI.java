@@ -31,7 +31,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public HashMap<Integer, StartArea> startBoxes;
 	HashSet<Integer> enemyTeams = new HashSet<Integer>();
 	HashSet<Integer> enemyAllyTeams = new HashSet<Integer>();
-	public List<Team> allies; 
+	public List<Integer> allies;
     public int teamID;
     public int allyTeamID;
     public int currentFrame = 0;
@@ -60,10 +60,11 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         this.teamID = callback.getGame().getMyTeam(); // teamID as passed by interface is broken 0_0
         this.allyTeamID = callback.getGame().getMyAllyTeam();
         startBoxes = new HashMap<Integer, StartArea>();
-        
+		this.allies = new ArrayList<Integer>();
+
         parseStartBoxes();
         identifyEnemyTeams();
-        allies = callback.getAllyTeams();
+		identifyAllyTeams();
 
 		// load modules
         try {
@@ -98,6 +99,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		}
         
         graphManager.setLosManager(losManager);
+		graphManager.setMilitaryManager(warManager);
         
         ecoManager.setMilitaryManager(warManager);
 		ecoManager.setGraphManager(graphManager);
@@ -558,6 +560,16 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			}
     	}
     }
+
+	// creates a list of teams that are allied with the AI.
+	private void identifyAllyTeams(){
+		int teamCount = callback.getGame().getTeams();
+		for (int i = 0; i < teamCount; i++){
+			if (callback.getGame().getTeamAllyTeam(i) == allyTeamID && i != teamID){
+				allies.add(i);
+			}
+		}
+	}
     
     public OOAICallback getCallback(){
     	return callback;

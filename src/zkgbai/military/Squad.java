@@ -106,20 +106,22 @@ public class Squad {
 		return false;
 	}
 
-	public List<Fighter> cutoff(){
+	public void cutoff(){
 		List<Fighter> tooFar = new ArrayList<Fighter>();
 		AIFloat3 pos = getPos();
 		for (Fighter f:fighters){
 			if (distance(pos, f.getPos()) > 1000 && distance(target, f.getPos()) > 1000){
 				tooFar.add(f);
+				f.squad = null;
 			}
 		}
-		fighters.removeAll(tooFar);
 		if (fighters.size() < 4 && metalValue < 1000){
+			for (Fighter f:fighters){
+				f.squad = null;
+			}
 			tooFar.addAll(fighters);
-			fighters.clear();
 		}
-		return tooFar;
+		fighters.removeAll(tooFar);
 	}
 
 	private Fighter getNewLeader(){

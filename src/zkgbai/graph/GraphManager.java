@@ -28,10 +28,12 @@ import zkgbai.Module;
 import zkgbai.StartArea;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.los.LosManager;
+import zkgbai.military.MilitaryManager;
 
 public class GraphManager extends Module {
 	private ZKGraphBasedAI parent;
 	private OOAICallback callback;
+	private MilitaryManager warManager;
 	private ArrayList<MetalSpot> metalSpots;
 	private ArrayList<Link> links;
 	private ArrayList<Pylon> pylons;
@@ -408,7 +410,7 @@ public class GraphManager extends Module {
 		if(parent.startType == ZKGraphBasedAI.StartType.ZK_STARTPOS){
 			// identify ally startbox ID's
 			Set<Integer> allyBoxes = new HashSet<Integer>();
-			for(Team a:parent.allies){
+			for(Team a:callback.getAllyTeams()){
 				int boxID = (int)a.getTeamRulesParamByName("start_box_id").getValueFloat();
 				allyBoxes.add(boxID);
 				parent.debug("team "+a.getTeamId()+" of allyteam "+parent.getCallback().getGame().getTeamAllyTeam(a.getTeamId())+" is ally with boxID "+boxID);
@@ -461,20 +463,9 @@ public class GraphManager extends Module {
 		}
 
 		for (MetalSpot ms: metalSpots){
-			avgMexValue += ms.value / metalSpots.size();
-		}
-		for (MetalSpot ms: metalSpots){
 			if (callback.getMap().getElevationAt(ms.getPos().x, ms.getPos().z) < 10f){
 				this.isWaterMap = true;
-			}
-
-			float var = ms.value/avgMexValue;
-			if (var > 1.2){
-				ms.weight = 3;
-			}else if (var < 0.8){
-				ms.weight = 0;
-			}else{
-				ms.weight = 1;
+				break;
 			}
 		}
     }
@@ -638,6 +629,40 @@ public class GraphManager extends Module {
 
 	public AIFloat3 getEnemyCenter(){
 		return enemyCenter;
+	}
+
+	public AIFloat3 getClosestHaven(AIFloat3 position){
+		UnitDef building = callback.getUnitDefByName("factorygunship");
+		AIFloat3 closest = position; // returns position as a fallback
+		float distance = Float.MAX_VALUE;
+		for (Link l:links){
+			if (l.isOwned() && warManager.getThreat(l.getPos()) == 0){
+				float dist = groundDistance(position, l.getPos());
+				if (dist < distance){
+					distance = dist;
+					closest = l.getPos();
+				}
+			}
+		}
+		closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		return closest;
+	}
+
+	public AIFloat3 getClosestAirHaven(AIFloat3 position){
+		UnitDef building = callback.getUnitDefByName("factorygunship");
+		AIFloat3 closest = position; // returns position as a fallback
+		float distance = Float.MAX_VALUE;
+		for (Link l:links){
+			if (l.isOwned() && warManager.getAAThreat(l.getPos()) == 0){
+				float dist = groundDistance(position, l.getPos());
+				if (dist < distance){
+					distance = dist;
+					closest = l.getPos();
+				}
+			}
+		}
+		closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		return closest;
 	}
 
 	public List<MetalSpot> getUnownedSpots(){
@@ -814,5 +839,9 @@ public class GraphManager extends Module {
     
 	public void setLosManager(LosManager losManager) {
 		this.losManager = losManager;
+	}
+
+	public void setMilitaryManager(MilitaryManager mmg) {
+		this.warManager = mmg;
 	}
 }
