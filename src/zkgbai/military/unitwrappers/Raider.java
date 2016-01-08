@@ -1,12 +1,14 @@
-package zkgbai.military;
+package zkgbai.military.unitwrappers;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 import zkgbai.ZKGraphBasedAI;
-import zkgbai.military.tasks.FighterTask;
+import zkgbai.kgbutil.Pathfinder;
+import zkgbai.military.RadarDef;
 import zkgbai.military.tasks.ScoutTask;
 
 import java.util.Deque;
+import static zkgbai.kgbutil.KgbUtil.*;
 
 
 public class Raider extends Fighter {
@@ -14,14 +16,17 @@ public class Raider extends Fighter {
     public boolean scouting = true;
     private int lastTaskFrame;
     private AIFloat3 lastpos;
-    private static ZKGraphBasedAI parent;
+    private static Pathfinder pathfinder = null;
 
-    public Raider(Unit u, float metal, ZKGraphBasedAI ai) {
+    public Raider(Unit u, float metal) {
         super(u, metal);
         this.task = null;
         this.lastTaskFrame = 0;
         this.lastpos = getPos();
-        parent = ai;
+
+        if (pathfinder == null){
+            pathfinder = Pathfinder.getInstance();
+        }
     }
 
     public void setTask(ScoutTask t) {
@@ -109,8 +114,8 @@ public class Raider extends Fighter {
         if (task != null && frame - lastTaskFrame > 90) {
             float movedist = distance(unit.getPos(), lastpos);
             float jobdist = distance(unit.getPos(), task.spot.getPos());
-            if (movedist < 50 && jobdist > 100) {
-                AIFloat3 unstickPoint = getRadialPoint(unit.getPos(), 450f);
+            if (movedist < 150 && jobdist > 100) {
+                AIFloat3 unstickPoint = getRadialPoint(unit.getPos(), 350f);
                 unit.moveTo(unstickPoint, (short) 0, frame + 6000);
                 clearTask(frame);
             }
@@ -125,13 +130,5 @@ public class Raider extends Fighter {
         lastTaskFrame = frame;
         lastpos = unit.getPos();
         super.fightTo(pos, frame);
-    }
-
-    protected float distance(AIFloat3 pos1, AIFloat3 pos2) {
-        float x1 = pos1.x;
-        float z1 = pos1.z;
-        float x2 = pos2.x;
-        float z2 = pos2.z;
-        return (float) Math.sqrt((x1 - x2) * (x1 - x2) + (z1 - z2) * (z1 - z2));
     }
 }

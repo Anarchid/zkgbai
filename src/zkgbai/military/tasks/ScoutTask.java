@@ -2,7 +2,7 @@ package zkgbai.military.tasks;
 
 import com.springrts.ai.oo.AIFloat3;
 import zkgbai.graph.MetalSpot;
-import zkgbai.military.Raider;
+import zkgbai.military.unitwrappers.Raider;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,10 +1,9 @@
-package zkgbai.military;
+package zkgbai.military.unitwrappers;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.Unit;
 
 public class Squad {
 	List<Fighter> fighters;

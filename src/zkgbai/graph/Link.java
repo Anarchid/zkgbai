@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
+import static zkgbai.kgbutil.KgbUtil.*;
 
 import com.springrts.ai.oo.AIFloat3;
 
@@ -125,7 +126,7 @@ public class Link {
 				if(i++>1000) return null;
 				visited.add(q);
 				
-				float distance = GraphManager.groundDistance(q.position, v1.position);
+				float distance = distance(q.position, v1.position);
 				if (distance < minDistance){
 					minDistance = distance;
 					winner = q;

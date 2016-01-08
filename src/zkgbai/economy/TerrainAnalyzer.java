@@ -3,6 +3,7 @@ package zkgbai.economy;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Pathing;
+import zkgbai.ZKGraphBasedAI;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.Link;
 
@@ -14,6 +15,7 @@ import java.util.List;
  * Created by aeonios on 12/5/2015.
  */
 public class TerrainAnalyzer {
+    ZKGraphBasedAI parent;
     OOAICallback callback;
     GraphManager graphManager;
     List<String> initialFacList;
@@ -27,9 +29,10 @@ public class TerrainAnalyzer {
     int boatPath;
     static String taMsg = "Terrain Analysis: ";
 
-    public TerrainAnalyzer(OOAICallback callback, GraphManager graphManager){
-        this.callback = callback;
-        this.graphManager = graphManager;
+    public TerrainAnalyzer(){
+        this.parent = ZKGraphBasedAI.getInstance();
+        this.callback = parent.getCallback();
+        this.graphManager = parent.graphManager;
         this.initialFacList = new ArrayList<String>();
         this.path = callback.getPathing();
 
@@ -44,6 +47,12 @@ public class TerrainAnalyzer {
     }
 
     private void populateFacList(){
+        if (!parent.allies.isEmpty()){
+            debug(taMsg + "Allies detected, enabling air starts!");
+            initialFacList.add("factorygunship");
+            initialFacList.add("factoryplane");
+        }
+
         debug(taMsg + "Checking Veh Pathability..");
         PathResult veh = checkPathing(vehPath, 1.35f);
         if (veh.result){
@@ -91,8 +100,8 @@ public class TerrainAnalyzer {
         PathResult boat = checkPathing(boatPath, 5f);
         if (boat.result){
             debug(taMsg + "Boat path check succeeded, enabling boats!");
-            initialFacList.add("factoryship");
-            return;
+            //initialFacList.add("factoryship");
+            //return;
         }
 
         debug(taMsg + "Checking Amph Pathability..");
@@ -107,7 +116,7 @@ public class TerrainAnalyzer {
             debug(taMsg + "Analysis Failed! Going air by default.");
             if (!initialFacList.contains("factorygunship")) {
                 initialFacList.add("factorygunship");
-                //initialFacList.add("factoryplane");
+                initialFacList.add("factoryplane");
             }
         }
     }

@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package zkgbai.military;
+package zkgbai.kgbutil;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.OOAICallback;
@@ -17,15 +17,17 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 import com.springrts.ai.oo.clb.Unit;
+import zkgbai.ZKGraphBasedAI;
 import zkgbai.graph.CostSupplier;
+import zkgbai.military.MilitaryManager;
 
 /**
  *
  * @author User
  */
 public class Pathfinder extends Object {
-
-    private MilitaryManager ai;
+    ZKGraphBasedAI ai;
+    MilitaryManager warManager;
     OOAICallback callback;
     float mwidth, mheight;
     int smwidth;
@@ -36,13 +38,24 @@ public class Pathfinder extends Object {
     private Map<CostSupplier, float[]> costSupplierCosts = new HashMap<CostSupplier, float[]>();
     private Map<CostSupplier, int[]> costSupplierLastUpdate = new HashMap<CostSupplier, int[]>();
 
-    public Pathfinder(MilitaryManager ai) {
-    	this.ai = ai;
-    	callback = ai.parent.getCallback();
+    private static Pathfinder instance = null;
+
+    private Pathfinder() {
+        instance = this;
+    	this.ai = ZKGraphBasedAI.getInstance();
+    	this.callback = ai.getCallback();
+        this.warManager = ai.warManager;
         mwidth = callback.getMap().getWidth() * 8;
         mheight = callback.getMap().getHeight() * 8;
         smwidth = (int) (mwidth / mapRes);
         updateSlopeMap();
+    }
+
+    public static Pathfinder getInstance(){
+        if (instance == null){
+            instance = new Pathfinder();
+        }
+        return instance;
     }
 
     private void updateSlopeMap() {
@@ -65,8 +78,8 @@ public class Pathfinder extends Object {
 
         float[] costs = costSupplierCosts.get(supplier);
         int[] lastUpdate = costSupplierLastUpdate.get(supplier);
-        if (ai.parent.currentFrame - lastUpdate[pos] > 15) {
-            lastUpdate[pos] = ai.parent.currentFrame;
+        if (ai.currentFrame - lastUpdate[pos] > 15) {
+            lastUpdate[pos] = ai.currentFrame;
             costs[pos] = supplier.getCost(slope, maxSlope, toAIFloat3(pos));
         }
         return costs[pos];
@@ -225,7 +238,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return Float.MAX_VALUE;
             }
-            return 10 * (ai.getThreat(pos) + (slope/maxSlope));
+            return 10 * (warManager.getThreat(pos) + (slope/maxSlope));
         }
     };
     /**
@@ -238,7 +251,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return Float.MAX_VALUE;
             }
-            return 10 * (slope / maxSlope) + 1 * ai.getThreat(pos) + 1;
+            return 10 * (slope / maxSlope) + 1 * warManager.getThreat(pos) + 1;
         }
     };
     /**
@@ -252,7 +265,7 @@ public class Pathfinder extends Object {
                 return Float.MAX_VALUE;
             }
 
-            return 10 * (2 * ai.getThreat(pos) + (slope/maxSlope));
+            return 10 * (2 * warManager.getThreat(pos) + (slope/maxSlope));
         }
     };
 

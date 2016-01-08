@@ -1,12 +1,13 @@
-package zkgbai.military;
+package zkgbai.military.unitwrappers;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
+import static zkgbai.kgbutil.KgbUtil.*;
 
 /**
  * Created by aeonios on 11/14/2015.
  */
-public class Strider extends Fighter{
+public class Strider extends Fighter {
     public int dgunReload;
     public int lastDgunFrame = 0;
     public Strider(Unit u, Float metal){

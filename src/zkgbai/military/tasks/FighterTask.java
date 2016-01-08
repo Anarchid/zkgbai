@@ -1,11 +1,6 @@
 package zkgbai.military.tasks;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.OOAICallback;
-import zkgbai.los.LosManager;
-import zkgbai.military.Fighter;
-
-import java.util.List;
 
 /**
  * Created by aeonios on 11/13/2015.

@@ -1,4 +1,4 @@
-package zkgbai.military;
+package zkgbai.military.unitwrappers;
 
 import com.springrts.ai.oo.AIFloat3;
 
@@ -8,14 +8,14 @@ import java.util.List;
 /**
  * Created by aeonios on 11/29/2015.
  */
-public class ShieldSquad extends Squad{
+public class ShieldSquad extends Squad {
     static int CMD_ORBIT = 13923;
     static int CMD_ORBIT_DRAW = 13924;
     static short OPTION_SHIFT_KEY = (1 << 5);
     private Fighter leader;
     private int leaderWeight;
 
-    ShieldSquad(){
+    public ShieldSquad(){
         super();
         this.leader = null;
         this.leaderWeight = 0;

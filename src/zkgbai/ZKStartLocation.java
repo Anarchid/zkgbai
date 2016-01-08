@@ -8,6 +8,8 @@ import zkgbai.graph.GraphManager;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Drawer;
 
+import static zkgbai.kgbutil.KgbUtil.distance;
+
 public class ZKStartLocation extends StartArea {
 
 	ArrayList<AIFloat3> locations;
@@ -20,7 +22,7 @@ public class ZKStartLocation extends StartArea {
 	@Override
 	public boolean contains(AIFloat3 point) {
 		for(AIFloat3 l:locations){
-			if (GraphManager.groundDistance(point, l) < 512){
+			if (distance(point, l) < 512){
 				return true;
 			}
 		}

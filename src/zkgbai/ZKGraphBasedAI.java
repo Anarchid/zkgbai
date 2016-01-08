@@ -25,6 +25,7 @@ import zkgbai.los.LosManager;
 import zkgbai.military.MilitaryManager;
 
 public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
+	private static ZKGraphBasedAI instance = null;
 
 	private OOAICallback callback;
     private List<Module> modules = new LinkedList<Module>();
@@ -38,11 +39,11 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     //DebugView debugView;
     boolean debugActivated;
     
-	LosManager losManager;
-	GraphManager graphManager;
-	EconomyManager ecoManager;
-	MilitaryManager warManager;
-	FactoryManager facManager;
+	public LosManager losManager;
+	public GraphManager graphManager;
+	public EconomyManager ecoManager;
+	public MilitaryManager warManager;
+	public FactoryManager facManager;
     
     public static enum StartType{
     	SPRING_BOX,
@@ -52,6 +53,16 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     }
     
     public StartType startType;
+
+	// Set singleton instance
+	public ZKGraphBasedAI(){
+		super();
+		instance = this;
+	}
+
+	public static ZKGraphBasedAI getInstance(){
+		return instance;
+	}
     
 	@Override
     public int init(int AIId, OOAICallback callback) {
@@ -97,22 +108,6 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		} catch (Throwable e){
 			printException(e);
 		}
-        
-        graphManager.setLosManager(losManager);
-		graphManager.setMilitaryManager(warManager);
-        
-        ecoManager.setMilitaryManager(warManager);
-		ecoManager.setGraphManager(graphManager);
-		ecoManager.setLosManager(losManager);
-		ecoManager.setFactoryManager(facManager);
-
-		warManager.setEcoManager(ecoManager);
-		warManager.setLosManager(losManager);
-		warManager.setGraphManager(graphManager);
-		warManager.setFactoryManager(facManager);
-
-		facManager.setEconomyManager(ecoManager);
-		facManager.setMilitaryManager(warManager);
 
 		/*try{
 			debugView = new DebugView(this);
@@ -130,8 +125,16 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         modules.add(ecoManager);
         modules.add(warManager);
 		modules.add(facManager);
-                
-        selectRandomCommander();
+
+		try {
+			for (Module m:modules){
+				m.init(AIId, callback);
+			}
+		} catch (Throwable e){
+			printException(e);
+		}
+
+		selectRandomCommander();
 		chooseStartPos();
         
         return 0;
@@ -152,7 +155,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			Map<String,String> customParams = ud.getCustomParams();
 			String level = customParams.get("level");
 			if(level != null){
-				if(Integer.parseInt(level) == 0){
+				if(Integer.parseInt(level) == 0 && ud.getTooltip().contains("Support")){
 					commanderNames.add(ud.getName());
 				}
 			}

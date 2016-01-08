@@ -30,8 +30,10 @@ import zkgbai.ZKGraphBasedAI;
 import zkgbai.los.LosManager;
 import zkgbai.military.MilitaryManager;
 
+import static zkgbai.kgbutil.KgbUtil.*;
+
 public class GraphManager extends Module {
-	private ZKGraphBasedAI parent;
+	private ZKGraphBasedAI ai;
 	private OOAICallback callback;
 	private MilitaryManager warManager;
 	private ArrayList<MetalSpot> metalSpots;
@@ -60,14 +62,14 @@ public class GraphManager extends Module {
 	//private Image graphImage;
 	//private Graphics graphGraphics;
 	
-	public GraphManager(ZKGraphBasedAI parent){
-		this.parent = parent;
-		this.callback = parent.getCallback();
+	public GraphManager(ZKGraphBasedAI ai){
+		this.ai = ai;
+		this.callback = ai.getCallback();
 
 		this.metalSpots = new ArrayList<MetalSpot>();
 		this.links = new ArrayList<Link>();
 		this.pylons = new ArrayList<Pylon>();
-		this.mexDef = parent.getCallback().getUnitDefByName("cormex");
+		this.mexDef = ai.getCallback().getUnitDefByName("cormex");
 		this.mexDefID = mexDef.getUnitDefId();
 		this.m = callback.getResourceByName("Metal");
 		this.e = callback.getResourceByName("Energy");
@@ -79,6 +81,7 @@ public class GraphManager extends Module {
 		
 		// hardwired for now because of segfaults upon segfaults
 		pylonDefs = new java.util.HashMap<String, Integer>();
+		pylonDefs.put("armwin", 60);
 		pylonDefs.put("armsolar", 100);
 		pylonDefs.put("armestor", 500);
 		pylonDefs.put("armfus", 150);
@@ -87,12 +90,19 @@ public class GraphManager extends Module {
 		final int width = callback.getMap().getWidth();
 		final int height = callback.getMap().getHeight();
 
-		parent.debug("GraphManager: Parsing metal spots...");
+		ai.debug("GraphManager: Parsing metal spots...");
 		
 		ArrayList<HashMap> grpMexes = parseMetalSpotsGRP();
 		if(grpMexes.size() > 0){
 			initializeGraph(grpMexes);
 		}
+	}
+
+	@Override
+	public int init(int AIID, OOAICallback cb){
+		this.losManager = ai.losManager;
+		this.warManager = ai.warManager;
+		return 0;
 	}
 	
 	@Override
@@ -102,7 +112,7 @@ public class GraphManager extends Module {
 	
 	@SuppressWarnings("rawtypes")
 	private ArrayList<HashMap> parseMetalSpotsGRP(){
-		Game g = parent.getCallback().getGame();
+		Game g = ai.getCallback().getGame();
 		
 		GameRulesParam mexCount = g.getGameRulesParamByName("mex_count");
 		
@@ -114,7 +124,7 @@ public class GraphManager extends Module {
 		
 		int numSpots = (int)mexCount.getValueFloat();
 		
-		parent.debug("GraphManager: Detected "+numSpots+" metal spots in GRP");
+		ai.debug("GraphManager: Detected "+numSpots+" metal spots in GRP");
 		
 		
 		if(numSpots < 0){
@@ -131,7 +141,7 @@ public class GraphManager extends Module {
 				data.add(map);
 			}
 			catch(NullPointerException e){
-				parent.debug("faulty GRP metal config; returning partial");
+				ai.debug("faulty GRP metal config; returning partial");
 				return data;
 			}
 		}
@@ -146,7 +156,7 @@ public class GraphManager extends Module {
 			JsonParserFactory factory=JsonParserFactory.getInstance();
 			JSONParser parser=factory.newJsonParser();
 			ArrayList<HashMap> jsonData=(ArrayList)parser.parseJson(json).values().toArray()[0];
-    		parent.debug("Parsed JSON metalmap with "+jsonData.size()+" spots");
+    		ai.debug("Parsed JSON metalmap with "+jsonData.size()+" spots");
 			if(!graphInitialized){
 				initializeGraph(jsonData);	
 			}
@@ -162,16 +172,16 @@ public class GraphManager extends Module {
 			Pylon p = new Pylon(unit, radius.intValue());
 
 			for(MetalSpot m:metalSpots){
-				if(groundDistance(p.position,m.position)<p.radius+50){
+				if(distance(p.position, m.position)<p.radius+50){
 					m.addPylon(p);
 					p.addSpot(m);
 				}
 			}
 
 			for(Link l:links){
-				if(GraphManager.groundDistance(p.position,l.centerPos) < l.length/2){
+				if(distance(p.position, l.centerPos) < l.length/2){
 					for(Pylon lp:l.pylons){
-						if(GraphManager.groundDistance(p.position,lp.position) < p.radius+lp.radius){
+						if(distance(p.position, lp.position) < p.radius+lp.radius){
 							lp.addNeighbour(p);
 							p.addNeighbour(lp);
 						}
@@ -349,12 +359,6 @@ public class GraphManager extends Module {
 			ms.allyShadowed = false;
 		}
 	}
-
-    public static float groundDistance(AIFloat3 v0, AIFloat3 v1){
-    	float dx = v0.x-v1.x;
-    	float dz = v0.z-v1.z;
-    	return (float) Math.sqrt(dx*dx+dz*dz);
-    }
     
     private void initializeGraph(ArrayList<HashMap> jsonData){
     	List<TriangulationPoint> points = new ArrayList<TriangulationPoint>();
@@ -406,19 +410,19 @@ public class GraphManager extends Module {
     }
     
     private void doInitialInference(){
-		Set<Integer> enemies = parent.getEnemyAllyTeamIDs();
-		if(parent.startType == ZKGraphBasedAI.StartType.ZK_STARTPOS){
+		Set<Integer> enemies = ai.getEnemyAllyTeamIDs();
+		if(ai.startType == ZKGraphBasedAI.StartType.ZK_STARTPOS){
 			// identify ally startbox ID's
 			Set<Integer> allyBoxes = new HashSet<Integer>();
 			for(Team a:callback.getAllyTeams()){
 				int boxID = (int)a.getTeamRulesParamByName("start_box_id").getValueFloat();
 				allyBoxes.add(boxID);
-				parent.debug("team "+a.getTeamId()+" of allyteam "+parent.getCallback().getGame().getTeamAllyTeam(a.getTeamId())+" is ally with boxID "+boxID);
+				ai.debug("team "+a.getTeamId()+" of allyteam "+ai.getCallback().getGame().getTeamAllyTeam(a.getTeamId())+" is ally with boxID "+boxID);
 			}
 			
-			for(Entry<Integer, StartArea> s:parent.startBoxes.entrySet()){
+			for(Entry<Integer, StartArea> s:ai.startBoxes.entrySet()){
 				if(!allyBoxes.contains(s.getKey())){
-					parent.debug(s.getKey()+" is an enemy startbox");
+					ai.debug(s.getKey()+" is an enemy startbox");
 					for (MetalSpot ms:metalSpots){
 						AIFloat3 pos = ms.position;
 						if(s.getValue().contains(pos)){
@@ -427,7 +431,7 @@ public class GraphManager extends Module {
 						}
 					}
 				}else{
-					parent.debug(s.getKey()+" is an allied startbox");
+					ai.debug(s.getKey()+" is an allied startbox");
 					for (MetalSpot ms:metalSpots){
 						AIFloat3 pos = ms.position;
 						if(s.getValue().contains(pos)){
@@ -440,7 +444,7 @@ public class GraphManager extends Module {
 		}else{
 			StartArea box = null;
 			for(int enemy:enemies){
-				box = parent.getStartArea(enemy);
+				box = ai.getStartArea(enemy);
 			
 				if(box!=null){
 					for (MetalSpot ms:metalSpots){
@@ -453,7 +457,7 @@ public class GraphManager extends Module {
 				}
 			}
 
-			box = parent.getStartArea(parent.allyTeamID);
+			box = ai.getStartArea(ai.allyTeamID);
 			for (MetalSpot ms:metalSpots){
 				AIFloat3 pos = ms.position;
 				if(box.contains(pos)){
@@ -565,7 +569,7 @@ public class GraphManager extends Module {
 	public List<MetalSpot> getEnemyTerritory(){
 		ArrayList<MetalSpot> spots = new ArrayList<MetalSpot>();
 		for(MetalSpot ms:metalSpots){
-			if(ms.hostile || ms.enemyShadowed) spots.add(ms);
+			if((ms.hostile || ms.enemyShadowed) && !ms.owned) spots.add(ms);
 		}
 		return spots;
 	}
@@ -574,7 +578,7 @@ public class GraphManager extends Module {
 		// returns all metal spots not owned by allies.
 		List<MetalSpot> spots = new ArrayList<MetalSpot>();
 		for(MetalSpot ms:metalSpots){
-			if(ms.owned || ms.allyShadowed) spots.add(ms);
+			if((ms.owned || ms.allyShadowed) && !ms.hostile) spots.add(ms);
 		}
 		return spots;
 	}
@@ -637,7 +641,7 @@ public class GraphManager extends Module {
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
 			if (l.isOwned() && warManager.getThreat(l.getPos()) == 0){
-				float dist = groundDistance(position, l.getPos());
+				float dist = distance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
 					closest = l.getPos();
@@ -654,7 +658,7 @@ public class GraphManager extends Module {
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
 			if (l.isOwned() && warManager.getAAThreat(l.getPos()) == 0){
-				float dist = groundDistance(position, l.getPos());
+				float dist = distance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
 					closest = l.getPos();
@@ -687,7 +691,7 @@ public class GraphManager extends Module {
     	MetalSpot bestMS = null;
     	for(MetalSpot ms:metalSpots){
     		if(!ms.owned && !ms.hostile){
-    			float dist = groundDistance(position,ms.position); 
+    			float dist = distance(position, ms.position);
     			if(dist < minRange){
     				bestMS = ms;
     				minRange = dist;
@@ -703,7 +707,7 @@ public class GraphManager extends Module {
 		MetalSpot bestMS = null;
 		for(MetalSpot ms:metalSpots){
 			if(ms.hostile){
-				float dist = groundDistance(position,ms.position);
+				float dist = distance(position, ms.position);
 				if(dist < minRange){
 					bestMS = ms;
 					minRange = dist;
@@ -718,7 +722,7 @@ public class GraphManager extends Module {
 		float minRange = Float.MAX_VALUE;
 		MetalSpot bestMS = null;
 		for(MetalSpot ms:metalSpots){
-				float dist = groundDistance(position,ms.position);
+				float dist = distance(position, ms.position);
 				if(dist < minRange){
 					bestMS = ms;
 					minRange = dist;
@@ -744,7 +748,7 @@ public class GraphManager extends Module {
 		MetalSpot bestSpot = null;
 		for (MetalSpot ms:spots){
 			if (ms.owned) {
-				float dist = groundDistance(position, ms.getPos());
+				float dist = distance(position, ms.getPos());
 				if (dist < distance) {
 					bestSpot = ms;
 					distance = dist;
@@ -759,7 +763,7 @@ public class GraphManager extends Module {
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
 			if (!l.connected && l.length < 1500 && l.isOwned()){
-				float dist = groundDistance(position, l.getPos());
+				float dist = distance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
 					closest = l.getPos();
@@ -774,7 +778,7 @@ public class GraphManager extends Module {
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
 			if (!l.connected && l.isOwned() && l.length > 900 && l.length < 1500){
-				float dist = groundDistance(position, l.getPos());
+				float dist = distance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
 					closest = l.getPos();
@@ -784,14 +788,14 @@ public class GraphManager extends Module {
 		return closest;
 	}
     
-    public AIFloat3 getOverdriveSweetSpot(AIFloat3 position){
-    	float radius = 180;
+    public AIFloat3 getOverdriveSweetSpot(AIFloat3 position, UnitDef pylon){
+		float radius = 0.9f * pylonDefs.get(pylon.getName());
 		float minWeight = Float.MAX_VALUE;
     	Link link = null;
     	for(Link l:links){
     		if(!l.connected){
     			float combinedValue = (float) (l.v0.value+l.v1.value+Math.sqrt(l.pylons.size())+0.001f);
-    			float combinedCost = (float) (l.length + Math.pow(GraphManager.groundDistance(l.centerPos, position),2));
+    			float combinedCost = (float) (l.length + Math.pow(distance(l.centerPos, position),2));
 	    		float weight = combinedCost/combinedValue;
 	    		if (weight < minWeight){
 	    			link = l;
@@ -803,6 +807,8 @@ public class GraphManager extends Module {
     		Pylon p = link.getConnectionHead();
     		
     		if(p != null){
+				radius += 0.9f * p.radius;
+
 				float dx=link.v1.position.x - p.position.x;
 				float dz=link.v1.position.z - p.position.z;
 				
@@ -822,7 +828,7 @@ public class GraphManager extends Module {
     	MetalSpot spot = null;
     	for(MetalSpot ms:metalSpots){
     		if(ms.owned){
-	    		float weight = (groundDistance(ms.position, position));
+	    		float weight = (distance(ms.position, position));
 	    		weight += weight*Math.sqrt(ms.getPylonCount());
 	    		if (weight < minWeight){
 	    			spot = ms;
@@ -836,12 +842,4 @@ public class GraphManager extends Module {
     		return position;
     	}	
     }
-    
-	public void setLosManager(LosManager losManager) {
-		this.losManager = losManager;
-	}
-
-	public void setMilitaryManager(MilitaryManager mmg) {
-		this.warManager = mmg;
-	}
 }

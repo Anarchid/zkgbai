@@ -19,11 +19,14 @@ public class UnitClasses {
     public List<String> loners;
     public List<String> AAs;
     public List<String> planes;
+    public List<String> bombers;
     public List<String> sappers;
 
     public List<String> noRetreat;
 
-    public UnitClasses(){
+    private static UnitClasses instance = null;
+
+    private UnitClasses(){
         this.smallRaiders = new ArrayList<String>();
         this.mediumRaiders = new ArrayList<String>();
         this.soloRaiders = new ArrayList<String>();
@@ -36,6 +39,7 @@ public class UnitClasses {
         this.loners = new ArrayList<String>();
         this.AAs = new ArrayList<String>();
         this.planes = new ArrayList<String>();
+        this.bombers = new ArrayList<String>();
         this.sappers = new ArrayList<String>();
         this.noRetreat = new ArrayList<String>();
 
@@ -49,8 +53,8 @@ public class UnitClasses {
         mediumRaiders.add("corgator");
         mediumRaiders.add("armkam");
         mediumRaiders.add("corsh");
+        mediumRaiders.add("spherepole");
 
-        soloRaiders.add("spherepole");
         soloRaiders.add("hoverassault");
         soloRaiders.add("logkoda");
         soloRaiders.add("panther");
@@ -69,8 +73,6 @@ public class UnitClasses {
         assaults.add("capturecar");
         assaults.add("nsaclash");
         assaults.add("hoverriot");
-        assaults.add("correap");
-        assaults.add("tawf114");
         assaults.add("spiderassault");
         assaults.add("armsptk");
         assaults.add("arm_venom");
@@ -110,6 +112,8 @@ public class UnitClasses {
         loners.add("cormart");
         loners.add("corgol");
         loners.add("armcrabe");
+        loners.add("correap");
+        loners.add("tawf114");
 
         // Anti-air units
         AAs.add("armjeth");
@@ -118,6 +122,7 @@ public class UnitClasses {
         AAs.add("hoveraa");
         AAs.add("armaak");
         AAs.add("corvamp");
+        AAs.add("fighter");
         AAs.add("corcrash");
         AAs.add("shipaa");
         AAs.add("spideraa");
@@ -125,14 +130,20 @@ public class UnitClasses {
         AAs.add("vehaa");
 
         // Planes
-        planes.add("bomberdive");
         planes.add("fighter");
+        planes.add("bomberdive");
         planes.add("armstiletto_laser");
         planes.add("corvamp");
         planes.add("corshad");
         planes.add("corhurc2");
         planes.add("armcybr");
         planes.add("corawac");
+
+        // Bombers
+        bombers.add("bomberdive");
+        bombers.add("corshad");
+        bombers.add("armcybr");
+        bombers.add("corhurc2");
 
         // Sappers
         sappers.add("armtick");
@@ -141,9 +152,15 @@ public class UnitClasses {
         sappers.add("blastwing");
 
         // Things that should not retreat
-        //noRetreat.add("corsh");
         noRetreat.add("armcrabe");
-        noRetreat.add("spherepole");
         noRetreat.add("core_spectre");
+        noRetreat.add("corshad");
+    }
+
+    public static UnitClasses getInstance(){
+        if (instance == null){
+            instance = new UnitClasses();
+        }
+        return instance;
     }
 }

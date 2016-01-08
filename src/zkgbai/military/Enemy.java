@@ -7,20 +7,20 @@ import com.springrts.ai.oo.clb.WeaponDef;
 import com.springrts.ai.oo.clb.WeaponMount;
 
 public class Enemy {
-	Unit unit;
+	public Unit unit;
 	public UnitDef ud;
 	int unitID;
-	AIFloat3 position;
+	public AIFloat3 position;
 	float threatRadius = 0;
-	float value = 0;
+	public float value = 0;
 	float speed = 0;
 	public int lastSeen = 0;
 	public boolean isPainted = false;
 	boolean visible = false;
-	boolean isStatic = false;
+	public boolean isStatic = false;
 	boolean isRadarOnly = true;
 	boolean isRadarVisible = false;
-	boolean identified = false;
+	public boolean identified = false;
 	boolean isRiot = false;
 	boolean isFlamer = false;
 	boolean isArty = false;
@@ -127,7 +127,7 @@ public class Enemy {
 			if (unit.getHealth() > 0 && !isStatic) {
 				health = unit.getHealth();
 				danger = ud.getPower() + health;
-				danger *= 3f;
+				danger *= 2f;
 			} else {
 				health = ud.getHealth();
 				danger = ud.getPower() + health;
