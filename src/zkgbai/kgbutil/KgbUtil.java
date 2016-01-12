@@ -19,11 +19,15 @@ public class KgbUtil {
 
     public static AIFloat3 getDirectionalPoint(AIFloat3 start, AIFloat3 dest, float distance){
         AIFloat3 dir = new AIFloat3();
+
+        // First derive a normalized direction vector.
         float x = dest.x - start.x;
         float z = dest.z - start.z;
         float d = (float) Math.sqrt((x*x) + (z*z));
         x /= d;
         z /= d;
+
+        // Then apply it relative to the start position with the given distance.
         dir.x = start.x + (x * distance);
         dir.z = start.z + (z * distance);
         return dir;

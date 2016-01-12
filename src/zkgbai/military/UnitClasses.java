@@ -53,7 +53,6 @@ public class UnitClasses {
         mediumRaiders.add("corgator");
         mediumRaiders.add("armkam");
         mediumRaiders.add("corsh");
-        mediumRaiders.add("spherepole");
 
         soloRaiders.add("hoverassault");
         soloRaiders.add("logkoda");
@@ -61,6 +60,7 @@ public class UnitClasses {
         soloRaiders.add("armflea");
         soloRaiders.add("corfav");
         soloRaiders.add("corstorm");
+        soloRaiders.add("spherepole");
 
         // assaults; stuff that attacks in mobs
         assaults.add("armzeus");

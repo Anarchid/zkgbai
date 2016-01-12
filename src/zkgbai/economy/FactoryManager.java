@@ -101,7 +101,7 @@ public class FactoryManager extends Module {
 
         if (def.isBuilder() && unit.getMaxSpeed() > 0){
             numWorkers++;
-        }else if (unit.getMaxSpeed() > 0){
+        }else if (unit.getMaxSpeed() > 0 && !unit.getDef().getTooltip().contains("Anti-Air")){
             numFighters++;
         }
 
@@ -145,7 +145,7 @@ public class FactoryManager extends Module {
         UnitDef def = unit.getDef();
         String defName = def.getName();
 
-        if (unit.getMaxSpeed() > 0 && unit.getDef().isAbleToAttack()){
+        if (unit.getMaxSpeed() > 0 && unit.getDef().isAbleToAttack() && !unit.getDef().getTooltip().contains("Anti-Air")){
             numFighters--;
         }
 
@@ -276,7 +276,7 @@ public class FactoryManager extends Module {
     }
 
     private Boolean needWorkers(){
-        if ((float) numWorkers-1 < Math.floor(economyManager.effectiveIncomeMetal/5) + (economyManager.fusions.size() * 2)
+        if ((float) numWorkers-1 < Math.floor(economyManager.effectiveIncomeMetal/5) + (economyManager.fusions.size() * 2) + (warManager.miscHandler.striders.size() * 4)
                 && (numFighters > numWorkers || numWorkers == 0)
                 && (economyManager.effectiveIncome > 9 || numWorkers == 0)) {
             return true;
@@ -291,7 +291,7 @@ public class FactoryManager extends Module {
 
         if (raiderSpam < 0) {
             if (economyManager.effectiveIncome > 15 && Math.random() > 0.8) {
-                raiderSpam += 2;
+                raiderSpam++;
                 return "spherepole";
             } else {
                 if (smallMap || economyManager.effectiveIncome < 15){
@@ -313,7 +313,7 @@ public class FactoryManager extends Module {
             return "armtick";
         }
 
-        raiderSpam --;
+        raiderSpam--;
 
         if (numWarriors == 0){
             return "armwar";
@@ -322,18 +322,20 @@ public class FactoryManager extends Module {
         double rand = Math.random();
         if (economyManager.adjustedIncome < 40){
             if (rand > 0.50) {
+                raiderSpam++;
                 return "armrock";
-            } else if (rand > 0.30) {
+            } else if (rand > 0.20) {
                 return "armzeus";
             } else {
                 return "armwar";
             }
         } else {
             if (rand > 0.55) {
+                raiderSpam++;
                 return "armrock";
-            } else if (rand > 0.35) {
+            } else if (rand > 0.25) {
                 return "armzeus";
-            } else if (rand > 0.15) {
+            } else if (rand > 0.1) {
                 return "armwar";
             } else {
                 return "armsnipe";
@@ -404,10 +406,10 @@ public class FactoryManager extends Module {
         }
 
         if (raiderSpam < 0) {
+            raiderSpam++;
             if (Math.random() > 0.1) {
                 return "amphraider3";
             }else{
-                raiderSpam += 3;
                 return "amphraider2";
             }
         }
@@ -484,17 +486,13 @@ public class FactoryManager extends Module {
             return "corch";
         }
 
-        if (raiderSpam < -4){
-            raiderSpam = -4;
-        }
-
         if (raiderSpam < 0) {
             if (Math.random() > 0.66) {
                 raiderSpam += 2;
                 return "hoverassault";
             }
 
-            if (smallMap){
+            if (smallMap || economyManager.effectiveIncome < 15){
                 raiderSpam++;
             }
             return "corsh";
@@ -649,8 +647,12 @@ public class FactoryManager extends Module {
     }
 
     private String getStrider(){
-        if (economyManager.adjustedIncome > 120){
-            return "armbanth";
+        if (economyManager.adjustedIncome > 60 && !warManager.miscHandler.striders.isEmpty() && Math.random() > 0.5){
+            if (Math.random() > 0.25) {
+                return "armbanth";
+            }else{
+                return "armorco";
+            }
         }
 
         double rand = Math.random();

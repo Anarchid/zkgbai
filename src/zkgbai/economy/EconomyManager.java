@@ -479,6 +479,17 @@ public class EconomyManager extends Module {
 			fusions.add(unit);
 		}
 
+		// rush striders
+		if ((defName.equals("dante") || defName.equals("scorpion") || defName.equals("funnelweb")) && warManager.miscHandler.striders.size() == 0){
+			RepairTask rt = new RepairTask(unit);
+			repairTasks.add(rt);
+		}
+
+		if (defName.equals("armbanth") || defName.equals("armorco")){
+			RepairTask rt = new RepairTask(unit);
+			repairTasks.add(rt);
+		}
+
 		if (defName.equals("factoryplane")){
 			havePlanes = true;
 		}
@@ -701,7 +712,7 @@ public class EconomyManager extends Module {
 
 		if (worker.getTask() != null){
 			task = worker.getTask();
-			cost = costOfJob(worker, task) - 100;
+			cost = costOfJob(worker, task);
 		}
 
 		for (WorkerTask t: constructionTasks){
@@ -781,7 +792,7 @@ public class EconomyManager extends Module {
 			}else if (ctask.buildType.getName().equals("armestor")){
 				// for pylons
 				return dist - 500 + (500 * (costMod - 1));
-			}else if (ctask.buildType.getName().equals("armsolar") || ctask.buildType.getName().equals("armwin") && energy < 100){
+			}else if (ctask.buildType.getName().equals("armsolar") || ctask.buildType.getName().equals("armwin") && energy < 400){
 				// favor solars highly when estalled
 				return (dist/(float) Math.log(dist)) + (600 * (costMod-1));
 			}else{
@@ -814,7 +825,7 @@ public class EconomyManager extends Module {
 			if (rptask.target.getHealth() > 0) {
 				if (rptask.target.getMaxSpeed() > 0 && rptask.target.getDef().isAbleToAttack()) {
 					// for mobile combat units
-					return dist - (rptask.target.getMaxHealth() - rptask.target.getHealth()) / costMod;
+					return dist + (100 * (costMod - 1)) - Math.min(10000,(rptask.target.getMaxHealth() - rptask.target.getHealth())) / (5 * costMod);
 				}else if (rptask.target.getDef().isAbleToAttack()){
 					// for static defenses
 					return dist + (100 * (costMod - 1)) - ((rptask.target.getMaxHealth() * 4) - rptask.target.getHealth()) / costMod;
@@ -1049,7 +1060,7 @@ public class EconomyManager extends Module {
 		int energySize = solars.size() + solarTasks.size() + (windgens.size() + windTasks.size())/2;
 		if ((effectiveIncome < 15 && mexes.size() > energySize)
 				|| (effectiveIncome > 15 && energy < 100 && solarTasks.size() + windTasks.size() < facManager.numWorkers)
-				|| (effectiveIncome > 20 && (mexes.size() * ((mexes.size()/10)+1)) > energySize && solarTasks.size() + windTasks.size() < facManager.numWorkers)) {
+				|| (effectiveIncome > 30 && solarTasks.size() + windTasks.size() < facManager.numWorkers)) {
 			createEnergyTask(worker);
 		}
 
@@ -1315,9 +1326,9 @@ public class EconomyManager extends Module {
 	void porcPush(Unit unit, Unit attacker){
 		UnitDef porc;
 		double rand = Math.random();
-		if (rand > 0.1) {
+		if (rand > 0.2) {
 			porc = callback.getUnitDefByName("corrl");
-		}else if (rand > 0.05){
+		}else if (rand > 0.1){
 			porc = callback.getUnitDefByName("corllt");
 		}else{
 			porc = callback.getUnitDefByName("corhlt");
@@ -1472,7 +1483,7 @@ public class EconomyManager extends Module {
 		ConstructionTask ct;
 
 		// for fusions
-		if (adjustedIncome > 40 && !facManager.factories.isEmpty() && fusions.size() < 3 && fusionTasks.isEmpty()){
+		if (adjustedIncome > 1000 && !facManager.factories.isEmpty() && fusions.size() < 3 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
 			position = graphManager.getOverdriveSweetSpot(position, fusion);
@@ -1491,7 +1502,7 @@ public class EconomyManager extends Module {
 			}
 		}
 		// for singus
-		if (adjustedIncome > 70 && !facManager.factories.isEmpty() && factoryTasks.isEmpty() && fusions.size() < 5 && fusionTasks.isEmpty()){
+		if (adjustedIncome > 1500 && !facManager.factories.isEmpty() && factoryTasks.isEmpty() && fusions.size() < 5 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
 			position = graphManager.getOverdriveSweetSpot(position, singu);

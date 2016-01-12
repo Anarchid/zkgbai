@@ -47,7 +47,7 @@ public class TerrainAnalyzer {
     }
 
     private void populateFacList(){
-        if (!parent.allies.isEmpty()){
+        if (parent.allies.size() > 2){
             debug(taMsg + "Allies detected, enabling air starts!");
             initialFacList.add("factorygunship");
             initialFacList.add("factoryplane");
