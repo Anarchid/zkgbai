@@ -7,7 +7,6 @@ import com.springrts.ai.oo.AIFloat3;
 public class MetalSpot {
 	AIFloat3 position;
 	float value = 0;
-	boolean connected = false;
 	public boolean visible = false;
 
 	public boolean owned = false;
@@ -77,6 +76,19 @@ public class MetalSpot {
 			}
 		}
 		if (numEnemy > 1){
+			return true;
+		}
+		return false;
+	}
+
+	public boolean isConnected(){
+		int numConnected = 0;
+		for (Link l:links){
+			if (l.connected) {
+				numConnected++;
+			}
+		}
+		if (numConnected > 1){
 			return true;
 		}
 		return false;

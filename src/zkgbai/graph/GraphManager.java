@@ -757,52 +757,36 @@ public class GraphManager extends Module {
 		}
 		return bestSpot;
 	}
+    
+    public AIFloat3 getOverdriveSweetSpot(AIFloat3 position, UnitDef pylon){
+		float radius = 0.9f * pylonDefs.get(pylon.getName());
 
-	public AIFloat3 getNearestUnconnectedLink(AIFloat3 position){
-		AIFloat3 closest = null;
+		// First find the nearest mex with less than 2 connected links
+		MetalSpot best = null;
 		float distance = Float.MAX_VALUE;
-		for (Link l:links){
+		for (MetalSpot ms:metalSpots){
+			if (!ms.isConnected()){
+				float dist = distance(position, ms.getPos());
+				if (dist < distance){
+					distance = dist;
+					best = ms;
+				}
+			}
+		}
+
+		// then find the nearest unconnected link
+		Link link = null;
+		distance = Float.MAX_VALUE;
+		for (Link l:best.links){
 			if (!l.connected && l.length < 1500 && l.isOwned()){
 				float dist = distance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
-					closest = l.getPos();
+					link = l;
 				}
 			}
 		}
-		return closest;
-	}
 
-	public AIFloat3 getNearestPylonSpot(AIFloat3 position){
-		AIFloat3 closest = null;
-		float distance = Float.MAX_VALUE;
-		for (Link l:links){
-			if (!l.connected && l.isOwned() && l.length > 900 && l.length < 1500){
-				float dist = distance(position, l.getPos());
-				if (dist < distance){
-					distance = dist;
-					closest = l.getPos();
-				}
-			}
-		}
-		return closest;
-	}
-    
-    public AIFloat3 getOverdriveSweetSpot(AIFloat3 position, UnitDef pylon){
-		float radius = 0.9f * pylonDefs.get(pylon.getName());
-		float minWeight = Float.MAX_VALUE;
-    	Link link = null;
-    	for(Link l:links){
-    		if(!l.connected){
-    			float combinedValue = (float) (l.v0.value+l.v1.value+Math.sqrt(l.pylons.size())+0.001f);
-    			float combinedCost = (float) (l.length + Math.pow(distance(l.centerPos, position),2));
-	    		float weight = combinedCost/combinedValue;
-	    		if (weight < minWeight){
-	    			link = l;
-	    			minWeight = weight;
-	    		}
-    		}
-    	}
     	if(link != null){
     		Pylon p = link.getConnectionHead();
     		
@@ -820,26 +804,13 @@ public class GraphManager extends Module {
 				float z = p.position.z + vz*radius;
 				AIFloat3 newpos = new AIFloat3(x,p.position.y,z);
 				return newpos;
-    		}
+    		}else{
+				// if no pylons are present, start a new chain.
+				return getDirectionalPoint(link.v1.getPos(), link.getPos(), radius);
+			}
     	}	
-    	
-    	// if no unconnected links nearby, just pick a metal spot
-    	minWeight = Float.MAX_VALUE;
-    	MetalSpot spot = null;
-    	for(MetalSpot ms:metalSpots){
-    		if(ms.owned){
-	    		float weight = (distance(ms.position, position));
-	    		weight += weight*Math.sqrt(ms.getPylonCount());
-	    		if (weight < minWeight){
-	    			spot = ms;
-	    			minWeight = weight;
-	    		}
-    		}
-    	}
-    	if(spot != null){
-			return spot.position;
-    	}else{
-    		return position;
-    	}	
+
+		// if there are no unconnected owned links, return null
+		return null;
     }
 }

@@ -488,7 +488,7 @@ public class FactoryManager extends Module {
 
         if (raiderSpam < 0) {
             if (Math.random() > 0.66) {
-                raiderSpam += 2;
+                raiderSpam++;
                 return "hoverassault";
             }
 
@@ -506,12 +506,14 @@ public class FactoryManager extends Module {
         double rand = Math.random();
         if (economyManager.adjustedIncome < 35) {
             if (rand > 0.2) {
+                raiderSpam++;
                 return "nsaclash";
             } else {
                 return "hoverriot";
             }
         } else {
             if (rand > 0.35) {
+                raiderSpam++;
                 return "nsaclash";
             } else if (rand > 0.1) {
                 return "hoverriot";
@@ -647,7 +649,7 @@ public class FactoryManager extends Module {
     }
 
     private String getStrider(){
-        if (economyManager.adjustedIncome > 60 && !warManager.miscHandler.striders.isEmpty() && Math.random() > 0.5){
+        if (economyManager.adjustedIncome > 60 && warManager.miscHandler.striders.size() > 2 && Math.random() > 0.5){
             if (Math.random() > 0.25) {
                 return "armbanth";
             }else{

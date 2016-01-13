@@ -76,8 +76,7 @@ public class Link {
 			return false;
 		}
 		
-		public boolean checkConnected()
-		{
+		public boolean checkConnected() {
 			int i = 0;
 			ArrayList<Pylon>visited = new ArrayList<Pylon>();
 			Queue <Pylon>queue = new LinkedList<Pylon>();
@@ -116,9 +115,9 @@ public class Link {
 			int i = 0;
 			ArrayList<Pylon>visited = new ArrayList<Pylon>();
 			Queue <Pylon>queue = new LinkedList<Pylon>();
-			
-			for(Pylon p:v0.pylons){
-				queue.add(p);	
+
+			for(Pylon p:v1.pylons){
+				queue.add(p);
 			}
 			
 			while(!queue.isEmpty()) {

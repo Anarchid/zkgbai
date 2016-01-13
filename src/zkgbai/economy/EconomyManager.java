@@ -792,7 +792,7 @@ public class EconomyManager extends Module {
 			}else if (ctask.buildType.getName().equals("armestor")){
 				// for pylons
 				return dist - 500 + (500 * (costMod - 1));
-			}else if (ctask.buildType.getName().equals("armsolar") || ctask.buildType.getName().equals("armwin") && energy < 400){
+			}else if (ctask.buildType.getName().equals("armsolar") || ctask.buildType.getName().equals("armwin") && (energy < 400 || fusions.size() > 2)){
 				// favor solars highly when estalled
 				return (dist/(float) Math.log(dist)) + (600 * (costMod-1));
 			}else{
@@ -807,11 +807,6 @@ public class EconomyManager extends Module {
 				return dist;
 			}
 
-			if (rtask.def.getContainedResource(m) > 300) {
-				// for big reclaimables
-				return (dist/(float) Math.log(dist)) - rtask.target.getReclaimLeft() + (600 * (costMod - 2));
-			}
-			// for other reclaimables
 			return (dist / (float) Math.log(dist)) + (600 * (costMod - 1));
 		}
 
@@ -825,7 +820,7 @@ public class EconomyManager extends Module {
 			if (rptask.target.getHealth() > 0) {
 				if (rptask.target.getMaxSpeed() > 0 && rptask.target.getDef().isAbleToAttack()) {
 					// for mobile combat units
-					return dist + (100 * (costMod - 1)) - Math.min(10000,(rptask.target.getMaxHealth() - rptask.target.getHealth())) / (5 * costMod);
+					return dist + (100 * (costMod - 1)) - 250 - Math.min(10000,(rptask.target.getMaxHealth() - rptask.target.getHealth())) / (5 * costMod);
 				}else if (rptask.target.getDef().isAbleToAttack()){
 					// for static defenses
 					return dist + (100 * (costMod - 1)) - ((rptask.target.getMaxHealth() * 4) - rptask.target.getHealth()) / costMod;
@@ -1446,14 +1441,6 @@ public class EconomyManager extends Module {
 		}
 		return false;
 	}
-	
-	Boolean canBuildFusion( AIFloat3 position){
-		 Worker nearestFac = getNearestFac(position);
-		if ((effectiveIncome > 30 && nearestFac != null && fusions.size() < 6 && fusionTasks.size() == 0)){
-			return true;
-		}
-		return false;
-	}
 
     void captureMexes(){
     	UnitDef mex = callback.getUnitDefByName("cormex");
@@ -1483,10 +1470,13 @@ public class EconomyManager extends Module {
 		ConstructionTask ct;
 
 		// for fusions
-		if (adjustedIncome > 1000 && !facManager.factories.isEmpty() && fusions.size() < 3 && fusionTasks.isEmpty()){
+		if (effectiveIncomeEnergy > 75 && adjustedIncome > 35 && !facManager.factories.isEmpty() && fusions.size() == 0 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
 			position = graphManager.getOverdriveSweetSpot(position, fusion);
+			if (position == null){
+				position = graphManager.getClosestSpot(worker.getPos()).getPos();
+			}
 			position = callback.getMap().findClosestBuildSite(fusion,position,600f, 3, 0);
 
 			// don't build fusions too close to the fac
@@ -1502,10 +1492,13 @@ public class EconomyManager extends Module {
 			}
 		}
 		// for singus
-		if (adjustedIncome > 1500 && !facManager.factories.isEmpty() && factoryTasks.isEmpty() && fusions.size() < 5 && fusionTasks.isEmpty()){
+		if (effectiveIncomeEnergy > 100 && !facManager.factories.isEmpty() && factoryTasks.isEmpty() && adjustedIncome > fusions.size() * 50 && fusionTasks.isEmpty()){
 			position = getNearestFac(position).getPos();
 			position = getRadialPoint(position, 1200f);
 			position = graphManager.getOverdriveSweetSpot(position, singu);
+			if (position == null){
+				position = graphManager.getClosestSpot(worker.getPos()).getPos();
+			}
 			position = callback.getMap().findClosestBuildSite(singu,position,600f, 3, 0);
 
 			// don't build fusions too close to the fac or on the front line
@@ -1522,13 +1515,14 @@ public class EconomyManager extends Module {
 		}
 		// for solars
 		else if (Math.random() > 0.66 && callback.getMap().getElevationAt(position.x, position.z) > 0){
-			if (solars.size() + (windgens.size())/2 > 3) {
-				position = graphManager.getNearestUnconnectedLink(position);
-			}
 			if (position == null){
 				return;
 			}
 			position = graphManager.getOverdriveSweetSpot(position, solar);
+			// in case all metal spots are connected
+			if (position == null){
+				return;
+			}
 			position = callback.getMap().findClosestBuildSite(solar, position, 600f, 3, 0);
 
 			float solarDist = 400;
@@ -1576,13 +1570,14 @@ public class EconomyManager extends Module {
 			}
 			// windgens
 		}else {
-			if (solars.size() + (windgens.size())/2 > 3) {
-				position = graphManager.getNearestUnconnectedLink(position);
-			}
 			if (position == null){
 				return;
 			}
 			position = graphManager.getOverdriveSweetSpot(position, windgen);
+			// in case all metal spots are connected
+			if (position == null){
+				return;
+			}
 			position = callback.getMap().findClosestBuildSite(windgen, position, 600f, 3, 0);
 
 			// prevent it from blocking the fac with crap
@@ -1622,9 +1617,8 @@ public class EconomyManager extends Module {
 	void createGridTask(Worker worker){
 		ConstructionTask ct;
 		UnitDef pylon = callback.getUnitDefByName("armestor");
+		AIFloat3 position = graphManager.getOverdriveSweetSpot(worker.getPos(), pylon);
 
-		AIFloat3 position = graphManager.getNearestPylonSpot(worker.getPos());
-		position = graphManager.getOverdriveSweetSpot(position, pylon);
 		if (position == null){
 			return;
 		}
@@ -1646,7 +1640,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if(gdist > 500) {
+		if(gdist > 1000) {
 			ct = new ConstructionTask(pylon, position, 0);
 			if (buildCheck(ct) && !pylonTasks.contains(ct)){
 				constructionTasks.add(ct);
