@@ -29,7 +29,7 @@ public class MetalSpot {
 	public boolean equals(Object other){
 		if(other instanceof MetalSpot){
 			MetalSpot ms = (MetalSpot)other;
-			return (ms.value == value && ms.position == position);
+			return (ms.value == value && ms.position.equals(position));
 		}
 		return false;
 	}
@@ -66,18 +66,13 @@ public class MetalSpot {
 		if (enemyShadowed){
 			return true;
 		}
-		int numEnemy = 0;
+
 		for (Link l:links){
-			if (l.length < 1500) {
-				if ((l.v0.enemyShadowed && !l.v0.owned)
-						|| (l.v1.enemyShadowed && !l.v1.owned)) {
-					numEnemy++;
-				}
+			if (!l.isOwned()) {
+				return true;
 			}
 		}
-		if (numEnemy > 1){
-			return true;
-		}
+
 		return false;
 	}
 

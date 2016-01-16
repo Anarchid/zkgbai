@@ -9,6 +9,7 @@ public class ConstructionTask extends WorkerTask {
 	public int facing;
 	public Unit target;
 	public int frameIssued;
+	public boolean isSinguDefense = false;
 
 	public ConstructionTask(UnitDef def, AIFloat3 pos, int h) {
 		super();

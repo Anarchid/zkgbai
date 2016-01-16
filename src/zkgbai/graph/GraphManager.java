@@ -38,7 +38,6 @@ public class GraphManager extends Module {
 	private MilitaryManager warManager;
 	private ArrayList<MetalSpot> metalSpots;
 	private ArrayList<Link> links;
-	private ArrayList<Pylon> pylons;
     public int myTeamID;
 	int frame = 0;
     private UnitDef mexDef;
@@ -68,7 +67,6 @@ public class GraphManager extends Module {
 
 		this.metalSpots = new ArrayList<MetalSpot>();
 		this.links = new ArrayList<Link>();
-		this.pylons = new ArrayList<Pylon>();
 		this.mexDef = ai.getCallback().getUnitDefByName("cormex");
 		this.mexDefID = mexDef.getUnitDefId();
 		this.m = callback.getResourceByName("Metal");
@@ -148,28 +146,28 @@ public class GraphManager extends Module {
 		
 		return data;
 	}
-	
-    @Override
-    public int luaMessage(java.lang.String inData){        
-    	if(inData.startsWith("METAL_SPOTS:")){
-    		String json = inData.substring(12);
+
+	@Override
+	public int luaMessage(java.lang.String inData){
+		if(inData.startsWith("METAL_SPOTS:")){
+			String json = inData.substring(12);
 			JsonParserFactory factory=JsonParserFactory.getInstance();
 			JSONParser parser=factory.newJsonParser();
 			ArrayList<HashMap> jsonData=(ArrayList)parser.parseJson(json).values().toArray()[0];
-    		ai.debug("Parsed JSON metalmap with "+jsonData.size()+" spots");
+			ai.debug("Parsed JSON metalmap with "+jsonData.size()+" spots");
 			if(!graphInitialized){
-				initializeGraph(jsonData);	
+				initializeGraph(jsonData);
 			}
-    	}
-    	return 0; //signaling: OK
-    }
-    
-    @Override
-    public int unitFinished(Unit unit) {
-    	UnitDef def = unit.getDef();
+		}
+		return 0; //signaling: OK
+	}
+
+	@Override
+	public int unitCreated(Unit unit, Unit builder) {
+		UnitDef def = unit.getDef();
 		Integer radius = pylonDefs.get(def.getName());
 		if(radius != null){
-			Pylon p = new Pylon(unit, radius.intValue());
+			Pylon p = new Pylon(unit, radius);
 
 			for(MetalSpot m:metalSpots){
 				if(distance(p.position, m.position)<p.radius+50){
@@ -179,56 +177,53 @@ public class GraphManager extends Module {
 			}
 
 			for(Link l:links){
-				if(distance(p.position, l.centerPos) < l.length/2){
-					for(Pylon lp:l.pylons){
-						if(distance(p.position, lp.position) < p.radius+lp.radius){
+				if(distance(p.position, l.centerPos) < (l.length/2) + p.radius){
+					for(Pylon lp:l.pylons.values()){
+						if(!p.equals(lp) && distance(p.position, lp.position) < p.radius+lp.radius){
 							lp.addNeighbour(p);
 							p.addNeighbour(lp);
 						}
 					}
 
 					l.addPylon(p);
-					if(l.checkConnected()){
+					l.checkConnected();
+				}
+			}
+		}
 
+		return 0;
+	}
+
+	@Override
+	public int unitDestroyed(Unit unit, Unit attacker) {
+		UnitDef def = unit.getDef();
+		if(pylonDefs.containsKey(def.getName())){
+			Pylon deadPylon = new Pylon(unit, pylonDefs.get(def.getName()));
+			for(Link l:links){
+				if(distance(deadPylon.position, l.centerPos) < (l.length/2) + deadPylon.radius){
+					Pylon p = l.pylons.get(unit.getUnitId());
+
+					if (p != null) {
+						deadPylon = p;
+						break;
 					}
 				}
 			}
 
-			pylons.add(p);
+			for(Pylon p:deadPylon.neighbours){
+				p.removeNeighbour(deadPylon);
+			}
+			for(MetalSpot m:deadPylon.spots){
+				m.pylons.remove(deadPylon);
+			}
+			for(Link l:deadPylon.links){
+				l.removePylon(deadPylon);
+				l.checkConnected();
+			}
+			// destroy pylon
 		}
-
-    	return 0;
-    }
-
-	@Override
-    public int unitDestroyed(Unit unit, Unit attacker) {
-    	UnitDef def = unit.getDef();
-		if(!def.isBuilder() && def.getName().equals("armsolar")){
-    		Pylon deadPylon = null;
-    		for(Pylon p:pylons){
-    			if(p.unit.equals(unit)){
-    				deadPylon = p;
-    				break;
-    			}
-    		}
-    		
-    		if(deadPylon != null){
-    			for(Pylon p:deadPylon.neighbours){
-    				p.neighbours.remove(deadPylon);
-    			}
-    			for(MetalSpot m:deadPylon.spots){
-    				m.pylons.remove(deadPylon);
-    			}
-    			for(Link l:deadPylon.links){
-    				l.pylons.remove(deadPylon);
-    				if(!l.checkConnected()){
-    				}
-    			}
-    		}
-    		// destroy pylon
-    	}
-        return 0; // signaling: OK
-    }
+		return 0; // signaling: OK
+	}
 
 	@Override
 	public int enemyEnterLOS(Unit enemy){
@@ -242,8 +237,8 @@ public class GraphManager extends Module {
 		}
 		return 0;
 	}
-    
-    // TODO: move los stuff to a separate handler
+
+	// TODO: move los stuff to a separate handler
 	@Override
 	public int update(int uframe){
 		this.frame = uframe;
@@ -251,8 +246,8 @@ public class GraphManager extends Module {
 			return 0;
 		}
 
-    	for(MetalSpot ms:metalSpots){
-    		if(losManager.isInLos(ms.getPos())){
+		for(MetalSpot ms:metalSpots){
+			if(losManager.isInLos(ms.getPos())){
 				ms.lastSeen = frame;
 				ms.visible = true;
 
@@ -279,21 +274,21 @@ public class GraphManager extends Module {
 				}
 
 				cleanShadows(ms);
-    		}else{
-    			if(ms.visible){
-    				ms.visible = false;
-    			}
+			}else{
+				if(ms.visible){
+					ms.visible = false;
+				}
 				if (ms.owned){
 					ms.owned = false;
 				}
 				if (frame - ms.lastSeen > 3600){
 					ms.lastSeen = frame-1800;
 				}
-    		}
-    		
-    	}
+			}
 
-    	calcCenters();
+		}
+
+		calcCenters();
 
 		return 0;
 	}
@@ -669,6 +664,15 @@ public class GraphManager extends Module {
 		return closest;
 	}
 
+	public List<MetalSpot> getOwnedSpots(){
+		// returns all metal spots not owned by allies.
+		List<MetalSpot> spots = new ArrayList<MetalSpot>();
+		for(MetalSpot ms:metalSpots){
+			if(ms.owned) spots.add(ms);
+		}
+		return spots;
+	}
+
 	public List<MetalSpot> getUnownedSpots(){
 		// returns all metal spots not owned by allies.
 		List<MetalSpot> spots = new ArrayList<MetalSpot>();
@@ -757,6 +761,34 @@ public class GraphManager extends Module {
 		}
 		return bestSpot;
 	}
+
+	public AIFloat3 getClosestPylonSpot(AIFloat3 position){
+		// First find the nearest mex with less than 2 connected links
+		MetalSpot best = null;
+		float distance = Float.MAX_VALUE;
+		for (MetalSpot ms:metalSpots){
+			if (!ms.isConnected()){
+				float dist = distance(position, ms.getPos());
+				if (dist < distance){
+					distance = dist;
+					best = ms;
+				}
+			}
+		}
+
+		// then find the shortest unconnected link
+		Link link = null;
+		distance = Float.MAX_VALUE;
+		for (Link l:best.links){
+			if (!l.connected && l.isOwned()){
+				if (l.length < distance){
+					distance = l.length;
+					link = l;
+				}
+			}
+		}
+		return link.getPos();
+	}
     
     public AIFloat3 getOverdriveSweetSpot(AIFloat3 position, UnitDef pylon){
 		float radius = 0.9f * pylonDefs.get(pylon.getName());
@@ -774,14 +806,13 @@ public class GraphManager extends Module {
 			}
 		}
 
-		// then find the nearest unconnected link
+		// then find the shortest unconnected link
 		Link link = null;
 		distance = Float.MAX_VALUE;
 		for (Link l:best.links){
-			if (!l.connected && l.length < 1500 && l.isOwned()){
-				float dist = distance(position, l.getPos());
-				if (dist < distance){
-					distance = dist;
+			if (!l.connected && l.isOwned()){
+				if (l.length < distance){
+					distance = l.length;
 					link = l;
 				}
 			}
@@ -792,18 +823,7 @@ public class GraphManager extends Module {
     		
     		if(p != null){
 				radius += 0.9f * p.radius;
-
-				float dx=link.v1.position.x - p.position.x;
-				float dz=link.v1.position.z - p.position.z;
-				
-				double d = Math.sqrt(dx*dx+dz*dz);
-				float vx = (float) (dx/d);
-				float vz = (float) (dz/d);
-				
-				float x = p.position.x + vx*radius;
-				float z = p.position.z + vz*radius;
-				AIFloat3 newpos = new AIFloat3(x,p.position.y,z);
-				return newpos;
+				return getDirectionalPoint(p.position, link.v0.getPos(), radius);
     		}else{
 				// if no pylons are present, start a new chain.
 				return getDirectionalPoint(link.v1.getPos(), link.getPos(), radius);

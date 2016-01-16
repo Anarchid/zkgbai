@@ -36,10 +36,13 @@ public class FactoryManager extends Module {
     int raiderSpam = 0;
 
     int numWarriors = 0;
+    int numZeus = 0;
+    int numRockos = 0;
 
     int numFelons = 0;
     int numThugs = 0;
     int numLaws = 0;
+    int numFunnels = 0;
 
     int numVenoms = 0;
     int numRedbacks = 0;
@@ -53,6 +56,11 @@ public class FactoryManager extends Module {
 
         this.raiderSpam = ((int) Math.ceil(Math.random()*9.0));
         raiderSpam = Math.max(4, raiderSpam)* -1;
+
+        if (callback.getMap().getHeight() > 896 || callback.getMap().getWidth() > 896){
+            raiderSpam = -9;
+        }
+
         if (callback.getMap().getHeight() < 640 && callback.getMap().getWidth() < 640){
             raiderSpam /= 2;
         }
@@ -109,6 +117,14 @@ public class FactoryManager extends Module {
             numWarriors++;
         }
 
+        if(defName.equals("armzeus")){
+            numZeus++;
+        }
+
+        if(defName.equals("armrock")){
+            numRockos++;
+        }
+
         if(defName.equals("shieldfelon")){
             numFelons++;
         }
@@ -119,6 +135,10 @@ public class FactoryManager extends Module {
 
         if (defName.equals("cormak")){
             numLaws++;
+        }
+
+        if (defName.equals("funnelweb")){
+            numFunnels++;
         }
 
         if (defName.equals("arm_venom")){
@@ -161,6 +181,14 @@ public class FactoryManager extends Module {
             numWarriors--;
         }
 
+        if(defName.equals("armzeus")){
+            numZeus--;
+        }
+
+        if(defName.equals("armrock")){
+            numRockos--;
+        }
+
         if (defName.equals("shieldfelon")){
             numFelons--;
         }
@@ -171,6 +199,10 @@ public class FactoryManager extends Module {
 
         if (defName.equals("cormak")){
             numLaws--;
+        }
+
+        if (defName.equals("funnelweb")){
+            numFunnels--;
         }
 
         if (defName.equals("arm_venom")){
@@ -276,7 +308,7 @@ public class FactoryManager extends Module {
     }
 
     private Boolean needWorkers(){
-        if ((float) numWorkers-1 < Math.floor(economyManager.effectiveIncomeMetal/5) + (economyManager.fusions.size() * 2) + (warManager.miscHandler.striders.size() * 4)
+        if ((float) numWorkers-1 < Math.floor(economyManager.effectiveIncomeMetal/5) + ((warManager.miscHandler.striders.size() + economyManager.fusions.size() + numFunnels + factories.size() - 1) * 4)
                 && (numFighters > numWorkers || numWorkers == 0)
                 && (economyManager.effectiveIncome > 9 || numWorkers == 0)) {
             return true;
@@ -291,10 +323,10 @@ public class FactoryManager extends Module {
 
         if (raiderSpam < 0) {
             if (economyManager.effectiveIncome > 15 && Math.random() > 0.8) {
-                raiderSpam++;
+                raiderSpam ++;
                 return "spherepole";
             } else {
-                if (smallMap || economyManager.effectiveIncome < 15){
+                if (smallMap || economyManager.effectiveIncome < 15) {
                     raiderSpam++;
                 }
                 return "armpw";
@@ -313,7 +345,7 @@ public class FactoryManager extends Module {
             return "armtick";
         }
 
-        raiderSpam--;
+        raiderSpam -= 2;
 
         if (numWarriors == 0){
             return "armwar";
@@ -321,19 +353,19 @@ public class FactoryManager extends Module {
 
         double rand = Math.random();
         if (economyManager.adjustedIncome < 40){
-            if (rand > 0.50) {
-                raiderSpam++;
+            if (numRockos < 2 * (numWarriors + numZeus)) {
+                raiderSpam += 2;
                 return "armrock";
-            } else if (rand > 0.20) {
+            } else if (rand > 0.3) {
                 return "armzeus";
             } else {
                 return "armwar";
             }
         } else {
-            if (rand > 0.55) {
-                raiderSpam++;
+            if (numRockos < 2 * (numWarriors + numZeus)) {
+                raiderSpam += 2;
                 return "armrock";
-            } else if (rand > 0.25) {
+            } else if (rand > 0.4) {
                 return "armzeus";
             } else if (rand > 0.1) {
                 return "armwar";
@@ -351,12 +383,10 @@ public class FactoryManager extends Module {
         if (raiderSpam < 0){
             double rand = Math.random();
             if (economyManager.effectiveIncome > 15 && rand > 0.5){
-                raiderSpam++;
+                raiderSpam += 2;
                 return "corstorm";
             }else if (rand > 0.1){
-                if (economyManager.effectiveIncome < 15) {
-                    raiderSpam++;
-                }
+                raiderSpam++;
                 return "corak";
             }
             return "corclog";
@@ -366,7 +396,7 @@ public class FactoryManager extends Module {
             return "corcrash";
         }
 
-        raiderSpam -= 2;
+        raiderSpam -= 3;
 
         if (numFelons < Math.min((economyManager.adjustedIncome/15)-2, 3) && numFelons * 4 < numThugs && Math.random() > 0.5){
             return "shieldfelon";
@@ -429,7 +459,7 @@ public class FactoryManager extends Module {
         }else{
             if (rand > 0.5) {
                 return "amphfloater";
-            } else if (rand > 0.15) {
+            } else if (rand > 0.05) {
                 return "amphriot";
             } else {
                 return "amphassault";
@@ -486,15 +516,17 @@ public class FactoryManager extends Module {
             return "corch";
         }
 
+        /*if (raiderSpam < -4 && callback.getMap().getHeight() < 1024 && callback.getMap().getWidth() < 1024){
+            raiderSpam = -4;
+        }*/
+
         if (raiderSpam < 0) {
-            if (Math.random() > 0.66) {
-                raiderSpam++;
+            if (Math.random() > 0.5) {
+                raiderSpam += 2;
                 return "hoverassault";
             }
 
-            if (smallMap || economyManager.effectiveIncome < 15){
-                raiderSpam++;
-            }
+            raiderSpam++;
             return "corsh";
         }
 
@@ -502,18 +534,18 @@ public class FactoryManager extends Module {
             return "hoveraa";
         }
 
-        raiderSpam--;
+        raiderSpam -= 3;
         double rand = Math.random();
         if (economyManager.adjustedIncome < 35) {
             if (rand > 0.2) {
-                raiderSpam++;
+                raiderSpam += 3;
                 return "nsaclash";
             } else {
                 return "hoverriot";
             }
         } else {
             if (rand > 0.35) {
-                raiderSpam++;
+                raiderSpam += 3;
                 return "nsaclash";
             } else if (rand > 0.1) {
                 return "hoverriot";
@@ -649,8 +681,8 @@ public class FactoryManager extends Module {
     }
 
     private String getStrider(){
-        if (economyManager.adjustedIncome > 60 && warManager.miscHandler.striders.size() > 2 && Math.random() > 0.5){
-            if (Math.random() > 0.25) {
+        if (economyManager.adjustedIncome > 60 && warManager.miscHandler.striders.size() > 1 && Math.random() > 0.5){
+            if (Math.random() > 0.25 || warManager.miscHandler.striders.size() < 5) {
                 return "armbanth";
             }else{
                 return "armorco";

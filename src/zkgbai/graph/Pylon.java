@@ -7,7 +7,6 @@ import com.springrts.ai.oo.clb.Unit;
 
 public class Pylon {
 	int radius;
-	float output;
 	AIFloat3 position;
 	public ArrayList<MetalSpot> spots;
 	public ArrayList<Pylon> neighbours;
@@ -27,7 +26,7 @@ public class Pylon {
 	@Override 
 	public boolean equals(Object other) {
 		if (other instanceof Pylon) {
-			return (((Pylon) other).getUnit().getUnitId() == this.unit.getUnitId());
+			return (((Pylon) other).hashCode() == this.hashCode());
 		}
 		return false;
 	}
@@ -38,7 +37,9 @@ public class Pylon {
 	}
 	
 	void addNeighbour(Pylon p){
-		neighbours.add(p);
+		if (!neighbours.contains(p)) {
+			neighbours.add(p);
+		}
 	}
 	
 	void removeNeighbour(Pylon p){

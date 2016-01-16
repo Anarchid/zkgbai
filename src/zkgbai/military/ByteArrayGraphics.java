@@ -3,15 +3,15 @@ package zkgbai.military;
 /**
  * Created by haplo on 12/22/2015.
  */
-public class ArrayGraphics {
-    short[] data;
+public class ByteArrayGraphics {
+    byte[] data;
     int width;
     int height;
 
-    public ArrayGraphics(int w, int h){
+    public ByteArrayGraphics(int w, int h){
         width = w;
         height = h;
-        data = new short[width * height];
+        data = new byte[width * height];
     }
 
     public void clear(){
@@ -43,7 +43,7 @@ public class ArrayGraphics {
                 if(sum < radsq) {
                     data[index] += intensity;
                     if (data[index] < 0){
-                        data[index] = Short.MAX_VALUE;
+                        data[index] = Byte.MAX_VALUE;
                     }
                 }
             }
@@ -71,7 +71,7 @@ public class ArrayGraphics {
                 int index = (y * width) + x;
 
                 if(sum < radsq) {
-                    data[index] = (short) Math.max(data[index] - intensity, 0);
+                    data[index] = (byte) Math.max(data[index] - intensity, 0);
                 }
             }
         }

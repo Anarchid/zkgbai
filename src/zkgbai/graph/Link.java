@@ -1,29 +1,25 @@
 package zkgbai.graph;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
+
 import static zkgbai.kgbutil.KgbUtil.*;
 
 import com.springrts.ai.oo.AIFloat3;
 
 public class Link {
-		public ArrayList<Pylon> pylons;
 		boolean connected = false;
-		float weight;
 		public float length;
 		public MetalSpot v0;
 		public MetalSpot v1;
 		AIFloat3 centerPos;
+		Map<Integer, Pylon> pylons;
 		
 		Link(MetalSpot v0,MetalSpot v1){
-			this.pylons = new ArrayList<Pylon>();
 			this.v0 = v0;
 			this.v1 = v1;
 			calcCenterPos();
 			calcLength();
-			this.weight = (v0.value+v1.value)/this.length+1; 
+			this.pylons = new HashMap<Integer, Pylon>();
 		}
 		
 		@Override
@@ -39,13 +35,13 @@ public class Link {
 		public int hashCode(){
 			return v0.position.hashCode() + v1.position.hashCode()*2 + centerPos.hashCode()*4;
 		}
-		
+
 		public void addPylon(Pylon p){
-			pylons.add(p);
+			pylons.put(p.hashCode(), p);
 		}
-		
+
 		public void removePylon(Pylon p){
-			pylons.remove(p);
+			pylons.remove(p.hashCode());
 		}
 		
 		private void calcCenterPos() {
@@ -76,64 +72,76 @@ public class Link {
 			return false;
 		}
 		
-		public boolean checkConnected() {
-			int i = 0;
+		public void checkConnected() {
 			ArrayList<Pylon>visited = new ArrayList<Pylon>();
 			Queue <Pylon>queue = new LinkedList<Pylon>();
-			
-			for(Pylon p:v0.pylons){
-				queue.add(p);	
+			float minDistance = Float.MAX_VALUE;
+			int i = 0;
+
+			// check each pylon
+			for(Pylon p:v1.pylons){
+				queue.add(p);
 			}
-			
+
 			while(!queue.isEmpty()) {
+				if(i++>50) {
+					connected = false;
+					return;
+				}// infinite loop guard
 				Pylon q = queue.remove();
-				if(q.spots.contains(v1)){
-					connected = true;
-					return true;
-				}else{
-					if(i++>1000) return false;
-					visited.add(q);
+				visited.add(q);
+
+				// iterate through each pylon starting at v1 and
+				// progressively moving towards v0 until v0 is reached
+				float distance = distance(q.position, v0.position);
+				if (distance < minDistance){
+					minDistance = distance;
 					for(Pylon child:q.neighbours){
 						if(!visited.contains(child)){
 							queue.add(child);
 						}
 					}
 				}
+
+				if (q.spots.contains(v0)){
+					connected = true;
+					return;
+				}
 			}
+
 			connected = false;
-			return false;
 		}
 		
 		public Pylon getConnectionHead(){
-			if(connected || pylons.size() == 0){
+			if(connected || v1.pylons.size() == 0){
 				return null;
 			}
-			
-			Pylon winner = null;
-			float minDistance = Float.MAX_VALUE;
-			
-			int i = 0;
+
 			ArrayList<Pylon>visited = new ArrayList<Pylon>();
 			Queue <Pylon>queue = new LinkedList<Pylon>();
 
 			for(Pylon p:v1.pylons){
 				queue.add(p);
 			}
+
+			Pylon winner = null;
+			float minDistance = Float.MAX_VALUE;
+			int i = 0;
 			
 			while(!queue.isEmpty()) {
+				if(i++>50) return null; // infinite loop guard
 				Pylon q = queue.remove();
-				if(i++>1000) return null;
 				visited.add(q);
 				
-				float distance = distance(q.position, v1.position);
+				float distance = distance(q.position, v0.position);
 				if (distance < minDistance){
 					minDistance = distance;
 					winner = q;
-				}
-				
-				for(Pylon child:q.neighbours){
-					if(!visited.contains(child)){
-						queue.add(child);
+
+					for(Pylon child:q.neighbours){
+						if(!visited.contains(child)){
+							queue.add(child);
+						}
 					}
 				}
 			}

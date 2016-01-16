@@ -26,6 +26,8 @@ public class Enemy {
 	boolean isArty = false;
 	boolean isAA = false;
 	boolean isSuperWep = false;
+	boolean isMinorCancer = false;
+	boolean isMajorCancer = false;
 	float maxObservedSpeed = 0;
 	
 	Enemy(Unit unit, float cost){
@@ -72,6 +74,18 @@ public class Enemy {
 		this.value = cost;
 		this.isStatic = (u.getSpeed() == 0);
 		this.ud = u;
+
+		String defName = ud.getName();
+
+		if (defName.equals("corgarp") || defName.equals("armsnipe") || defName.equals("armmanni")){
+			this.isMinorCancer = true;
+		}
+
+		if (defName.equals("dante") || defName.equals("scorpion") || defName.equals("funnelweb") || defName.equals("armbanth") || defName.equals("armorco")
+				|| defName.equals("amphassault") || defName.equals("armraven") || defName.equals("armcrabe") || defName.equals("corgol") || defName.equals("correap")
+				|| defName.equals("shieldfelon")){
+			this.isMajorCancer = true;
+		}
 		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
@@ -126,15 +140,15 @@ public class Enemy {
 
 			if (unit.getHealth() > 0 && !isStatic) {
 				health = unit.getHealth();
-				danger = ud.getPower() + health;
+				danger = ud.getPower() + (health/10);
 				danger *= 2f;
 			} else {
 				health = ud.getHealth();
-				danger = ud.getPower() + health;
+				danger = ud.getPower() + (health/10);
 			}
 
 			if (isFlamer || ud.getName().equals("arm_venom")){
-				danger += 400;
+				danger += 200;
 			}
 			if (isRiot){
 				danger *= 2;
