@@ -2,6 +2,7 @@ package zkgbai.military.fighterhandlers;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
+import com.springrts.ai.oo.clb.UnitRulesParam;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.graph.GraphManager;
 import zkgbai.military.MilitaryManager;
@@ -28,7 +29,6 @@ public class RetreatHandler {
     int frame;
 
     public static final short OPTION_SHIFT_KEY = (1 << 5); //  32
-    private static final int CMD_FIND_PAD = 33411;
 
     public RetreatHandler(){
         this.ai = ZKGraphBasedAI.getInstance();
@@ -54,7 +54,7 @@ public class RetreatHandler {
     }
 
     public void checkUnit(Unit u){
-        if(cowardUnits.contains(u) && !retreatingUnits.contains(u) && u.getHealth()/u.getMaxHealth() < 0.4){
+        if(cowardUnits.contains(u) && !retreatingUnits.contains(u) && (u.getHealth()/u.getMaxHealth() < 0.5 || (u.getDef().getTooltip().contains("Anti-Air") && u.getHealth()/u.getMaxHealth() < 0.75))){
             retreatingUnits.add(u);
             squadHandler.removeFromSquad(u);
         }
@@ -90,6 +90,13 @@ public class RetreatHandler {
             }
 
             if(!retreatedUnits.contains(u)) {
+                // don't retreat scythes unless they're cloaked
+                if (u.getDef().getName().equals("spherepole")){
+                    if (!u.isCloaked() && warManager.getEffectiveThreat(u.getPos()) <= 0){
+                        continue;
+                    }
+                }
+
                 AIFloat3 position;
                 if (!u.getDef().isAbleToFly()) {
                     position = graphManager.getClosestHaven(u.getPos());
@@ -119,14 +126,8 @@ public class RetreatHandler {
                         // let the rest of the waypoints get handled the next time around.
                     }
                 }else{
-                    // for bombers, find an airpad
-                    if (u.getDef().getName().equals("corshad") || u.getDef().getName().equals("armcybr")){
-                        List<Float> params = new ArrayList<Float>();
-                        u.executeCustomCommand(CMD_FIND_PAD, params, (short) 0, frame+300);
-                    }else {
-                        position = graphManager.getClosestAirHaven(u.getPos());
-                        u.moveTo(position, (short) 0, frame + 300); // don't use pathing for air units.
-                    }
+                    position = graphManager.getClosestAirHaven(u.getPos());
+                    u.moveTo(position, (short) 0, frame + 300); // don't use pathing for air units.
                 }
 
                 retreatedUnits.add(u);

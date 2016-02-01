@@ -9,11 +9,13 @@ import java.beans.FeatureDescriptor;
 public class ReclaimTask extends WorkerTask {
 	public Feature target;
 	public FeatureDef def;
-	public ReclaimTask(Feature feat){
+	public float metalValue;
+	public ReclaimTask(Feature feat, float metal){
 		super();
 		this.target = feat;
 		this.def = feat.getDef();
 		this.position = feat.getPosition();
+		this.metalValue = metal;
 	}
 	
 	@Override

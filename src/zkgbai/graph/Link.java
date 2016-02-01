@@ -112,40 +112,74 @@ public class Link {
 			connected = false;
 		}
 		
-		public Pylon getConnectionHead(){
-			if(connected || v1.pylons.size() == 0){
-				return null;
-			}
-
-			ArrayList<Pylon>visited = new ArrayList<Pylon>();
-			Queue <Pylon>queue = new LinkedList<Pylon>();
-
-			for(Pylon p:v1.pylons){
-				queue.add(p);
-			}
-
+		public Pylon getConnectionHead(AIFloat3 position){
 			Pylon winner = null;
 			float minDistance = Float.MAX_VALUE;
 			int i = 0;
-			
-			while(!queue.isEmpty()) {
-				if(i++>50) return null; // infinite loop guard
-				Pylon q = queue.remove();
-				visited.add(q);
-				
-				float distance = distance(q.position, v0.position);
-				if (distance < minDistance){
-					minDistance = distance;
-					winner = q;
 
-					for(Pylon child:q.neighbours){
-						if(!visited.contains(child)){
-							queue.add(child);
+			//start from the closest end
+			if (distance(position, v0.getPos()) < distance(position, v1.getPos())){
+				if (connected || v0.pylons.size() == 0) {
+					return null;
+				}
+
+				ArrayList<Pylon> visited = new ArrayList<Pylon>();
+				Queue<Pylon> queue = new LinkedList<Pylon>();
+
+				for (Pylon p : v0.pylons) {
+					queue.add(p);
+				}
+
+				while (!queue.isEmpty()) {
+					if (i++ > 50) return null; // infinite loop guard
+					Pylon q = queue.remove();
+					visited.add(q);
+
+					float distance = distance(q.position, v1.position);
+					if (distance < minDistance) {
+						minDistance = distance;
+						winner = q;
+
+						for (Pylon child : q.neighbours) {
+							if (!visited.contains(child)) {
+								queue.add(child);
+							}
 						}
 					}
 				}
+
+				return winner;
+			}else {
+				if (connected || v1.pylons.size() == 0) {
+					return null;
+				}
+
+				ArrayList<Pylon> visited = new ArrayList<Pylon>();
+				Queue<Pylon> queue = new LinkedList<Pylon>();
+
+				for (Pylon p : v1.pylons) {
+					queue.add(p);
+				}
+
+				while (!queue.isEmpty()) {
+					if (i++ > 50) return null; // infinite loop guard
+					Pylon q = queue.remove();
+					visited.add(q);
+
+					float distance = distance(q.position, v0.position);
+					if (distance < minDistance) {
+						minDistance = distance;
+						winner = q;
+
+						for (Pylon child : q.neighbours) {
+							if (!visited.contains(child)) {
+								queue.add(child);
+							}
+						}
+					}
+				}
+
+				return winner;
 			}
-			
-			return winner;
 		}
 }

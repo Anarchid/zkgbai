@@ -75,7 +75,7 @@ public class TerrainAnalyzer {
         PathResult bot = checkPathing(botPath, 1.4f);
         if ((bot.avgCostRatio < veh.avgCostRatio - 0.05f || !veh.result) && bot.result){
             debug(taMsg + "Bot path check succeeded, enabling bots!");
-            initialFacList.add("factorycloak");
+            //initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");
             initialFacList.add("factoryamph");
         } else if (veh.result && bot.avgCostRatio >= veh.avgCostRatio - 0.05f) {
@@ -149,7 +149,9 @@ public class TerrainAnalyzer {
         if (initialFacList.isEmpty()){
             populateFacList();
         }
-        return initialFacList;
+        List<String> facList = new ArrayList<String>();
+        facList.addAll(initialFacList);
+        return facList;
     }
 
     private void debug(String s) {

@@ -48,7 +48,8 @@ public class Raider extends Fighter {
         return task;
     }
 
-    public void raid(Deque<AIFloat3> path, int frame) {
+    public void raid(AIFloat3 target, int frame) {
+        Deque<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(target, 50f), pathfinder.RAIDER_PATH);
         scouting = false;
         unit.stop((short) 0, frame);
         unit.setMoveState(1, (short) 0, frame + 30); // set to maneuver
@@ -79,7 +80,8 @@ public class Raider extends Fighter {
         lastpos = unit.getPos();
     }
 
-    public void sneak(Deque<AIFloat3> path, int frame) {
+    public void sneak(AIFloat3 target, int frame) {
+        Deque<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(target, 50f), pathfinder.RAIDER_PATH);
         scouting = false;
         unit.stop((short) 0, frame);
         unit.setMoveState(2, (short) 0, frame + 10); // set to maneuver

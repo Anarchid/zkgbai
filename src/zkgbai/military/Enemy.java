@@ -21,9 +21,10 @@ public class Enemy {
 	boolean isRadarOnly = true;
 	boolean isRadarVisible = false;
 	public boolean identified = false;
-	boolean isRiot = false;
+	public boolean isWorker = false;
+	public boolean isRiot = false;
 	boolean isFlamer = false;
-	boolean isArty = false;
+	public boolean isArty = false;
 	boolean isAA = false;
 	boolean isSuperWep = false;
 	boolean isMinorCancer = false;
@@ -75,21 +76,27 @@ public class Enemy {
 		this.isStatic = (u.getSpeed() == 0);
 		this.ud = u;
 
+		if (ud.isBuilder()){
+			this.isWorker = true;
+		}
+
 		String defName = ud.getName();
 
-		if (defName.equals("corgarp") || defName.equals("armsnipe") || defName.equals("armmanni")){
+		if (defName.equals("corgarp") || defName.equals("armsnipe") || defName.equals("armmanni")
+				|| defName.equals("amphfloater") || defName.equals("armsptk")){
 			this.isMinorCancer = true;
 		}
 
 		if (defName.equals("dante") || defName.equals("scorpion") || defName.equals("funnelweb") || defName.equals("armbanth") || defName.equals("armorco")
 				|| defName.equals("amphassault") || defName.equals("armraven") || defName.equals("armcrabe") || defName.equals("corgol") || defName.equals("correap")
-				|| defName.equals("shieldfelon")){
+				|| defName.equals("shieldfelon") || u.getName().equals("capturecar") || u.getName().contains("com")){
 			this.isMajorCancer = true;
 		}
 		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
-			if (u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().contains("com") || u.getName().equals("screamer") || u.getName().equals("corflak")){
+			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().contains("com") || u.getName().equals("screamer") || u.getName().equals("corflak") || defName.equals("amphraider3"))
+					&& !defName.equals("dante")){
 				// identify riots
 				this.isRiot = true;
 			}
@@ -104,7 +111,7 @@ public class Enemy {
 				}
 			}
 
-			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm")) && !u.getTooltip().contains("Riot")){
+			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("cormist")) && !u.getTooltip().contains("Riot")){
 				// identify arty/skirms
 				this.isArty = true;
 			}
@@ -138,23 +145,22 @@ public class Enemy {
 				return 0;
 			}
 
-			if (unit.getHealth() > 0 && !isStatic) {
+			if (!isStatic) {
 				health = unit.getHealth();
-				danger = ud.getPower() + (health/10);
-				danger *= 2f;
+				danger = (ud.getPower() + health)/10;
 			} else {
 				health = ud.getHealth();
-				danger = ud.getPower() + (health/10);
+				danger = (ud.getPower() + health)/10;
 			}
 
-			if (isFlamer || ud.getName().equals("arm_venom")){
-				danger += 200;
+			if (isFlamer || ud.getName().equals("arm_venom") || ud.getName().equals("amphraider2")){
+				danger += 100;
 			}
 			if (isRiot){
 				danger *= 2;
 			}
-			if (isArty){
-				danger /= 2;
+			if (isArty && !ud.getName().equals("amphfloater")){
+				danger /= 3;
 			}
 		}
 		return danger;

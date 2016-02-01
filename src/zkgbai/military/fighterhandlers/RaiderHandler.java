@@ -6,8 +6,10 @@ import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.EconomyManager;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
+import zkgbai.military.Enemy;
 import zkgbai.military.MilitaryManager;
 import zkgbai.kgbutil.Pathfinder;
+import zkgbai.military.UnitClasses;
 import zkgbai.military.tasks.ScoutTask;
 import zkgbai.military.unitwrappers.Raider;
 
@@ -58,17 +60,16 @@ public class RaiderHandler {
 
         // move raiders from the holding squad into the main raider pool
         // either if there's a big enough mob or if there are no scouts.
-        if (raidQueue.size() > max(4, 2 * (int) floor(ecoManager.effectiveIncome/10)) || raiders.size() < 2){
+        if (raidQueue.size() > max(4, (int) floor(ecoManager.effectiveIncome/5)) || raiders.size() < 2){
             raiders.addAll(raidQueue);
             raidQueue.clear();
         }
     }
 
     public void addMediumRaider(Raider r) {
-        mediumRaidQueue.add(r);
-
         // move raiders from the holding squad into the main raider pool.
-        if (mediumRaidQueue.size() >= max(4, 2 * (int) floor(ecoManager.effectiveIncome/10))){
+        mediumRaidQueue.add(r);
+        if (mediumRaidQueue.size() >= (int) min(6, max(4, floor(ecoManager.effectiveIncome / 5)))){
             raiders.addAll(mediumRaidQueue);
             mediumRaidQueue.clear();
         }
@@ -159,7 +160,9 @@ public class RaiderHandler {
             }
         }
 
-        if (warManager.getThreat(task.target) > warManager.getFriendlyThreat(raider.getPos())){
+        cost += (500 * warManager.getThreat(task.target));
+
+        if (warManager.getEffectiveThreat(task.target) > warManager.getFriendlyThreat(raider.getPos())){
             cost += 9001;
         }
         return cost;
@@ -174,21 +177,53 @@ public class RaiderHandler {
                 if (retreatHandler.isRetreating(r.getUnit()) || r.getUnit().getHealth() <= 0){
                     continue;
                 }
-                AIFloat3 pos = warManager.getRallyPoint(r.getPos());
-                r.fightTo(pos, frame);
+
+                AIFloat3 pos;
+                boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
+                if (!overThreat){
+                    pos = warManager.getRaiderRally(r.getPos());
+                    r.fightTo(pos, frame);
+                }
             }
 
             for (Raider r: mediumRaidQueue){
                 if (retreatHandler.isRetreating(r.getUnit()) || r.getUnit().getHealth() <= 0){
                     continue;
                 }
-                AIFloat3 pos = warManager.getRallyPoint(r.getPos());
-                r.fightTo(pos, frame);
+
+                AIFloat3 pos;
+                boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
+                if (!overThreat){
+                    pos = warManager.getRaiderRally(r.getPos());
+                    r.fightTo(pos, frame);
+                }
             }
         }
 
+        // retreat overthreatened raiders from queues
+        for (Raider r: raidQueue){
+            AIFloat3 pos;
+            boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
+            if (overThreat){
+                pos = graphManager.getClosestHaven(r.getPos());
+                r.sneak(pos, frame);
+            }
+        }
+
+        for (Raider r: mediumRaidQueue){
+            AIFloat3 pos;
+            boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
+            if (overThreat){
+                pos = graphManager.getClosestHaven(r.getPos());
+                r.sneak(pos, frame);
+            }
+        }
+
+        // assign main raid group
         for (Raider r: raiders){
-            if (retreatHandler.isRetreating(r.getUnit()) || r.getUnit().getHealth() <= 0){
+            boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
+            if (retreatHandler.isRetreating(r.getUnit()) || r.getUnit().getHealth() <= 0
+                    || (r.getUnit().getDef().getName().equals("spherepole") && !r.getUnit().isCloaked() && !overThreat)){
                 continue;
             }
 
@@ -197,14 +232,14 @@ public class RaiderHandler {
             }
 
             ScoutTask bestTask = null;
+            AIFloat3 bestTarget = null;
             float cost = Float.MAX_VALUE;
 
-            if (r.getTask() != null){
-                bestTask = r.getTask();
-                cost = getScoutCost(bestTask, r) - 200;
-            }
-
             for (ScoutTask s:scoutTasks){
+                if (warManager.getEffectiveThreat(s.target) > warManager.getFriendlyThreat(r.getPos())){
+                    continue;
+                }
+
                 float tmpcost = getScoutCost(s, r);
                 if (tmpcost < cost){
                     cost = tmpcost;
@@ -212,25 +247,50 @@ public class RaiderHandler {
                 }
             }
 
-            boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
-            if (bestTask != null && (overThreat || bestTask != r.getTask() || r.getUnit().getCurrentCommands().isEmpty())){
-                if (!bestTask.spot.hostile){
-                    if (overThreat){
-                        Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 100f), pathfinder.RAIDER_PATH);
-                        r.sneak(path, frame);
-                    }else {
-                        r.fightTo(bestTask.target, frame);
-                    }
-                }else{ // for raiding
-                    Deque path = pathfinder.findPath(r.getUnit(), getRadialPoint(bestTask.target, 50f), pathfinder.RAIDER_PATH);
-                    if (overThreat){
-                        r.sneak(path, frame);
-                    }else {
-                        r.raid(path, frame);
-                    }
+            for (Enemy e: warManager.getTargets()){
+                if (warManager.getEffectiveThreat(e.position) > warManager.getFriendlyThreat(r.getPos()) || e.isRiot){
+                    continue;
                 }
-                bestTask.addRaider(r);
-                r.setTask(bestTask);
+
+                float tmpcost = distance(r.getPos(), e.position);
+                if (!e.isArty && !e.isWorker && !e.isStatic){
+                    tmpcost += 1000;
+                }
+                if (e.isWorker){
+                    tmpcost = (tmpcost/4)-100;
+                }
+
+                if (tmpcost < cost){
+                    cost = tmpcost;
+                    bestTarget = e.position;
+                }
+            }
+
+            if (bestTarget != null){
+                if (r.getTask() != null) {
+                    r.getTask().removeRaider(r);
+                    r.clearTask();
+                }
+
+                if (overThreat) {
+                    r.sneak(bestTarget, frame);
+                } else {
+                    r.raid(bestTarget, frame);
+                }
+            }else if (bestTask != null && (overThreat || bestTask != r.getTask() || r.getUnit().getCurrentCommands().isEmpty())){
+                if (overThreat) {
+                    r.sneak(bestTask.target, frame);
+                } else {
+                    r.raid(bestTask.target, frame);
+                }
+
+                if (r.getTask() == null || !r.getTask().equals(bestTask)) {
+                    if (r.getTask() != null) {
+                        r.getTask().removeRaider(r);
+                    }
+                    bestTask.addRaider(r);
+                    r.setTask(bestTask);
+                }
             }
         }
     }

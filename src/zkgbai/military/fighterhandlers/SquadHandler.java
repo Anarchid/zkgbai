@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static zkgbai.kgbutil.KgbUtil.*;
+
 /**
  * Created by haplo on 1/4/2016.
  */
@@ -35,6 +37,7 @@ public class SquadHandler {
     public List<Squad> squads;
 
     int frame = 0;
+    int squadCounter = 0;
 
     public SquadHandler(){
         this.ai = ZKGraphBasedAI.getInstance();
@@ -55,7 +58,7 @@ public class SquadHandler {
     public void update(int frame){
         this.frame = frame;
 
-        if (frame % 90 == 0){
+        if (frame % 30 == 0){
 
             for (Fighter f:fighters.values()){
                 Unit u = f.getUnit();
@@ -161,20 +164,19 @@ public class SquadHandler {
     }
 
     private void updateSquads(){
+        squadCounter++;
         // set the rally point for the next forming squad for defense
-        if (nextSquad != null && frame % 270 == 0) {
+        if (nextSquad != null && squadCounter == 1) {
             if (warManager.getEffectiveThreat(nextSquad.getPos()) > 0 || warManager.getEffectiveThreat(nextSquad.target) > 0) {
                 nextSquad.retreatTo(graphManager.getClosestHaven(nextSquad.getPos()), frame);
             }else {
                 nextSquad.setTarget(warManager.getRallyPoint(nextSquad.getPos()), frame);
             }
-        }
-        if (nextAirSquad != null && frame % 450 == 0) {
+        }else if (nextAirSquad != null && squadCounter == 2) {
             nextAirSquad.setTarget(warManager.getRallyPoint(nextAirSquad.getPos()), frame);
-        }
-        if (nextShieldSquad != null && frame % 180 == 0) {
+        }else if (nextShieldSquad != null && squadCounter == 3) {
             // shields only get one squad into which it dumps all of its mobs.
-            if (nextShieldSquad.getHealth() < 0.85 || warManager.getEffectiveThreat(nextShieldSquad.getPos()) > 0){
+            if (nextShieldSquad.getHealth() < 0.85 || (warManager.getEffectiveThreat(nextShieldSquad.getPos()) > 0 && distance(nextShieldSquad.getPos(), nextShieldSquad.target) > 1200)){
                 nextShieldSquad.retreatTo(graphManager.getClosestHaven(nextShieldSquad.getPos()), frame);
             }else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1000){
                 AIFloat3 target = warManager.getTarget(nextShieldSquad.getPos(), true);
@@ -185,6 +187,8 @@ public class SquadHandler {
             }else {
                 nextShieldSquad.setTarget(warManager.getRallyPoint(nextShieldSquad.getPos()), frame);
             }
+        }else if (squadCounter > 3){
+            squadCounter = 0;
         }
 
         List<Squad> deadSquads = new ArrayList<Squad>();
@@ -206,11 +210,13 @@ public class SquadHandler {
                 }
                 break;
             }else if (s.status == 'a' && !s.assigned){
-                if (!s.isAirSquad && warManager.getEffectiveThreat(s.getPos()) > 0){
-                    s.retreatTo(graphManager.getClosestHaven(s.getPos()), frame);
-                    assigned = true;
-                    s.assigned = true;
-                    break;
+                if (!s.isAirSquad && warManager.getEffectiveThreat(s.getPos()) > 0 && distance(s.getPos(), s.target) > 1200){
+                    if (s.isRallied(frame)) {
+                        s.retreatTo(graphManager.getClosestHaven(s.getPos()), frame);
+                        assigned = true;
+                        s.assigned = true;
+                        break;
+                    }
                 }else if (s.isAirSquad && warManager.getEffectiveAAThreat(s.getPos()) > 0){
                     s.retreatTo(graphManager.getClosestAirHaven(s.getPos()), frame);
                     assigned = true;
@@ -219,9 +225,9 @@ public class SquadHandler {
                 }
 
                 AIFloat3 target;
-                if (s.isAirSquad){
+                if (s.isAirSquad) {
                     target = warManager.getAirTarget(s.getPos(), true);
-                }else{
+                } else {
                     target = warManager.getTarget(s.getPos(), true);
                 }
 

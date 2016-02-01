@@ -49,10 +49,10 @@ public class UnitClasses {
         smallRaiders.add("corclog");
         smallRaiders.add("amphraider3");
         smallRaiders.add("amphraider2");
+        smallRaiders.add("corsh");
 
         mediumRaiders.add("corgator");
         mediumRaiders.add("armkam");
-        mediumRaiders.add("corsh");
 
         soloRaiders.add("hoverassault");
         soloRaiders.add("logkoda");

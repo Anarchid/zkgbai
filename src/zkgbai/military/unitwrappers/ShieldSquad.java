@@ -14,6 +14,7 @@ public class ShieldSquad extends Squad {
     static short OPTION_SHIFT_KEY = (1 << 5);
     private Fighter leader;
     private int leaderWeight;
+    boolean hasFunnel = false;
 
     public ShieldSquad(){
         super();
@@ -26,18 +27,30 @@ public class ShieldSquad extends Squad {
         f.squad = this;
         metalValue = metalValue + f.metalValue;
 
+        // for funnels
+        if (getUnitWeight(f) == 1){
+            hasFunnel = true;
+            leader.getUnit().setWantedMaxSpeed(1.3f, (short) 0, frame+30);
+        }
+
         if (leader == null){
             f.getUnit().setMoveState(1, (short) 0, frame+300);
             leader = f;
             leaderWeight = getUnitWeight(f);
             f.fightTo(target, frame);
+            if (hasFunnel){
+                f.getUnit().setWantedMaxSpeed(1.3f, (short) 0, frame+30);
+            }
         }else if (getUnitWeight(f) > leaderWeight){
             f.getUnit().setMoveState(1, (short) 0, frame+300);
             leader.getUnit().setMoveState(0, (short) 0, frame + 300);
+            leader.getUnit().setWantedMaxSpeed(2f, (short) 0, frame+30);
             fighters.add(leader);
             leader = f;
             leaderWeight = getUnitWeight(f);
-            leader.fightTo(target, frame);
+            if (target != null) {
+                leader.fightTo(target, frame);
+            }
             List<Float> params = new ArrayList<>();
             List<Float> drawParams = new ArrayList<>();
             params.add((float)leader.id);
@@ -46,6 +59,10 @@ public class ShieldSquad extends Squad {
             for (Fighter fi: fighters){
                 fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 3000);
                 fi.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, frame + 3000);
+            }
+
+            if (hasFunnel){
+                f.getUnit().setWantedMaxSpeed(1.3f, (short) 0, frame+30);
             }
         }else{
             f.getUnit().setMoveState(0, (short) 0, frame+300);
@@ -68,6 +85,10 @@ public class ShieldSquad extends Squad {
             if (leader == null){
                 leaderWeight = 0;
                 return;
+            }
+
+            if (hasFunnel){
+                leader.getUnit().setWantedMaxSpeed(1.3f, (short) 0, Integer.MAX_VALUE);
             }
             fighters.remove(leader);
             leaderWeight = getUnitWeight(leader);

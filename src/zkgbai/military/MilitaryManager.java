@@ -138,17 +138,17 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for raiders
 		for (Raider r : raiderHandler.raiders) {
-			int power = (int) (r.getUnit().getPower() + (r.getUnit().getMaxHealth()/10));
+			int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth())/20);
 			AIFloat3 pos = r.getPos();
 			int x = (int) pos.x / 8;
 			int y = (int) pos.z / 8;
-			int rad = 65;
+			int rad = 30;
 			allyThreatGraphics.paintCircle(x, y, rad, power);
 		}
 
 		// paint allythreat for fighters
 		for (Fighter f : squadHandler.fighters.values()) {
-			int power = (int) (3f * (f.getUnit().getPower() + (f.getUnit().getMaxHealth()/10)));
+			int power = (int) ((f.getUnit().getPower() + f.getUnit().getMaxHealth())/8);
 			AIFloat3 pos = f.getPos();
 			int x = (int) pos.x / 8;
 			int y = (int) pos.z / 8;
@@ -159,7 +159,7 @@ public class MilitaryManager extends Module {
 
 		// paint allythreat for striders
 		for (Strider s : miscHandler.striders.values()) {
-			int power = (int) (2f * (s.getUnit().getPower() + (s.getUnit().getMaxHealth()/10)));
+			int power = (int)  ((s.getUnit().getPower() + s.getUnit().getMaxHealth())/5);
 			AIFloat3 pos = s.getPos();
 			int x = (int) pos.x / 8;
 			int y = (int) pos.z / 8;
@@ -232,35 +232,35 @@ public class MilitaryManager extends Module {
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
 
-		return (threatGraphics.getValue(x, y) + enemyPorcGraphics.getValue(x, y))/5000f;
+		return (threatGraphics.getValue(x, y) + enemyPorcGraphics.getValue(x, y))/500f;
 	}
 
 	public float getEffectiveThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
 
-		return ((threatGraphics.getValue(x, y) + enemyPorcGraphics.getValue(x, y)) - (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y)))/5000f;
+		return ((threatGraphics.getValue(x, y) + enemyPorcGraphics.getValue(x, y)) - (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y)))/500f;
 	}
 
 	public float getFriendlyThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
 
-		return (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y))/5000f;
+		return (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y))/500f;
 	}
 
 	public float getAAThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
 
-		return (aaThreatGraphics.getValue(x, y) + aaPorcGraphics.getValue(x, y))/5000f;
+		return (aaThreatGraphics.getValue(x, y) + aaPorcGraphics.getValue(x, y))/500f;
 	}
 
 	public float getEffectiveAAThreat(AIFloat3 position){
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
 
-		return ((aaThreatGraphics.getValue(x, y) + aaPorcGraphics.getValue(x, y)) - (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y)))/5000f;
+		return ((aaThreatGraphics.getValue(x, y) + aaPorcGraphics.getValue(x, y)) - (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y)))/500f;
 	}
 
 	public boolean isAllyTerritory(AIFloat3 position){
@@ -287,7 +287,7 @@ public class MilitaryManager extends Module {
 		if (defend) {
 			// check for defense targets first
 			for (DefenseTarget d : defenseTargets) {
-				if (getEffectiveThreat(d.position) > getFriendlyThreat(origin)){
+				if (getThreat(d.position) > getFriendlyThreat(origin)){
 					continue;
 				}
 				float tmpcost = distance(origin, d.position) - d.damage;
@@ -301,31 +301,39 @@ public class MilitaryManager extends Module {
 
 		// then look for enemy mexes to kill, and see which is cheaper
 		List<MetalSpot> ms = graphManager.getEnemySpots();
-    	if(ms.size() > 0){
-    		for (MetalSpot m:ms){
-    			float tmpcost = (distance(m.getPos(), origin)/4) - 500;
+		for (MetalSpot m:ms){
+			if (getThreat(m.getPos()) > getFriendlyThreat(origin)){
+				continue;
+			}
+			float tmpcost = (distance(m.getPos(), origin)/4) - 500;
     			
-    			if (tmpcost < cost && getThreat(m.getPos()) - getFriendlyThreat(m.getPos()) < fthreat){
-    				target = m.getPos();
-    				cost = tmpcost;
-    			}
-    		}
-    	}
+			if (tmpcost < cost){
+				target = m.getPos();
+				cost = tmpcost;
+			}
+		}
+
 
 		// then look for enemy units to kill, and see if any are better targets
 		// then check for nearby enemies
 		for (Enemy e : targets.values()) {
-			if (getEffectiveThreat(e.position) > getFriendlyThreat(origin)){
+			if (getThreat(e.position) > getFriendlyThreat(origin)
+					|| (e.identified && e.ud.isAbleToFly())){
 				continue;
 			}
 			float tmpcost = distance(origin, e.position) - e.getDanger();
 
 			if (e.isMajorCancer){
-				tmpcost -= 5000;
+				tmpcost /= 4;
+				tmpcost -= 1000;
 			}else if (e.isMinorCancer){
-				tmpcost -= 2000;
-			}else if (!isAllyTerritory(e.position)){
-				tmpcost += 1000;
+				tmpcost /= 2;
+				tmpcost -= 500;
+			}
+
+			if (isAllyTerritory(e.position)){
+				tmpcost /= 2;
+				tmpcost -= 250;
 			}
 
 			if (tmpcost < cost) {
@@ -399,7 +407,20 @@ public class MilitaryManager extends Module {
 			while(enemies.hasNext()){
 				Enemy e = enemies.next();
 				if (e.position != null && e.identified) {
-					float tmpcost = distance(origin, e.position) / (1 + (e.value/1000));
+					float tmpcost = distance(origin, e.position) - e.getDanger();
+
+					if (e.isMajorCancer){
+						tmpcost /= 4;
+						tmpcost -= 1000;
+					}else if (e.isMinorCancer){
+						tmpcost /= 2;
+						tmpcost -= 500;
+					}
+
+					if (isAllyTerritory(e.position)){
+						tmpcost /= 4;
+						tmpcost -= 500;
+					}
 
 					if (tmpcost < cost && getEffectiveAAThreat(e.position) < fthreat) {
 						cost = tmpcost;
@@ -454,7 +475,7 @@ public class MilitaryManager extends Module {
 
 		// check for defense targets first
 		for (DefenseTarget d : defenseTargets) {
-			if (getEffectiveThreat(d.position) > getFriendlyThreat(pos)){
+			if (getThreat(d.position) > getFriendlyThreat(pos)){
 				continue;
 			}
 			float tmpcost = distance(pos, d.position) - d.damage;
@@ -467,17 +488,98 @@ public class MilitaryManager extends Module {
 
 		// then check for nearby enemies
 		for (Enemy e : targets.values()) {
-			if (getEffectiveThreat(e.position) > getFriendlyThreat(pos)){
+			if (getThreat(e.position) > getFriendlyThreat(pos)
+					|| (e.identified && e.ud.isAbleToFly())){
 				continue;
 			}
 			float tmpcost = distance(pos, e.position) - e.getDanger();
 
 			if (e.isMajorCancer){
-				tmpcost -= 5000;
+				tmpcost /= 4;
+				tmpcost -= 1000;
 			}else if (e.isMinorCancer){
-				tmpcost -= 2000;
-			}else if (!isAllyTerritory(e.position)){
-				tmpcost += 1000;
+				tmpcost /= 2;
+				tmpcost -= 500;
+			}
+
+			if (isAllyTerritory(e.position)){
+				tmpcost /= 4;
+				tmpcost -= 500;
+			}
+
+			if (tmpcost < cost) {
+				cost = tmpcost;
+				target = e.position;
+			}
+		}
+
+		if (target != null){
+			return target;
+		}
+
+		//if there aren't any, then rally near the front line.
+		AIFloat3 position = null;
+		try {
+			position = graphManager.getClosestHaven(graphManager.getClosestFrontLineSpot(pos).getPos());
+		}catch (Exception e){}
+		if (position != null) {
+			return position;
+		}else{
+			//otherwise rally near ally center.
+			position = graphManager.getClosestHaven(graphManager.getAllyCenter());
+		}
+
+		return position;
+	}
+
+	public AIFloat3 getRaiderRally(AIFloat3 pos){
+		AIFloat3 target = null;
+		if (pos == null){
+			pos = graphManager.getAllyCenter();
+		}
+		if (pos == null){
+			List<Unit> units = callback.getFriendlyUnits();
+			for (Unit u: units){
+				pos = u.getPos();
+				break;
+			}
+		}
+
+		float cost = Float.MAX_VALUE;
+
+		// check for defense targets first
+		for (DefenseTarget d : defenseTargets) {
+			if (getThreat(d.position) > getFriendlyThreat(pos)){
+				continue;
+			}
+			float tmpcost = distance(pos, d.position) - d.damage;
+
+			if (tmpcost < cost) {
+				cost = tmpcost;
+				target = d.position;
+			}
+		}
+
+		// then check for nearby enemies
+		for (Enemy e : targets.values()) {
+			if (getThreat(e.position) > getFriendlyThreat(pos)
+					|| e.isRiot
+					|| (e.identified && e.ud.isAbleToFly())){
+				continue;
+			}
+			float tmpcost = distance(pos, e.position) - e.getDanger();
+
+			if (e.isMajorCancer){
+				tmpcost /= 4;
+				tmpcost -= 1000;
+			}else if (e.isMinorCancer){
+				tmpcost /= 2;
+				tmpcost -= 500;
+			}
+
+			if (isAllyTerritory(e.position)){
+				tmpcost /= 4;
+				tmpcost -= 500;
 			}
 
 			if (tmpcost < cost) {
@@ -547,7 +649,7 @@ public class MilitaryManager extends Module {
 
 		List<DefenseTarget> expired = new ArrayList<DefenseTarget>();
 		for (DefenseTarget d:defenseTargets){
-			if (frame - d.frameIssued > 600){
+			if (frame - d.frameIssued > 300){
 				expired.add(d);
 			}
 		}
@@ -809,7 +911,7 @@ public class MilitaryManager extends Module {
 		}
     	
     	if (unit.getMaxSpeed() > 0 && unit.getDef().getBuildOptions().size() == 0
-				&& !unitTypes.smallRaiders.contains(defName) && !unitTypes.shieldMobs.contains(defName) && !unitTypes.noRetreat.contains(defName)){
+				&& !unitTypes.shieldMobs.contains(defName) && !unitTypes.noRetreat.contains(defName)){
     		retreatHandler.addCoward(unit);
     	}
 
@@ -825,7 +927,7 @@ public class MilitaryManager extends Module {
 
 		// Paint ally threat for porc
 		if (unit.getMaxSpeed() == 0 && unit.getDef().isAbleToAttack()){
-			int power = (int) (2 * (unit.getPower() + (unit.getMaxHealth()/10)));
+			int power = (int) ((unit.getPower() + unit.getMaxHealth())/10);
 			float radius = unit.getMaxRange();
 			AIFloat3 pos = unit.getPos();
 			int x = (int) pos.x/8;
@@ -863,7 +965,7 @@ public class MilitaryManager extends Module {
 			lastDefenseFrame = frame;
 			DefenseTarget dt = null;
 			if (attacker != null){
-				if (attacker.getPos() != null) {
+				if (attacker.getPos() != null && attacker.getDef() != null && !attacker.getDef().isAbleToFly()) {
 					dt = new DefenseTarget(attacker.getPos(), 1000, frame);
 				}
 			}
@@ -887,7 +989,7 @@ public class MilitaryManager extends Module {
 
 		// Unpaint ally threat for porc
 		if (unit.getMaxSpeed() == 0 && unit.getDef().isAbleToAttack()){
-			int power = (int) (2 * (unit.getPower() + (unit.getMaxHealth()/10)));
+			int power = (int) ((unit.getPower() + unit.getMaxHealth())/10);
 			float radius = unit.getMaxRange();
 			AIFloat3 pos = unit.getPos();
 			int x = (int) pos.x/8;
@@ -935,6 +1037,8 @@ public class MilitaryManager extends Module {
 					target.x = pos.x + x;
 					target.z = pos.z + z;
 					dt = new DefenseTarget(target, 2000f, frame);
+				}else if (h.getDef().isBuilder()){
+					dt = new DefenseTarget(h.getPos(), 2000f, frame);
 				}
 
 				// don't create defense targets vs air units.
@@ -971,6 +1075,12 @@ public class MilitaryManager extends Module {
 
 	@Override
 	public int unitGiven(Unit unit, int oldTeamID, int newTeamID){
+		// remove units that allies captured from enemy targets
+		if (targets.containsKey(unit.getUnitId())){
+			Enemy e = targets.get(unit.getUnitId());
+			e.position = null; // needed for bomberTasks
+			targets.remove(unit.getUnitId());
+		}
 		if (newTeamID == ai.teamID){
 			unitFinished(unit);
 			retreatHandler.checkUnit(unit);

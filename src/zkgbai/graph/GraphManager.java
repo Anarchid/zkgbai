@@ -30,6 +30,8 @@ import zkgbai.ZKGraphBasedAI;
 import zkgbai.los.LosManager;
 import zkgbai.military.MilitaryManager;
 
+import javax.lang.model.util.ElementScanner6;
+
 import static zkgbai.kgbutil.KgbUtil.*;
 
 public class GraphManager extends Module {
@@ -819,16 +821,26 @@ public class GraphManager extends Module {
 		}
 
     	if(link != null){
-    		Pylon p = link.getConnectionHead();
+    		Pylon p = link.getConnectionHead(position);
     		
     		if(p != null){
 				radius += 0.9f * p.radius;
-				return getDirectionalPoint(p.position, link.v0.getPos(), radius);
+				if (distance(position, link.v0.getPos()) < distance(position, link.v1.getPos())){
+					return getDirectionalPoint(p.position, link.v1.getPos(), radius);
+				}else {
+					return getDirectionalPoint(p.position, link.v0.getPos(), radius);
+				}
     		}else{
 				// if no pylons are present, start a new chain.
-				return getDirectionalPoint(link.v1.getPos(), link.getPos(), radius);
+				if (distance(position, link.v0.getPos()) < distance(position, link.v1.getPos())){
+					return getDirectionalPoint(link.v0.getPos(), link.getPos(), radius);
+				}else {
+					return getDirectionalPoint(link.v1.getPos(), link.getPos(), radius);
+				}
 			}
-    	}	
+    	}else if (best != null){
+			return best.getPos();
+		}
 
 		// if there are no unconnected owned links, return null
 		return null;
