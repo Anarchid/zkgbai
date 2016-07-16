@@ -675,7 +675,7 @@ public class FactoryManager extends Module {
         }
 
         if (fac.raiderSpam < 0) {
-            if ((economyManager.effectiveIncome > 15 && Math.random() > 0.7) || numScouts == 0){
+            if ((economyManager.effectiveIncome > 15 && Math.random() > 0.7) || numScouts == 0 || (bigMap && numScouts < 2)){
                 return "corfav";
             }
             fac.raiderSpam++;
