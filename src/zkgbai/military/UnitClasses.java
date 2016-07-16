@@ -53,6 +53,8 @@ public class UnitClasses {
 
         mediumRaiders.add("corgator");
         mediumRaiders.add("armkam");
+        mediumRaiders.add("spherepole");
+        mediumRaiders.add("hoverassault");
 
         soloRaiders.add("hoverassault");
         soloRaiders.add("logkoda");
@@ -60,7 +62,6 @@ public class UnitClasses {
         soloRaiders.add("armflea");
         soloRaiders.add("corfav");
         soloRaiders.add("corstorm");
-        soloRaiders.add("spherepole");
 
         // assaults; stuff that attacks in mobs
         assaults.add("armzeus");
@@ -77,6 +78,8 @@ public class UnitClasses {
         assaults.add("armsptk");
         assaults.add("arm_venom");
         assaults.add("spiderriot");
+        assaults.add("tawf114");
+        assaults.add("correap");
 
 
         // Air mobs
@@ -112,8 +115,8 @@ public class UnitClasses {
         loners.add("cormart");
         loners.add("corgol");
         loners.add("armcrabe");
-        loners.add("correap");
-        loners.add("tawf114");
+        loners.add("trem");
+        loners.add("armraven");
 
         // Anti-air units
         AAs.add("armjeth");

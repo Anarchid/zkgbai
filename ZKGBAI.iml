@@ -23,92 +23,11 @@
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="inheritedJdk" />
-    <orderEntry type="module-library">
-      <library name="AIInterface.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/jlib/AIInterface.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="JavaOO-AIWrapper.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/jlib/JavaOO-AIWrapper.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="file:///MyAI/lib/JavaOO-AIWrapper-src.jar" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="SkirmishAI-src.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/jlib/SkirmishAI-src.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="vecmath-src.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/jlib/vecmath-src.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="vecmath.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/jlib/vecmath.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="quick-json-1.0.2.3.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/jlib/quick-json-1.0.2.3.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="slf4j-api-1.7.7.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/jlib/slf4j-api-1.7.7.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="library" name="slick" level="project" />
-    <orderEntry type="library" name="natives-windows" level="project" />
-    <orderEntry type="library" name="natives-linux" level="project" />
-    <orderEntry type="library" name="lwjgl_util" level="project" />
-    <orderEntry type="library" name="lwjgl" level="project" />
-    <orderEntry type="library" name="jinput" level="project" />
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="file://$MODULE_DIR$/jlib" />
-        </CLASSES>
-        <JAVADOC />
-        <NATIVE>
-          <root url="file://$MODULE_DIR$/jlib" />
-        </NATIVE>
-        <SOURCES>
-          <root url="file://$MODULE_DIR$/jlib" />
-        </SOURCES>
-        <jarDirectory url="file://$MODULE_DIR$/jlib" recursive="false" />
-        <jarDirectory url="file://$MODULE_DIR$/jlib" recursive="false" type="SOURCES" />
-      </library>
-    </orderEntry>
+    <orderEntry type="library" name="JavaOO-AIWrapper" level="project" />
+    <orderEntry type="library" name="quick-json-1.0.2.3" level="project" />
+    <orderEntry type="library" name="slf4j-api-1.7.7" level="project" />
+    <orderEntry type="library" name="vecmath" level="project" />
+    <orderEntry type="library" name="vecmath-src" level="project" />
+    <orderEntry type="library" name="AIInterface" level="project" />
   </component>
 </module>

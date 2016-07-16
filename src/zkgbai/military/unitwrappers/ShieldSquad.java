@@ -12,7 +12,7 @@ public class ShieldSquad extends Squad {
     static int CMD_ORBIT = 13923;
     static int CMD_ORBIT_DRAW = 13924;
     static short OPTION_SHIFT_KEY = (1 << 5);
-    private Fighter leader;
+    public Fighter leader;
     private int leaderWeight;
     boolean hasFunnel = false;
 
@@ -124,6 +124,10 @@ public class ShieldSquad extends Squad {
         if (leader != null && leader.getUnit().getHealth() > 0) {
             leader.moveTo(target, frame);
         }
+    }
+
+    public AIFloat3 getAvgPos(){
+        return super.getPos();
     }
 
     @Override

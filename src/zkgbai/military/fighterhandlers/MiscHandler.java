@@ -63,15 +63,19 @@ public class MiscHandler {
             updateSupports();
             updateSappers();
 
-            for (Strider st:striders.values()){
-                Unit u = st.getUnit();
-                if (!retreatHandler.isRetreating(u)){
-                    AIFloat3 target = warManager.getTarget(st.getPos(), false);
-                    st.fightTo(target, frame);
+            if (frame % 30 == 0) {
+                for (Strider st : striders.values()) {
+                    Unit u = st.getUnit();
+                    if (!retreatHandler.isRetreating(u)) {
+                        AIFloat3 target = warManager.getTarget(st.getPos(), false);
+                        st.fightTo(target, frame);
+                    }
                 }
             }
 
-            dgunStriders();
+            if (frame % 45 == 0) {
+                dgunStriders();
+            }
         }
 
         if (frame % 300 == 0){
@@ -221,29 +225,52 @@ public class MiscHandler {
             if (!defName.equals("dante") && !defName.equals("scorpion") && !defName.equals("armbanth")){
                 continue;
             }
-            AIFloat3 target = getDgunTarget(s.getPos());
+            Unit target = getDgunTarget(s);
             if (target != null && frame > s.lastDgunFrame + s.dgunReload){
-                s.getUnit().dGunPosition(target, (short) 0, frame + 3000);
+                s.getUnit().dGun(target, (short) 0, frame + 3000);
                 s.lastDgunFrame = frame;
             }
         }
     }
 
-    private AIFloat3 getDgunTarget(AIFloat3 pos){
+    private Unit getDgunTarget(Strider s){
+        AIFloat3 pos = s.getPos();
         List<Unit> enemies = ai.getCallback().getEnemyUnitsIn(pos, 450f);
-        AIFloat3 target = null;
+        Unit target = null;
         float bestScore = 0;
-        for (Unit e:enemies){
-            float cost = e.getDef().getCost(m);
-            if (e.getMaxSpeed() > 0 && !e.getDef().isAbleToFly() && cost > 200){
-                if (cost > bestScore){
-                    bestScore = cost;
-                    target = e.getPos();
+
+        if (s.getUnit().getDef().getName().equals("dante")) {
+            for (Unit e : enemies) {
+                float cost = e.getDef().getCost(m);
+                if (e.getMaxSpeed() > 0 && (!e.getDef().isAbleToFly() || e.getDef().getName().equals("corcrw")) && cost > 200) {
+                    if (cost > bestScore) {
+                        bestScore = cost;
+                        target = e;
+                    }
+                } else if (e.getMaxSpeed() == 0 && !e.getDef().getName().equals("wolverine_mine")) {
+                    if (cost > bestScore) {
+                        bestScore = cost;
+                        target = e;
+                    }
                 }
-            }else if (e.getMaxSpeed() == 0 && ! e.getDef().getName().equals("wolverine_mine")){
-                if (cost > bestScore){
-                    bestScore = cost;
-                    target = e.getPos();
+            }
+        }else{
+            // scorpion and bantha both have emp dguns, so they shouldn't shoot at unarmed crap.
+            for (Unit e : enemies) {
+                float cost = e.getDef().getCost(m);
+                if (!e.getDef().isAbleToAttack()){
+                    continue;
+                }
+                if (e.getMaxSpeed() > 0 && (!e.getDef().isAbleToFly() || e.getDef().getName().equals("corcrw")) && cost > 200) {
+                    if (cost > bestScore) {
+                        bestScore = cost;
+                        target = e;
+                    }
+                } else if (e.getMaxSpeed() == 0 && !e.getDef().getName().equals("wolverine_mine")) {
+                    if (cost > bestScore) {
+                        bestScore = cost;
+                        target = e;
+                    }
                 }
             }
         }

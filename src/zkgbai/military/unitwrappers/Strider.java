@@ -21,7 +21,15 @@ public class Strider extends Fighter {
 
     @Override
     public void fightTo(AIFloat3 pos, int frame){
-        AIFloat3 target = getRadialPoint(pos, 50f);
-        unit.moveTo(target, (short) 0, frame+6000);
+        if (unit.getDef().getName().equals("scorpion")) {
+            AIFloat3 target = getDirectionalPoint(pos, getPos(), 250f);
+            unit.moveTo(target, (short) 0, frame + 6000);
+        }else if (unit.getDef().getName().equals("armbanth") || unit.getDef().getName().equals("armorco")){
+            AIFloat3 target = getDirectionalPoint(pos, getPos(), 350f);
+            unit.moveTo(target, (short) 0, frame + 6000);
+        }else{ // dante
+            AIFloat3 target = getRadialPoint(pos, 50f);
+            unit.moveTo(target, (short) 0, frame + 6000);
+        }
     }
 }

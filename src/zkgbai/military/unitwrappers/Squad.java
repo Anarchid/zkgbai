@@ -2,6 +2,7 @@ package zkgbai.military.unitwrappers;
 
 import java.util.ArrayList;
 import java.util.List;
+import static zkgbai.kgbutil.KgbUtil.*;
 
 import com.springrts.ai.oo.AIFloat3;
 
@@ -42,7 +43,7 @@ public class Squad {
 
 	public void removeUnit(Fighter f){
 		fighters.remove(f);
-		if (leader == f){
+		if (leader.equals(f)){
 			leader = getNewLeader();
 		}
 		metalValue -= f.metalValue;
@@ -87,12 +88,11 @@ public class Squad {
 	}
 
 	public boolean isRallied(int frame){
-		AIFloat3 pos = getPos();
 		boolean rallied = true;
 		for (Fighter f: fighters){
-			if (distance(pos, f.getPos()) > 350){
+			if (distance(target, f.getPos()) > 300){
 				rallied = false;
-				f.moveTo(pos, frame);
+				f.moveTo(getRadialPoint(target, 50f), frame);
 			}
 		}
 		return rallied;
@@ -133,13 +133,5 @@ public class Squad {
 			}
 		}
 		return newLeader;
-	}
-
-	float distance( AIFloat3 pos1,  AIFloat3 pos2){
-		float x1 = pos1.x;
-		float z1 = pos1.z;
-		float x2 = pos2.x;
-		float z2 = pos2.z;
-		return (float) Math.sqrt((x1-x2)*(x1-x2)+(z1-z2)*(z1-z2));
 	}
 }

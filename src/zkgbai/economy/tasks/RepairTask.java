@@ -4,12 +4,25 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 
 import zkgbai.economy.Worker;
+import zkgbai.military.UnitClasses;
 
 public class RepairTask extends WorkerTask{
 	public Unit target;
+	public Boolean isShieldMob = false;
+	public Boolean isTank = false;
 
 	public RepairTask(Unit target) {
 		this.target = target;
+		String defName = target.getDef().getName();
+
+		UnitClasses unitTypes = UnitClasses.getInstance();
+		if (unitTypes.shieldMobs.contains(target.getDef().getName()) && !target.getDef().getName().equals("funnelweb")){
+			this.isShieldMob = true;
+		}
+
+		if (defName.equals("correap") || defName.equals("tawf114") || defName.equals("corgol")){
+			this.isTank = true;
+		}
 	}
 	
 	@Override

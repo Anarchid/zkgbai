@@ -37,8 +37,6 @@ public class MilitaryManager extends Module {
 	ArrayGraphics allyThreatGraphics;
 	ArrayGraphics allyPorcGraphics;
 	ArrayGraphics enemyPorcGraphics;
-	ByteArrayGraphics frontLineGraphics;
-	ByteArrayGraphics territoryGraphics;
 	ArrayGraphics aaThreatGraphics;
 	ArrayGraphics aaPorcGraphics;
 	public ArrayList<TargetMarker> targetMarkers;
@@ -65,6 +63,9 @@ public class MilitaryManager extends Module {
 	int frame = 0;
 	int lastDefenseFrame = 0;
 	int lastAirDefenseFrame = 0;
+
+	public float enemyPorcValue = 0f;
+	public int slasherSpam = 0;
 
 	static int CMD_DONT_FIRE_AT_RADAR = 38372;
 	static int CMD_AIR_STRAFE = 39381;
@@ -94,8 +95,6 @@ public class MilitaryManager extends Module {
 
 		this.threatGraphics = new ArrayGraphics(width, height);
 		this.allyThreatGraphics = new ArrayGraphics(width, height);
-		this.frontLineGraphics = new ByteArrayGraphics(width, height);
-		this.territoryGraphics = new ByteArrayGraphics(width, height);
 		this.allyPorcGraphics = new ArrayGraphics(width, height);
 		this.enemyPorcGraphics = new ArrayGraphics(width, height);
 		this.aaThreatGraphics = new ArrayGraphics(width, height);
@@ -132,17 +131,33 @@ public class MilitaryManager extends Module {
 	private void paintThreatMap(){
 		threatGraphics.clear();
 		allyThreatGraphics.clear();
-		frontLineGraphics.clear();
-		territoryGraphics.clear();
 		aaThreatGraphics.clear();
 
 		// paint allythreat for raiders
-		for (Raider r : raiderHandler.raiders) {
+		for (Raider r : raiderHandler.soloRaiders) {
 			int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth())/20);
 			AIFloat3 pos = r.getPos();
 			int x = (int) pos.x / 8;
 			int y = (int) pos.z / 8;
-			int rad = 30;
+			int rad = 50;
+			allyThreatGraphics.paintCircle(x, y, rad, power);
+		}
+
+		for (Raider r : raiderHandler.smallRaiders.values()) {
+			int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth())/20);
+			AIFloat3 pos = r.getPos();
+			int x = (int) pos.x / 8;
+			int y = (int) pos.z / 8;
+			int rad = 50;
+			allyThreatGraphics.paintCircle(x, y, rad, power);
+		}
+
+		for (Raider r : raiderHandler.mediumRaiders.values()) {
+			int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth())/20);
+			AIFloat3 pos = r.getPos();
+			int x = (int) pos.x / 8;
+			int y = (int) pos.z / 8;
+			int rad = 50;
 			allyThreatGraphics.paintCircle(x, y, rad, power);
 		}
 
@@ -193,26 +208,6 @@ public class MilitaryManager extends Module {
 			}
 		}
 
-		// mark ally territory
-		List<MetalSpot> frontLine = graphManager.getOwnedSpots();
-		for (MetalSpot ms: frontLine){
-			AIFloat3 pos = ms.getPos();
-			int x = (int) pos.x/8;
-			int y = (int) pos.z/8;
-
-			territoryGraphics.paintCircle(x, y, 125, 1);
-		}
-
-		// mark front line territory
-		frontLine = graphManager.getFrontLineSpots();
-		for (MetalSpot ms: frontLine){
-			AIFloat3 pos = ms.getPos();
-			int x = (int) pos.x/8;
-			int y = (int) pos.z/8;
-
-			frontLineGraphics.paintCircle(x, y, 75, 1);
-		}
-
 		ArrayList<TargetMarker> deadMarkers = new ArrayList<TargetMarker>();
 		for(TargetMarker tm:targetMarkers){
 			int age = ai.currentFrame - tm.frame;
@@ -246,7 +241,7 @@ public class MilitaryManager extends Module {
 		int x = (int) (position.x/8);
 		int y = (int) (position.z/8);
 
-		return (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y))/500f;
+		return allyThreatGraphics.getValue(x, y)/500f;
 	}
 
 	public float getAAThreat(AIFloat3 position){
@@ -261,20 +256,6 @@ public class MilitaryManager extends Module {
 		int y = (int) (position.z/8);
 
 		return ((aaThreatGraphics.getValue(x, y) + aaPorcGraphics.getValue(x, y)) - (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y)))/500f;
-	}
-
-	public boolean isAllyTerritory(AIFloat3 position){
-		int x = (int) (position.x/8);
-		int y = (int) (position.z/8);
-
-		return (territoryGraphics.getValue(x, y) > 0);
-	}
-
-	public boolean isFrontLine(AIFloat3 position){
-		int x = (int) (position.x/8);
-		int y = (int) (position.z/8);
-
-		return (frontLineGraphics.getValue(x, y) > 0);
 	}
     
     
@@ -315,10 +296,11 @@ public class MilitaryManager extends Module {
 
 
 		// then look for enemy units to kill, and see if any are better targets
-		// then check for nearby enemies
+		// then check for nearby enemies that aren't raiders.
 		for (Enemy e : targets.values()) {
 			if (getThreat(e.position) > getFriendlyThreat(origin)
-					|| (e.identified && e.ud.isAbleToFly())){
+					|| (e.identified && e.ud.isAbleToFly())
+					|| (e.isRaider)){
 				continue;
 			}
 			float tmpcost = distance(origin, e.position) - e.getDanger();
@@ -331,7 +313,7 @@ public class MilitaryManager extends Module {
 				tmpcost -= 500;
 			}
 
-			if (isAllyTerritory(e.position)){
+			if (graphManager.isAllyTerritory(e.position)){
 				tmpcost /= 2;
 				tmpcost -= 250;
 			}
@@ -417,7 +399,7 @@ public class MilitaryManager extends Module {
 						tmpcost -= 500;
 					}
 
-					if (isAllyTerritory(e.position)){
+					if (graphManager.isAllyTerritory(e.position)){
 						tmpcost /= 4;
 						tmpcost -= 500;
 					}
@@ -489,7 +471,8 @@ public class MilitaryManager extends Module {
 		// then check for nearby enemies
 		for (Enemy e : targets.values()) {
 			if (getThreat(e.position) > getFriendlyThreat(pos)
-					|| (e.identified && e.ud.isAbleToFly())){
+					|| (e.identified && e.ud.isAbleToFly())
+					|| (!graphManager.isAllyTerritory(e.position) || graphManager.isEnemyTerritory(e.position))){
 				continue;
 			}
 			float tmpcost = distance(pos, e.position) - e.getDanger();
@@ -499,11 +482,6 @@ public class MilitaryManager extends Module {
 				tmpcost -= 1000;
 			}else if (e.isMinorCancer){
 				tmpcost /= 2;
-				tmpcost -= 500;
-			}
-
-			if (isAllyTerritory(e.position)){
-				tmpcost /= 4;
 				tmpcost -= 500;
 			}
 
@@ -564,7 +542,8 @@ public class MilitaryManager extends Module {
 		for (Enemy e : targets.values()) {
 			if (getThreat(e.position) > getFriendlyThreat(pos)
 					|| e.isRiot
-					|| (e.identified && e.ud.isAbleToFly())){
+					|| (e.identified && e.ud.isAbleToFly())
+					|| (!graphManager.isAllyTerritory(e.position) || graphManager.isEnemyTerritory(e.position))){
 				continue;
 			}
 			float tmpcost = distance(pos, e.position) - e.getDanger();
@@ -574,11 +553,6 @@ public class MilitaryManager extends Module {
 				tmpcost -= 1000;
 			}else if (e.isMinorCancer){
 				tmpcost /= 2;
-				tmpcost -= 500;
-			}
-
-			if (isAllyTerritory(e.position)){
-				tmpcost /= 4;
 				tmpcost -= 500;
 			}
 
@@ -654,6 +628,24 @@ public class MilitaryManager extends Module {
 			}
 		}
 		defenseTargets.removeAll(expired);
+
+		enemyPorcValue = 0f;
+		slasherSpam = 0;
+		// add up the value of heavy porc that the enemy has
+		// and also check for slasher spam
+		for (Enemy t: targets.values()){
+			if (t.identified){
+				if (t.ud.getName().equals("corhlt") || t.ud.getName().equals("armcrabe")) {
+					enemyPorcValue += t.ud.getCost(m);
+				}else if (t.ud.getName().equals("armanni") || t.ud.getName().equals("cordoom") || t.ud.getName().equals("corjamt")){
+					enemyPorcValue += 1.5 * t.ud.getCost(m);
+				}else if (t.ud.getName().equals("corrl") || t.ud.getName().equals("corllt")){
+					enemyPorcValue += t.ud.getCost(m) * 2f;
+				}else if (t.ud.getName().equals("cormist")){
+					slasherSpam++;
+				}
+			}
+		}
 	}
     
     @Override
@@ -819,8 +811,8 @@ public class MilitaryManager extends Module {
     public int unitFinished(Unit unit) {
 		String defName = unit.getDef().getName();
 
-		// enable snipers to shoot radar dots
-		if (defName.equals("armsnipe")){
+		// enable snipers and penetrators to shoot radar dots
+		if (defName.equals("armsnipe") || defName.equals("armmanni")){
 			ArrayList<Float> params = new ArrayList<>();
 			params.add((float) 0);
 			unit.executeCustomCommand(CMD_DONT_FIRE_AT_RADAR, params, (short) 0, frame+60);
@@ -850,6 +842,7 @@ public class MilitaryManager extends Module {
 
 		if (unitTypes.striders.contains(defName)){
 			Strider st = new Strider(unit, unit.getDef().getCost(m));
+			unit.setMoveState(1, (short) 0, frame + 10);
 			miscHandler.addStrider(st);
 		}else if (unitTypes.smallRaiders.contains(defName)) {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
@@ -877,7 +870,7 @@ public class MilitaryManager extends Module {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			miscHandler.addSupport(f);
     	}else if(unitTypes.loners.contains(defName)) {
-			if (defName.equals("cormist") || defName.equals("armcrabe")){
+			if (defName.equals("cormist") || defName.equals("armcrabe") || defName.equals("armmerl") || defName.equals("cormart") || defName.equals("armraven") || defName.equals("trem")){
 				unit.setMoveState(0, (short) 0, frame + 10);
 				ArrayList<Float> params = new ArrayList<>();
 				params.add((float) 1);
@@ -1006,12 +999,11 @@ public class MilitaryManager extends Module {
     public int unitDamaged(Unit h, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {
 		// check if the damaged unit is on fire.
 		boolean on_fire = false;
-		List<UnitRulesParam> urps = h.getUnitRulesParams();
-		for (UnitRulesParam urp: urps) {
-			if (urp.getName().equals("on_fire")){
-				on_fire = true;
-			}
+
+		if (h.getRulesParamFloat("on_fire", 0.0f) > 0){
+			on_fire = true;
 		}
+
 
 		// retreat damaged mob units
 		retreatHandler.checkUnit(h);

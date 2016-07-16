@@ -17,7 +17,6 @@ import com.json.parsers.JSONParser;
 import com.json.parsers.JsonParserFactory;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Game;
-import com.springrts.ai.oo.clb.GameRulesParam;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Team;
@@ -28,6 +27,7 @@ import zkgbai.Module;
 import zkgbai.StartArea;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.los.LosManager;
+import zkgbai.military.ByteArrayGraphics;
 import zkgbai.military.MilitaryManager;
 
 import javax.lang.model.util.ElementScanner6;
@@ -47,6 +47,10 @@ public class GraphManager extends Module {
 	private LosManager losManager;
 	Resource e;
 	Resource m;
+
+	ByteArrayGraphics frontLineGraphics;
+	ByteArrayGraphics allyTerritoryGraphics;
+	ByteArrayGraphics enemyTerritoryGraphics;
 
 	float avgMexValue = 0;
 	boolean graphInitialized = false;
@@ -90,6 +94,10 @@ public class GraphManager extends Module {
 		final int width = callback.getMap().getWidth();
 		final int height = callback.getMap().getHeight();
 
+		this.frontLineGraphics = new ByteArrayGraphics(width, height);
+		this.allyTerritoryGraphics = new ByteArrayGraphics(width, height);
+		this.enemyTerritoryGraphics = new ByteArrayGraphics(width, height);
+
 		ai.debug("GraphManager: Parsing metal spots...");
 		
 		ArrayList<HashMap> grpMexes = parseMetalSpotsGRP();
@@ -114,15 +122,13 @@ public class GraphManager extends Module {
 	private ArrayList<HashMap> parseMetalSpotsGRP(){
 		Game g = ai.getCallback().getGame();
 		
-		GameRulesParam mexCount = g.getGameRulesParamByName("mex_count");
-		
 		ArrayList<HashMap> data = new ArrayList<HashMap>();
+		
+		int numSpots = (int)g.getRulesParamFloat("mex_count", 0.0f);
 
-		if (mexCount == null){
+		if (numSpots == 0){
 			return data;
 		}
-		
-		int numSpots = (int)mexCount.getValueFloat();
 		
 		ai.debug("GraphManager: Detected "+numSpots+" metal spots in GRP");
 		
@@ -134,10 +140,10 @@ public class GraphManager extends Module {
 		for (int i=1;i<=numSpots;i++){
 			HashMap<String, String> map = new HashMap<String, String>();
 			try{
-				map.put("x", Float.toString(g.getGameRulesParamByName("mex_x"+i).getValueFloat()));
-				map.put("y", Float.toString(g.getGameRulesParamByName("mex_y"+i).getValueFloat()));
-				map.put("z", Float.toString(g.getGameRulesParamByName("mex_z"+i).getValueFloat()));
-				map.put("metal", Float.toString(g.getGameRulesParamByName("mex_metal"+i).getValueFloat()));
+				map.put("x", Float.toString(g.getRulesParamFloat("mex_x"+i, 0.0f)));
+				map.put("y", Float.toString(g.getRulesParamFloat("mex_y"+i, 0.0f)));
+				map.put("z", Float.toString(g.getRulesParamFloat("mex_z"+i, 0.0f)));
+				map.put("metal", Float.toString(g.getRulesParamFloat("mex_metal"+i, 0.0f)));
 				data.add(map);
 			}
 			catch(NullPointerException e){
@@ -248,6 +254,8 @@ public class GraphManager extends Module {
 			return 0;
 		}
 
+		frontLineGraphics.clear();
+
 		for(MetalSpot ms:metalSpots){
 			if(losManager.isInLos(ms.getPos())){
 				ms.lastSeen = frame;
@@ -290,6 +298,16 @@ public class GraphManager extends Module {
 
 		}
 
+		// mark front line territory
+		List<MetalSpot> frontLine = getFrontLineSpots();
+		for (MetalSpot ms: frontLine){
+			AIFloat3 pos = ms.getPos();
+			int x = (int) pos.x/8;
+			int y = (int) pos.z/8;
+
+			frontLineGraphics.paintCircle(x, y, 75, 1);
+		}
+
 		calcCenters();
 
 		return 0;
@@ -299,6 +317,14 @@ public class GraphManager extends Module {
 		ms.hostile = true;
 		ms.owned = false;
 		ms.enemyShadowed = false;
+
+		// paint territory circles
+		AIFloat3 pos = ms.getPos();
+		int x = (int) pos.x/8;
+		int y = (int) pos.z/8;
+
+		enemyTerritoryGraphics.paintCircle(x, y, 100, 1);
+
 		// set adjacent spots as enemyShadowed if they aren't already hostile
 		for (Link l:ms.links){
 			if (!l.v0.hostile){
@@ -314,6 +340,14 @@ public class GraphManager extends Module {
 		ms.hostile = false;
 		ms.owned = true;
 		ms.allyShadowed = false;
+
+		// paint territory circles
+		AIFloat3 pos = ms.getPos();
+		int x = (int) pos.x/8;
+		int y = (int) pos.z/8;
+
+		allyTerritoryGraphics.paintCircle(x, y, 200, 1);
+
 		// set adjacent spots as allyShadowed if they aren't already owned
 		for (Link l:ms.links){
 			if (!l.v0.owned){
@@ -328,9 +362,23 @@ public class GraphManager extends Module {
 	private void setNeutral(MetalSpot ms){
 		if (ms.owned){
 			ms.allyShadowed = true;
+
+			// unpaint territory circles
+			AIFloat3 pos = ms.getPos();
+			int x = (int) pos.x/8;
+			int y = (int) pos.z/8;
+
+			allyTerritoryGraphics.unpaintCircle(x, y, 200, 1);
 		}
 		if (ms.hostile){
 			ms.enemyShadowed = true;
+
+			// unpaint territory circles
+			AIFloat3 pos = ms.getPos();
+			int x = (int) pos.x/8;
+			int y = (int) pos.z/8;
+
+			enemyTerritoryGraphics.unpaintCircle(x, y, 100, 1);
 		}
 		ms.hostile = false;
 		ms.owned = false;
@@ -412,7 +460,7 @@ public class GraphManager extends Module {
 			// identify ally startbox ID's
 			Set<Integer> allyBoxes = new HashSet<Integer>();
 			for(Team a:callback.getAllyTeams()){
-				int boxID = (int)a.getTeamRulesParamByName("start_box_id").getValueFloat();
+				int boxID = (int)a.getRulesParamFloat("start_box_id", 0.0f);
 				allyBoxes.add(boxID);
 				ai.debug("team "+a.getTeamId()+" of allyteam "+ai.getCallback().getGame().getTeamAllyTeam(a.getTeamId())+" is ally with boxID "+boxID);
 			}
@@ -553,6 +601,31 @@ public class GraphManager extends Module {
 
 	public List<Link> getLinks(){
 		return links;
+	}
+
+	public boolean isAllyTerritory(AIFloat3 position){
+		int x = (int) (position.x/8);
+		int y = (int) (position.z/8);
+
+		return (allyTerritoryGraphics.getValue(x, y) > 0);
+	}
+
+	public boolean isEnemyTerritory(AIFloat3 position){
+		int x = (int) (position.x/8);
+		int y = (int) (position.z/8);
+
+		return (enemyTerritoryGraphics.getValue(x, y) > 0);
+	}
+
+	public boolean isFrontLine(AIFloat3 position){
+		int x = (int) (position.x/8);
+		int y = (int) (position.z/8);
+
+		return (frontLineGraphics.getValue(x, y) > 0);
+	}
+
+	public List<MetalSpot> getMetalSpots() {
+		return metalSpots;
 	}
     
     public List<MetalSpot> getEnemySpots(){
@@ -799,7 +872,7 @@ public class GraphManager extends Module {
 		MetalSpot best = null;
 		float distance = Float.MAX_VALUE;
 		for (MetalSpot ms:metalSpots){
-			if (!ms.isConnected()){
+			if (!ms.isConnected() && ms.owned){
 				float dist = distance(position, ms.getPos());
 				if (dist < distance){
 					distance = dist;

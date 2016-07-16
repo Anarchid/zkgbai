@@ -9,6 +9,7 @@ import zkgbai.ZKGraphBasedAI;
  */
 public class Factory extends Worker {
     public float raiderSpam = 0;
+    public float expensiveRaiderSpam = 0;
 
     public Factory(Unit u, boolean firstFac){
         super(u);
@@ -16,25 +17,22 @@ public class Factory extends Worker {
         if (firstFac){
             OOAICallback callback = ZKGraphBasedAI.getInstance().getCallback();
             this.raiderSpam = ((int) Math.ceil(Math.random()*9.0));
-            raiderSpam = Math.max(4, raiderSpam)* -1;
+            raiderSpam = Math.max(6, raiderSpam) * -1;
 
             if (callback.getMap().getHeight() > 896 || callback.getMap().getWidth() > 896){
                 raiderSpam = -9;
-            }
 
-            if (u.getDef().getName().equals("factorycloak")){
-                raiderSpam = -9;
-                if (callback.getMap().getHeight() < 640 && callback.getMap().getWidth() < 640){
-                    raiderSpam = -2;
+                if (u.getDef().getName().equals("factorytank")){
+                    raiderSpam = -6;
                 }
-            }
-
-            if (u.getDef().getName().equals("factoryhover")){
-                raiderSpam = -2;
             }
 
             if (u.getDef().getName().equals("factoryveh")){
                 raiderSpam = -4;
+            }
+
+            if (u.getDef().getName().equals("factoryspider")){
+                raiderSpam = -9;
             }
 
             if (callback.getMap().getHeight() < 640 && callback.getMap().getWidth() < 640){

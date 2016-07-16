@@ -82,14 +82,13 @@ public class SquadHandler {
         if (nextSquad == null){
             nextSquad = new Squad();
             nextSquad.setTarget(warManager.getRallyPoint(f.getPos()), frame);
-            nextSquad.income = ecoManager.effectiveIncome;
+            nextSquad.income = ecoManager.baseIncome;
         }
 
         nextSquad.addUnit(f, frame);
 
-        if (nextSquad.metalValue > nextSquad.income * 30 || nextSquad.metalValue > 1500){
+        if (nextSquad.metalValue > nextSquad.income * 45 && nextSquad.metalValue > 1000){
             nextSquad.status = 'r';
-            nextSquad.cutoff();
             squads.add(nextSquad);
             nextSquad = null;
         }
@@ -176,8 +175,10 @@ public class SquadHandler {
             nextAirSquad.setTarget(warManager.getRallyPoint(nextAirSquad.getPos()), frame);
         }else if (nextShieldSquad != null && squadCounter == 3) {
             // shields only get one squad into which it dumps all of its mobs.
-            if (nextShieldSquad.getHealth() < 0.85 || (warManager.getEffectiveThreat(nextShieldSquad.getPos()) > 0 && distance(nextShieldSquad.getPos(), nextShieldSquad.target) > 1200)){
-                nextShieldSquad.retreatTo(graphManager.getClosestHaven(nextShieldSquad.getPos()), frame);
+            if (nextShieldSquad.getHealth() < 0.85
+                    || (nextShieldSquad.leader != null && nextShieldSquad.leader.getUnit().getHealth()/nextShieldSquad.leader.getUnit().getMaxHealth() < 0.75)
+                    || (warManager.getEffectiveThreat(nextShieldSquad.getPos()) > 0 && distance(nextShieldSquad.getPos(), nextShieldSquad.target) > 1200)){
+                nextShieldSquad.retreatTo(graphManager.getClosestHaven(nextShieldSquad.getAvgPos()), frame);
             }else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1000){
                 AIFloat3 target = warManager.getTarget(nextShieldSquad.getPos(), true);
                 // reduce redundant order spam.
@@ -195,7 +196,6 @@ public class SquadHandler {
         boolean assigned = false;
 
         for (Squad s: squads){
-            s.cutoff();
             if (s.isDead()){
                 deadSquads.add(s);
                 continue;
@@ -205,6 +205,7 @@ public class SquadHandler {
             if (s.status == 'r' && !s.assigned){
                 assigned = true;
                 s.assigned = true;
+                s.setTarget(graphManager.getClosestHaven(s.target), frame);
                 if (s.isRallied(frame)){
                     s.status = 'a';
                 }

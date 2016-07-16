@@ -2,7 +2,6 @@ package zkgbai.military.fighterhandlers;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
-import com.springrts.ai.oo.clb.UnitRulesParam;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.EconomyManager;
 import zkgbai.graph.GraphManager;
@@ -90,8 +89,7 @@ public class BomberHandler {
             if (b.getUnit().getHealth() < b.getUnit().getMaxHealth()){
                 isUnarmed = true;
             }else {
-                UnitRulesParam noammo = b.getUnit().getUnitRulesParamByName("noammo");
-                if (noammo != null && noammo.getValueFloat() > 0) {
+                if (b.getUnit().getRulesParamFloat("noammo", 0.0f) > 0) {
                     isUnarmed = true;
                 }
             }
@@ -108,7 +106,7 @@ public class BomberHandler {
 
         // Allow all bombers to sift themselves into readyBombers before sending them to attack.
         // Also ensure that there are enough bombers to do damage.
-        if (activeBombers.isEmpty() && unarmedBombers.isEmpty() && readyBombers.size() > ecoManager.effectiveIncome/12){
+        if (activeBombers.isEmpty() && unarmedBombers.isEmpty() && readyBombers.size() > ecoManager.baseIncome/12){
             activeBombers.putAll(readyBombers);
             readyBombers.clear();
         }
@@ -121,8 +119,7 @@ public class BomberHandler {
         for (Fighter b:activeBombers.values()){
             // sift unarmed bombers back into the unarmed list.
             boolean isUnarmed = false;
-            UnitRulesParam noammo = b.getUnit().getUnitRulesParamByName("noammo");
-            if (noammo != null && noammo.getValueFloat() > 0) {
+            if (b.getUnit().getRulesParamFloat("noammo", 0.0f) > 0) {
                 isUnarmed = true;
             }
 

@@ -91,15 +91,15 @@ public class LosManager extends Module {
 		//the last value, bottom right, is at index (width/res * height/res - 1)
 		
 		// convert from world coordinates to heightmap coordinates
-		double x = (int) Math.floor(position.x/8);
-		double z = (int) Math.floor(position.z/8);
+		double x = Math.floor(position.x/8);
+		double z = Math.floor(position.z/8);
 		
 		int gridX = (int)Math.floor((x/mapWidth)* gridWidth);
 		int gridZ = (int)Math.floor((z/mapHeight)* gridHeight);
 		
 		int index = Math.min(gridX + gridZ * gridWidth,losMap.size()-1);  
 		
-		if(index >= losMap.size()){
+		if(index >= losMap.size() || index < 0){
 			return false;
 		}
 		return (losMap.get(index) > level);

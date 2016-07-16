@@ -34,6 +34,9 @@ public class ReclaimTask extends WorkerTask {
 
 	@Override
 	public AIFloat3 getPos(){
+		if (target.getPosition() != null && !target.getPosition().equals(new AIFloat3(0f,0f,0f))){
+			return target.getPosition();
+		}
 		return this.position;
 	}
 }

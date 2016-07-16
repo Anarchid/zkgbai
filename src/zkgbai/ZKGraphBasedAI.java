@@ -4,7 +4,6 @@ import java.util.*;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Game;
-import com.springrts.ai.oo.clb.GameRulesParam;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Team;
 import com.springrts.ai.oo.clb.Unit;
@@ -152,12 +151,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		List<String> commanderNames = new ArrayList<String>();
 		
 		for(UnitDef ud:unitdefs){
-			Map<String,String> customParams = ud.getCustomParams();
-			String level = customParams.get("level");
-			if(level != null){
-				if(Integer.parseInt(level) == 0 && ud.getTooltip().contains("Support")){
-					commanderNames.add(ud.getName());
-				}
+			if(ud.getHumanName().contains("Engineer Trainer")){
+				commanderNames.add(ud.getName());
 			}
 		}
 		
@@ -452,31 +447,26 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		int mapHeight = 8* callback.getMap().getHeight();
 			
 		Game g = callback.getGame();
-		
-		GameRulesParam advZKBoxes = g.getGameRulesParamByName("startbox_custom_shapes");
-		GameRulesParam maxStartBox = g.getGameRulesParamByName("startbox_max_n");
 
-		if(maxStartBox != null && advZKBoxes != null ){
-			if(advZKBoxes.getValueFloat() == 1){
-				startType = StartType.ZK_STARTPOS;
+	   if(g.getRulesParamFloat("startbox_custom_shapes", 0.0f) == 1f){
+		   startType = StartType.ZK_STARTPOS;
 				
-				int maxBox = (int) maxStartBox.getValueFloat();
+		   int maxBox = (int) g.getRulesParamFloat("startbox_max_n", 0.0f);
 				
-				for(int i=0;i<=maxBox;i++){
-					ArrayList<AIFloat3> starts = new ArrayList<AIFloat3>();
-					int numStarts = (int) g.getGameRulesParamByName("startpos_n_"+i).getValueFloat();
-					for(int j = 1;j<=numStarts;j++){
-						float x = g.getGameRulesParamByName("startpos_x_"+i+"_"+j).getValueFloat();
-						float z = g.getGameRulesParamByName("startpos_z_"+i+"_"+j).getValueFloat();
-						starts.add(new AIFloat3(x,0,z));
-						debug("startbox "+i+" contains startpos <"+x+","+z+">");
-					}
-					 startBoxes.put(i,new ZKStartLocation(starts));
-				}
+		   for(int i=0;i<=maxBox;i++){
+			   ArrayList<AIFloat3> starts = new ArrayList<AIFloat3>();
+			   int numStarts = (int) g.getRulesParamFloat("startpos_n_"+i, 0.0f);
+			   for(int j = 1;j<=numStarts;j++){
+				   float x = g.getRulesParamFloat("startpos_x_"+i+"_"+j, 0.0f);
+				   float z = g.getRulesParamFloat("startpos_z_"+i+"_"+j, 0.0f);
+				   starts.add(new AIFloat3(x,0,z));
+				   debug("startbox "+i+" contains startpos <"+x+","+z+">");
+			   }
+			   startBoxes.put(i,new ZKStartLocation(starts));
+		   }
 	
-				return;
-			}
-		}
+		   return;
+	   }
 
 		String script = callback.getGame().getSetupScript();
     	

@@ -11,11 +11,11 @@ import zkgbai.military.MilitaryManager;
 import zkgbai.kgbutil.Pathfinder;
 import zkgbai.military.UnitClasses;
 import zkgbai.military.tasks.ScoutTask;
+import zkgbai.military.unitwrappers.Fighter;
 import zkgbai.military.unitwrappers.Raider;
+import zkgbai.military.unitwrappers.RaiderSquad;
 
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import java.util.*;
 
 import static zkgbai.kgbutil.KgbUtil.*;
 import static java.lang.Math.*;
@@ -30,9 +30,15 @@ public class RaiderHandler {
     GraphManager graphManager;
     EconomyManager ecoManager;
 
-    List<Raider> raidQueue;
-    List<Raider> mediumRaidQueue;
-    public List<Raider> raiders;
+    RaiderSquad nextSmallRaiderSquad = null;
+    RaiderSquad nextScorcherSquad = null;
+    RaiderSquad nextBansheeSquad = null;
+    RaiderSquad nextScytheSquad = null;
+    RaiderSquad nextHalberdSquad = null;
+    public List<Raider> soloRaiders;
+    public Map<Integer, Raider> smallRaiders;
+    public Map<Integer, Raider> mediumRaiders;
+    List<RaiderSquad> raiderSquads;
 
     List<ScoutTask> scoutTasks;
 
@@ -48,39 +54,102 @@ public class RaiderHandler {
         this.pathfinder = Pathfinder.getInstance();
         this.retreatHandler = warManager.retreatHandler;
 
-        this.raiders = new ArrayList<Raider>();
-        this.raidQueue = new ArrayList<Raider>();
-        this.mediumRaidQueue = new ArrayList<Raider>();
+        this.soloRaiders = new ArrayList<Raider>();
+        this.smallRaiders = new HashMap<Integer, Raider>();
+        this.mediumRaiders = new HashMap<Integer, Raider>();
+        this.raiderSquads = new ArrayList<RaiderSquad>();
 
         this.scoutTasks = new ArrayList<ScoutTask>();
     }
 
     public void addSmallRaider(Raider r){
-        raidQueue.add(r);
+        if (soloRaiders.size() < 2 && !smallRaiders.containsKey(r.id)){
+            soloRaiders.add(r);
+            return;
+        }
 
-        // move raiders from the holding squad into the main raider pool
-        // either if there's a big enough mob or if there are no scouts.
-        if (raidQueue.size() > max(4, (int) floor(ecoManager.effectiveIncome/5)) || raiders.size() < 2){
-            raiders.addAll(raidQueue);
-            raidQueue.clear();
+        smallRaiders.put(r.id, r);
+
+        if (nextSmallRaiderSquad == null){
+            nextSmallRaiderSquad = new RaiderSquad();
+            nextSmallRaiderSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
+        }
+        nextSmallRaiderSquad.addUnit(r, frame);
+
+        if (nextSmallRaiderSquad.raiders.size() >= min(12, max(6, (int) floor(ecoManager.effectiveIncome/5f)))){
+            raiderSquads.add(nextSmallRaiderSquad);
+            nextSmallRaiderSquad.status = 'r';
+            nextSmallRaiderSquad = null;
         }
     }
 
     public void addMediumRaider(Raider r) {
-        // move raiders from the holding squad into the main raider pool.
-        mediumRaidQueue.add(r);
-        if (mediumRaidQueue.size() >= (int) min(6, max(4, floor(ecoManager.effectiveIncome / 5)))){
-            raiders.addAll(mediumRaidQueue);
-            mediumRaidQueue.clear();
+        mediumRaiders.put(r.id, r);
+
+        String defName = r.getUnit().getDef().getName();
+
+        if (defName.equals("corgator")){
+            //for scorchers
+            if (nextScorcherSquad == null){
+                nextScorcherSquad = new RaiderSquad();
+                nextScorcherSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
+            }
+            nextScorcherSquad.addUnit(r, frame);
+
+            if (nextScorcherSquad.raiders.size() >= (int) min(6f, max(4f, floor(ecoManager.effectiveIncome / 4f)))){
+                raiderSquads.add(nextScorcherSquad);
+                nextScorcherSquad.status = 'r';
+                nextScorcherSquad = null;
+            }
+
+        }else if (defName.equals("armkam")){
+            // for banshees
+            if (nextBansheeSquad == null){
+                nextBansheeSquad = new RaiderSquad();
+                nextBansheeSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
+            }
+            nextBansheeSquad.addUnit(r, frame);
+
+            if (nextBansheeSquad.raiders.size() >= (int) min(6, max(4, floor(ecoManager.effectiveIncome / 5)))){
+                raiderSquads.add(nextBansheeSquad);
+                nextBansheeSquad.status = 'r';
+                nextBansheeSquad = null;
+            }
+        }else if (defName.equals("spherepole")) {
+            // for scythes
+            if (nextScytheSquad == null) {
+                nextScytheSquad = new RaiderSquad();
+                nextScytheSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
+            }
+            nextScytheSquad.addUnit(r, frame);
+
+            if (nextScytheSquad.raiders.size() >= (int) min(4, max(2, floor(ecoManager.effectiveIncome / 10)))) {
+                raiderSquads.add(nextScytheSquad);
+                nextScytheSquad.status = 'r';
+                nextScytheSquad = null;
+            }
+        }else if (defName.equals("hoverassault")) {
+            // for scythes
+            if (nextHalberdSquad == null) {
+                nextHalberdSquad = new RaiderSquad();
+                nextHalberdSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
+            }
+            nextHalberdSquad.addUnit(r, frame);
+
+            if (nextHalberdSquad.raiders.size() >= (int) min(4, max(2, floor(ecoManager.effectiveIncome / 10)))) {
+                raiderSquads.add(nextHalberdSquad);
+                nextHalberdSquad.status = 'r';
+                nextHalberdSquad = null;
+            }
         }
     }
 
     public void addSoloRaider(Raider r){
-        raiders.add(r);
+        soloRaiders.add(r);
     }
 
     public void removeUnit(Unit u){
-        for (Raider r: raiders){
+        for (Raider r: soloRaiders){
             if (r.id == u.getUnitId()){
                 if (r.getTask() != null){
                     r.getTask().removeRaider(r);
@@ -88,13 +157,54 @@ public class RaiderHandler {
             }
         }
         Raider r = new Raider(u, 0);
-        raiders.remove(r);
-        raidQueue.remove(r);
-        mediumRaidQueue.remove(r);
+        soloRaiders.remove(r);
+        if (smallRaiders.containsKey(u.getUnitId())){
+            Raider sr = smallRaiders.get(u.getUnitId());
+            if (sr.squad != null){
+                sr.squad.removeUnit(sr);
+            }
+
+            if (sr.getTask() != null){
+                sr.getTask().removeRaider(r);
+            }
+            smallRaiders.remove(u.getUnitId());
+        }else if (mediumRaiders.containsKey(u.getUnitId())){
+            Raider mr = mediumRaiders.get(u.getUnitId());
+            if (mr.squad != null){
+                mr.squad.removeUnit(mr);
+            }
+
+            if (mr.getTask() != null){
+                mr.getTask().removeRaider(r);
+            }
+            mediumRaiders.remove(u.getUnitId());
+        }
     }
 
-    void cleanUnits(){
+    public void removeFromSquad(Unit u){
+        if (smallRaiders.containsKey(u.getUnitId())){
+            Raider r = smallRaiders.get(u.getUnitId());
+            if (r.squad != null){
+                r.squad.removeUnit(r);
+                r.squad = null;
+            }
 
+            if (r.getTask() != null){
+                r.getTask().removeRaider(r);
+                r.clearTask();
+            }
+        }else if (mediumRaiders.containsKey(u.getUnitId())){
+            Raider r = mediumRaiders.get(u.getUnitId());
+            if (r.squad != null){
+                r.squad.removeUnit(r);
+                r.squad = null;
+            }
+
+            if (r.getTask() != null){
+                r.getTask().removeRaider(r);
+                r.clearTask();
+            }
+        }
     }
 
     public void update(int frame){
@@ -103,6 +213,18 @@ public class RaiderHandler {
         if(frame%15 == 0) {
             createScoutTasks();
             checkScoutTasks();
+
+            for (Raider r:smallRaiders.values()){
+                if (r.squad == null && !retreatHandler.isRetreating(r.getUnit())){
+                    addSmallRaider(r);
+                }
+            }
+
+            for (Raider r:mediumRaiders.values()){
+                if (r.squad == null && !retreatHandler.isRetreating(r.getUnit())){
+                    addMediumRaider(r);
+                }
+            }
 
             assignRaiders();
         }
@@ -145,25 +267,25 @@ public class RaiderHandler {
     private float getScoutCost(ScoutTask task,  Raider raider){
         float cost = distance(task.target, raider.getPos());
         if (task.spot.hostile){
-            cost /= 4;
+            cost /= 4f;
         }else {
             if ((frame - task.spot.getLastSeen()) < 450) {
-                cost += 3000;
+                cost += 3000f;
             }else {
                 // reduce cost relative to every 30 seconds since last seen for enemy shadowed spots
                 cost /= ((frame - task.spot.getLastSeen()) / 900);
             }
 
             // disprefer scouting the same non-hostile spot with more than one raider.
-            if (!task.assignedRaiders.isEmpty() && !task.assignedRaiders.contains(raider)){
-                cost += 2000;
+            if ((!task.assignedRaiders.isEmpty() && !task.assignedRaiders.contains(raider))){
+                cost += 2000f;
             }
         }
 
-        cost += (500 * warManager.getThreat(task.target));
+        cost += (1000f * warManager.getThreat(task.target));
 
         if (warManager.getEffectiveThreat(task.target) > warManager.getFriendlyThreat(raider.getPos())){
-            cost += 9001;
+            cost += 9001f;
         }
         return cost;
     }
@@ -173,54 +295,55 @@ public class RaiderHandler {
         if (frame % 120 == 0){
             needUnstick = true;
 
-            for (Raider r: raidQueue){
-                if (retreatHandler.isRetreating(r.getUnit()) || r.getUnit().getHealth() <= 0){
-                    continue;
-                }
-
-                AIFloat3 pos;
-                boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
-                if (!overThreat){
-                    pos = warManager.getRaiderRally(r.getPos());
-                    r.fightTo(pos, frame);
+            // assign rally points for new squads
+            if (nextSmallRaiderSquad != null && !nextSmallRaiderSquad.raiders.isEmpty()){
+                boolean overThreat = (warManager.getEffectiveThreat(nextSmallRaiderSquad.getPos()) > 0);
+                if (!overThreat) {
+                    nextSmallRaiderSquad.raid(warManager.getRaiderRally(nextSmallRaiderSquad.getPos()), frame);
+                }else{
+                    nextSmallRaiderSquad.sneak(graphManager.getClosestHaven(nextSmallRaiderSquad.getPos()), frame);
                 }
             }
 
-            for (Raider r: mediumRaidQueue){
-                if (retreatHandler.isRetreating(r.getUnit()) || r.getUnit().getHealth() <= 0){
-                    continue;
+            if (nextScorcherSquad != null && !nextScorcherSquad.raiders.isEmpty()){
+                boolean overThreat = (warManager.getEffectiveThreat(nextScorcherSquad.getPos()) > 0);
+                if (!overThreat) {
+                    nextScorcherSquad.raid(warManager.getRaiderRally(nextScorcherSquad.getPos()), frame);
+                }else{
+                    nextScorcherSquad.sneak(graphManager.getClosestHaven(nextScorcherSquad.getPos()), frame);
                 }
+            }
 
-                AIFloat3 pos;
-                boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
-                if (!overThreat){
-                    pos = warManager.getRaiderRally(r.getPos());
-                    r.fightTo(pos, frame);
+            if (nextBansheeSquad != null && !nextBansheeSquad.raiders.isEmpty()){
+                boolean overThreat = (warManager.getEffectiveThreat(nextBansheeSquad.getPos()) > 0);
+                if (!overThreat) {
+                    nextBansheeSquad.raid(warManager.getRaiderRally(nextBansheeSquad.getPos()), frame);
+                }else{
+                    nextBansheeSquad.sneak(graphManager.getClosestHaven(nextBansheeSquad.getPos()), frame);
+                }
+            }
+
+            if (nextScytheSquad != null && !nextScytheSquad.raiders.isEmpty()){
+                boolean overThreat = (warManager.getEffectiveThreat(nextScytheSquad.getPos()) > 0);
+                if (!overThreat) {
+                    nextScytheSquad.raid(warManager.getRaiderRally(nextScytheSquad.getPos()), frame);
+                }else{
+                    nextScytheSquad.sneak(graphManager.getClosestHaven(nextScytheSquad.getPos()), frame);
+                }
+            }
+
+            if (nextHalberdSquad != null && !nextHalberdSquad.raiders.isEmpty()){
+                boolean overThreat = (warManager.getEffectiveThreat(nextHalberdSquad.getPos()) > 0);
+                if (!overThreat) {
+                    nextHalberdSquad.raid(warManager.getRaiderRally(nextHalberdSquad.getPos()), frame);
+                }else{
+                    nextHalberdSquad.sneak(graphManager.getClosestHaven(nextHalberdSquad.getPos()), frame);
                 }
             }
         }
 
-        // retreat overthreatened raiders from queues
-        for (Raider r: raidQueue){
-            AIFloat3 pos;
-            boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
-            if (overThreat){
-                pos = graphManager.getClosestHaven(r.getPos());
-                r.sneak(pos, frame);
-            }
-        }
-
-        for (Raider r: mediumRaidQueue){
-            AIFloat3 pos;
-            boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
-            if (overThreat){
-                pos = graphManager.getClosestHaven(r.getPos());
-                r.sneak(pos, frame);
-            }
-        }
-
-        // assign main raid group
-        for (Raider r: raiders){
+        // assign soloraid/scout group
+        for (Raider r: soloRaiders){
             boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
             if (retreatHandler.isRetreating(r.getUnit()) || r.getUnit().getHealth() <= 0
                     || (r.getUnit().getDef().getName().equals("spherepole") && !r.getUnit().isCloaked() && !overThreat)){
@@ -258,6 +381,11 @@ public class RaiderHandler {
                 }
                 if (e.isWorker){
                     tmpcost = (tmpcost/4)-100;
+                    tmpcost += 750f * warManager.getThreat(e.position);
+                }
+                if (e.isStatic && e.getDanger() > 0f){
+                    tmpcost = (tmpcost/4)-100;
+                    tmpcost += 500f * warManager.getThreat(e.position);
                 }
 
                 if (tmpcost < cost){
@@ -272,13 +400,13 @@ public class RaiderHandler {
                     r.clearTask();
                 }
 
-                if (overThreat) {
+                if (overThreat || distance(bestTarget, r.getPos()) > 500) {
                     r.sneak(bestTarget, frame);
                 } else {
                     r.raid(bestTarget, frame);
                 }
             }else if (bestTask != null && (overThreat || bestTask != r.getTask() || r.getUnit().getCurrentCommands().isEmpty())){
-                if (overThreat) {
+                if (overThreat || distance(bestTask.target, r.getPos()) > 500) {
                     r.sneak(bestTask.target, frame);
                 } else {
                     r.raid(bestTask.target, frame);
@@ -293,14 +421,108 @@ public class RaiderHandler {
                 }
             }
         }
+
+        // assign raider squads
+        List<RaiderSquad> deadSquads = new ArrayList<RaiderSquad>();
+        for (RaiderSquad rs:raiderSquads){
+            if (rs.isDead()){
+                deadSquads.add(rs);
+                continue;
+            }
+
+            boolean overThreat = false;
+            for (Raider r:rs.raiders){
+                if (warManager.getEffectiveThreat(r.getPos()) > 0){
+                    overThreat = true;
+                }
+            }
+
+            if (rs.status == 'r'){
+                // rally rallying squads
+                if (overThreat){
+                    rs.sneak(graphManager.getClosestHaven(rs.getPos()), frame);
+                }else {
+                    if (rs.isRallied(frame)) {
+                        rs.status = 'a';
+                    }
+                }
+            }else{
+                // for ready squads, assign to a target
+                ScoutTask bestTask = null;
+                AIFloat3 bestTarget = null;
+                float cost = Float.MAX_VALUE;
+
+                for (ScoutTask s:scoutTasks){
+                    if (warManager.getEffectiveThreat(s.target) > warManager.getFriendlyThreat(rs.getPos())){
+                        continue;
+                    }
+
+                    float tmpcost = getScoutCost(s, rs.leader);
+                    if (tmpcost < cost){
+                        cost = tmpcost;
+                        bestTask = s;
+                    }
+                }
+
+                for (Enemy e: warManager.getTargets()){
+                    if (warManager.getEffectiveThreat(e.position) > warManager.getFriendlyThreat(rs.getPos()) || e.isRiot){
+                        continue;
+                    }
+
+                    float tmpcost = distance(rs.getPos(), e.position);
+                    if (!e.isArty && !e.isWorker && !e.isStatic){
+                        tmpcost += 1000;
+                    }
+                    if (e.isWorker){
+                        tmpcost = (tmpcost/4)-100;
+                    }
+
+                    if (e.isStatic && e.getDanger() > 0f){
+                        tmpcost = (tmpcost/5)-200;
+                    }
+
+                    if (tmpcost < cost){
+                        cost = tmpcost;
+                        bestTarget = e.position;
+                    }
+                }
+
+                if (bestTarget != null){
+                    if (rs.leader.getTask() != null) {
+                        rs.leader.getTask().removeRaider(rs.leader);
+                        rs.leader.clearTask();
+                    }
+                    if (overThreat || distance(bestTarget, rs.getPos()) > 500) {
+                        rs.sneak(bestTarget, frame);
+                    }else{
+                        rs.raid(bestTarget, frame);
+                    }
+                }else if (bestTask != null && (overThreat || bestTask != rs.leader.getTask() || rs.leader.getUnit().getCurrentCommands().isEmpty())){
+                    if (overThreat || distance(bestTask.target, rs.getPos()) > 500) {
+                        rs.sneak(bestTask.target, frame);
+                    }else{
+                        rs.raid(bestTask.target, frame);
+                    }
+
+                    if (rs.leader.getTask() == null || !rs.leader.getTask().equals(bestTask)) {
+                        if (rs.leader.getTask() != null) {
+                            rs.leader.getTask().removeRaider(rs.leader);
+                        }
+                        bestTask.addRaider(rs.leader);
+                        rs.leader.setTask(bestTask);
+                    }
+                }
+            }
+        }
+        raiderSquads.removeAll(deadSquads);
     }
 
     public void avoidEnemies(Unit h, Unit attacker, AIFloat3 dir){
-        for (Raider r : raiders) {
-            if (r.id == h.getUnitId() && h.getHealth() / h.getMaxHealth() < 0.8 && attacker != null && attacker.getMaxSpeed() > 0 && warManager.getEffectiveThreat(h.getPos()) <= 0
-                    && r.scouting && !r.getUnit().getDef().getName().equals("corgator")) {
+        if (smallRaiders.containsKey(h.getUnitId())) {
+            Raider r = smallRaiders.get(h.getUnitId());
+            if (h.getHealth() / h.getMaxHealth() < 0.8 && attacker != null && attacker.getMaxSpeed() > 0 && warManager.getEffectiveThreat(h.getPos()) <= 0) {
                 float movdist = -100;
-                if (r.getUnit().getDef().getName().equals("spherepole") || r.getUnit().getDef().getName().equals("corsh") || warManager.getEffectiveThreat(h.getPos()) > 0) {
+                if (r.getUnit().getDef().getName().equals("corsh")) {
                     movdist = -450;
                 }
                 float x = movdist * dir.x;
@@ -309,18 +531,6 @@ public class RaiderHandler {
                 AIFloat3 target = new AIFloat3();
                 target.x = pos.x + x;
                 target.z = pos.z + z;
-                h.moveTo(target, (short) 0, frame);
-            }
-        }
-
-        for (Raider r: raidQueue){
-            if (r.id == h.getUnitId() && h.getHealth()/h.getMaxHealth() < 0.6){
-                float x = -100*dir.x;
-                float z = -100*dir.z;
-                AIFloat3 pos = h.getPos();
-                AIFloat3 target = new AIFloat3();
-                target.x = pos.x+x;
-                target.z = pos.z+z;
                 h.moveTo(target, (short) 0, frame);
             }
         }

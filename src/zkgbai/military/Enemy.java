@@ -23,6 +23,7 @@ public class Enemy {
 	public boolean identified = false;
 	public boolean isWorker = false;
 	public boolean isRiot = false;
+	public boolean isRaider = false;
 	boolean isFlamer = false;
 	public boolean isArty = false;
 	boolean isAA = false;
@@ -95,7 +96,7 @@ public class Enemy {
 		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
-			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().contains("com") || u.getName().equals("screamer") || u.getName().equals("corflak") || defName.equals("amphraider3"))
+			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("screamer") || u.getName().equals("corflak") || defName.equals("amphraider3"))
 					&& !defName.equals("dante")){
 				// identify riots
 				this.isRiot = true;
@@ -111,7 +112,12 @@ public class Enemy {
 				}
 			}
 
-			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("cormist")) && !u.getTooltip().contains("Riot")){
+			if (u.getTooltip().contains("aider") || u.getTooltip().contains("cout")){
+				// this is for keeping assault mobs from chasing raiders around.
+				this.isRaider = true;
+			}
+
+			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("cormist")) || u.isBuilder() && !u.getTooltip().contains("Riot")){
 				// identify arty/skirms
 				this.isArty = true;
 			}
@@ -159,7 +165,8 @@ public class Enemy {
 			if (isRiot){
 				danger *= 2;
 			}
-			if (isArty && !ud.getName().equals("amphfloater")){
+			if ((isArty && !ud.getName().equals("amphfloater"))
+					|| ud.isBuilder()){
 				danger /= 3;
 			}
 		}
