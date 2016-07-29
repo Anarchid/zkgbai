@@ -21,7 +21,7 @@ local infos = {
 	},
 	{
 		key    = 'version',
-		value  = '0.8', -- AI version - !This comment is used for parsing!
+		value  = '0.8.1', -- AI version - !This comment is used for parsing!
 	},
 	{
 		key    = 'className',
@@ -30,7 +30,7 @@ local infos = {
 	},
 	{
 		key    = 'name',
-		value  = 'Turns your world into a solar freaking parking lot.',
+		value  = 'Advanced 1v1 AI (has performance issues in teams).',
 		desc   = 'human readable name.',
 	},
 	{

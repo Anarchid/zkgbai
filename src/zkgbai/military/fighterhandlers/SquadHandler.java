@@ -179,7 +179,7 @@ public class SquadHandler {
                     || (nextShieldSquad.leader != null && nextShieldSquad.leader.getUnit().getHealth()/nextShieldSquad.leader.getUnit().getMaxHealth() < 0.75)
                     || (warManager.getEffectiveThreat(nextShieldSquad.getPos()) > 0 && distance(nextShieldSquad.getPos(), nextShieldSquad.target) > 1200)){
                 nextShieldSquad.retreatTo(graphManager.getClosestHaven(nextShieldSquad.getAvgPos()), frame);
-            }else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1000){
+            }else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1500){
                 AIFloat3 target = warManager.getTarget(nextShieldSquad.getPos(), true);
                 // reduce redundant order spam.
                 if (!target.equals(nextShieldSquad.target)) {
@@ -205,7 +205,7 @@ public class SquadHandler {
             if (s.status == 'r' && !s.assigned){
                 assigned = true;
                 s.assigned = true;
-                s.setTarget(graphManager.getClosestHaven(s.target), frame);
+                s.setTarget(warManager.getRallyPoint(s.getPos()), frame);
                 if (s.isRallied(frame)){
                     s.status = 'a';
                 }

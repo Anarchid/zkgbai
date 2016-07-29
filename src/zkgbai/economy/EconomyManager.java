@@ -516,7 +516,7 @@ public class EconomyManager extends Module {
 			repairTasks.add(rt);
 		}
 
-		if (defName.equals("funnelweb") && facManager.numFunnels < 2){
+		if (defName.equals("funnelweb") && facManager.numFunnels == 0){
 			RepairTask rt = new RepairTask(unit);
 			repairTasks.add(rt);
 		}
@@ -613,7 +613,7 @@ public class EconomyManager extends Module {
 		}
 
 		// check for enemy air
-		if (e.getDef().isAbleToFly() && !e.getDef().getName().equals("attackdrone") && !e.getDef().getName().equals("battledrone")){
+		if (e.getDef().isAbleToFly() && !e.getDef().getName().equals("attackdrone") && !e.getDef().getName().equals("battledrone") && !e.getDef().getName().equals("carrydrone")){
 			enemyHasAir = true;
 		}
 		return 0;
@@ -789,7 +789,7 @@ public class EconomyManager extends Module {
 				return ((float) (dist/Math.log(dist)) - 100) + (600 * (costMod - 1));
 			}else if (ctask.buildType.isAbleToAttack()){
 				// for porc
-				if (effectiveIncome < 10 || warManager.slasherSpam * 140 > warManager.enemyPorcValue){
+				if (effectiveIncome < 10f || warManager.slasherSpam * 140 > warManager.enemyPorcValue){
 					return dist+300;
 				}
 				return dist - 400 + Math.max(0, (1500 * (costMod - 2)));
@@ -815,10 +815,6 @@ public class EconomyManager extends Module {
 		}
 
 		if (task instanceof ReclaimTask) {
-			/*if (warManager.getThreat(task.getPos()) > 0){
-				return dist+800;
-			}*/
-
 			ReclaimTask rtask = (ReclaimTask) task;
 
 			if (metal > 400 || energy < 100){
@@ -1131,7 +1127,7 @@ public class EconomyManager extends Module {
 		}
 
 		// do we need radar?
-		if (needRadar(position) && effectiveIncome > 10 && energy > 100 && !tooCloseToFac){
+		if (needRadar(position) && effectiveIncome > 20 && energy > 100 && !tooCloseToFac){
     		createRadarTask(worker);
     	}
 

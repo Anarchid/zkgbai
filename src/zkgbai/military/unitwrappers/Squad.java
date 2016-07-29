@@ -90,9 +90,11 @@ public class Squad {
 	public boolean isRallied(int frame){
 		boolean rallied = true;
 		for (Fighter f: fighters){
-			if (distance(target, f.getPos()) > 300){
-				rallied = false;
+			if (distance(target, f.getPos()) > 300 && distance(leader.getPos(), f.getPos()) > 300){
 				f.moveTo(getRadialPoint(target, 50f), frame);
+				rallied = false;
+			}else{
+				f.fightTo(target, frame);
 			}
 		}
 		return rallied;

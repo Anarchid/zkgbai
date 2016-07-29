@@ -75,10 +75,10 @@ public class TerrainAnalyzer {
         PathResult bot = checkPathing(botPath, 1.4f);
         if ((bot.avgCostRatio < veh.avgCostRatio - 0.05f || !veh.result) && bot.result){
             debug(taMsg + "Bot path check succeeded, enabling bots!");
-            //initialFacList.add("factorycloak");
+            initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");
             initialFacList.add("factoryamph");
-        } else if (veh.result && bot.avgCostRatio >= veh.avgCostRatio - 0.05f) {
+        }else if (veh.result && bot.avgCostRatio >= veh.avgCostRatio - 0.05f) {
             debug(taMsg + "Bots not cost competitive, skipping!");
         }
 

@@ -498,7 +498,7 @@ public class MilitaryManager extends Module {
 		//if there aren't any, then rally near the front line.
 		AIFloat3 position = null;
 		try {
-			position = graphManager.getClosestHaven(graphManager.getClosestFrontLineSpot(pos).getPos());
+			position = graphManager.getClosestFrontLineSpot(pos).getPos();
 		}catch (Exception e){}
 		if (position != null) {
 			return position;
@@ -695,7 +695,7 @@ public class MilitaryManager extends Module {
 				}
 				e.isPainted = true;
 			}
-    	}else{
+    	}else if (!enemy.isBeingBuilt() || !enemy.getDef().isAbleToMove()){
     		Enemy e = new Enemy(enemy, enemy.getDef().getCost(metal));
     		targets.put(enemy.getUnitId(),e);
     		e.visible = true;
@@ -736,6 +736,13 @@ public class MilitaryManager extends Module {
 				enemyPorcGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower);
 				e.isPainted = true;
 			}
+		}else{
+			Resource metal = ai.getCallback().getResourceByName("Metal");
+			Enemy e = new Enemy(enemy, enemy.getDef().getCost(metal));
+			targets.put(enemy.getUnitId(),e);
+			e.visible = true;
+			e.setIdentified();
+			e.lastSeen = frame;
 		}
 		return 0;
 	}

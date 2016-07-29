@@ -96,7 +96,7 @@ public class RaiderHandler {
             }
             nextScorcherSquad.addUnit(r, frame);
 
-            if (nextScorcherSquad.raiders.size() >= (int) min(6f, max(4f, floor(ecoManager.effectiveIncome / 4f)))){
+            if (nextScorcherSquad.raiders.size() >= (int) min(8f, max(4f, floor(ecoManager.effectiveIncome / 4f)))){
                 raiderSquads.add(nextScorcherSquad);
                 nextScorcherSquad.status = 'r';
                 nextScorcherSquad = null;

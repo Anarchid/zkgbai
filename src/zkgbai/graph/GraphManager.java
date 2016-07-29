@@ -881,6 +881,10 @@ public class GraphManager extends Module {
 			}
 		}
 
+		if (best == null){
+			best = getClosestSpot(new AIFloat3(0, 0, 0));
+		}
+
 		// then find the shortest unconnected link
 		Link link = null;
 		distance = Float.MAX_VALUE;

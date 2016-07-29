@@ -46,7 +46,6 @@ public class UnitClasses {
         // raiders
         smallRaiders.add("armpw");
         smallRaiders.add("corak");
-        smallRaiders.add("corclog");
         smallRaiders.add("amphraider3");
         smallRaiders.add("amphraider2");
         smallRaiders.add("corsh");
@@ -62,6 +61,7 @@ public class UnitClasses {
         soloRaiders.add("armflea");
         soloRaiders.add("corfav");
         soloRaiders.add("corstorm");
+        soloRaiders.add("corclog");
 
         // assaults; stuff that attacks in mobs
         assaults.add("armzeus");
