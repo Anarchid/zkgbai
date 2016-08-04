@@ -43,7 +43,7 @@ public class Squad {
 
 	public void removeUnit(Fighter f){
 		fighters.remove(f);
-		if (leader.equals(f)){
+		if (leader != null && leader.equals(f)){
 			leader = getNewLeader();
 		}
 		metalValue -= f.metalValue;

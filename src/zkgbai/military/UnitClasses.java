@@ -53,7 +53,6 @@ public class UnitClasses {
         mediumRaiders.add("corgator");
         mediumRaiders.add("armkam");
         mediumRaiders.add("spherepole");
-        mediumRaiders.add("hoverassault");
 
         soloRaiders.add("hoverassault");
         soloRaiders.add("logkoda");

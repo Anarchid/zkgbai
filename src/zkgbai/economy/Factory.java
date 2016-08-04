@@ -31,6 +31,11 @@ public class Factory extends Worker {
                 raiderSpam = -4;
             }
 
+            if (u.getDef().getName().equals("factoryhover")){
+                raiderSpam = -4;
+                expensiveRaiderSpam = -2;
+            }
+
             if (u.getDef().getName().equals("factoryspider")){
                 raiderSpam = -9;
             }

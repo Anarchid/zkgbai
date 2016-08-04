@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 
 import zkgbai.economy.EconomyManager;
 import zkgbai.economy.FactoryManager;
+import zkgbai.economy.tasks.ConstructionTask;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
 import zkgbai.gui.DebugView;
@@ -191,7 +192,11 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
     @Override
     public int message(int player, String message) {
-	    for (Module module : modules) {
+	    /*if (message.equals("kgbdebug")){
+			//add debugging code here
+		}*/
+
+		for (Module module : modules) {
 	    	try {
 	            module.message(player, message);
 	    	} catch (Throwable e) {

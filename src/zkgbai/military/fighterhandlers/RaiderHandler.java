@@ -128,19 +128,6 @@ public class RaiderHandler {
                 nextScytheSquad.status = 'r';
                 nextScytheSquad = null;
             }
-        }else if (defName.equals("hoverassault")) {
-            // for scythes
-            if (nextHalberdSquad == null) {
-                nextHalberdSquad = new RaiderSquad();
-                nextHalberdSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
-            }
-            nextHalberdSquad.addUnit(r, frame);
-
-            if (nextHalberdSquad.raiders.size() >= (int) min(4, max(2, floor(ecoManager.effectiveIncome / 10)))) {
-                raiderSquads.add(nextHalberdSquad);
-                nextHalberdSquad.status = 'r';
-                nextHalberdSquad = null;
-            }
         }
     }
 
@@ -329,15 +316,6 @@ public class RaiderHandler {
                     nextScytheSquad.raid(warManager.getRaiderRally(nextScytheSquad.getPos()), frame);
                 }else{
                     nextScytheSquad.sneak(graphManager.getClosestHaven(nextScytheSquad.getPos()), frame);
-                }
-            }
-
-            if (nextHalberdSquad != null && !nextHalberdSquad.raiders.isEmpty()){
-                boolean overThreat = (warManager.getEffectiveThreat(nextHalberdSquad.getPos()) > 0);
-                if (!overThreat) {
-                    nextHalberdSquad.raid(warManager.getRaiderRally(nextHalberdSquad.getPos()), frame);
-                }else{
-                    nextHalberdSquad.sneak(graphManager.getClosestHaven(nextHalberdSquad.getPos()), frame);
                 }
             }
         }

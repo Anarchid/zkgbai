@@ -35,7 +35,7 @@ public class EconomyManager extends Module {
 	List<ConstructionTask> windTasks;
 	List<ConstructionTask> fusionTasks;
 	List<ConstructionTask> pylonTasks;
-	List<ConstructionTask> porcTasks;
+	public List<ConstructionTask> porcTasks;
 	List<ConstructionTask> nanoTasks;
 	List<ConstructionTask> AATasks;
 	List<ConstructionTask> airpadTasks;
@@ -225,7 +225,7 @@ public class EconomyManager extends Module {
 			// remove finished or invalidated tasks
 			cleanOrders();
 
-			if (effectiveIncome > 30){
+			if (defendedFac){
 				defendLinks();
 			}
 		}
@@ -251,7 +251,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if (frame % 3 == 0) {
+		if (frame % 6 == 0) {
 			assignWorkers(); // assign workers to tasks
 		}
 
@@ -339,7 +339,8 @@ public class EconomyManager extends Module {
 		}
 
 		// defender push against enemy porc
-		if (attacker != null && attacker.getMaxSpeed() == 0 && h.getMaxSpeed() > 0 && frame - lastPorcPushFrame > 15) {
+		if (attacker != null && attacker.getMaxSpeed() == 0 && h.getMaxSpeed() > 0
+				&& frame - lastPorcPushFrame > 15 && graphManager.isAllyTerritory(h.getPos())) {
 			lastPorcPushFrame = frame;
 			porcPush(h, attacker);
 		}
@@ -608,7 +609,7 @@ public class EconomyManager extends Module {
 		}
 
 		// porc over enemy mexes
-		if (e.getDef().getName().equals("cormex")){
+		if (e.getDef().getName().equals("cormex") && graphManager.isAllyTerritory(e.getPos())){
 			fortifyMex(e.getPos());
 		}
 
@@ -976,6 +977,10 @@ public class EconomyManager extends Module {
 					idlers.addAll(idle);
 					invalidtasks.add(rt);
 				}
+			}else{
+				List<Worker> idle = rt.stopWorkers(frame);
+				idlers.addAll(idle);
+				invalidtasks.add(rt);
 			}
 		}
 		reclaimTasks.removeAll(invalidtasks);
@@ -1097,7 +1102,7 @@ public class EconomyManager extends Module {
 
 		float eRatio;
 		if (effectiveIncomeMetal > 25f && eFac){
-			eRatio = 1.5f + (((float)fusions.size())/2f);
+			eRatio = 2.0f + (((float)fusions.size())/2f);
 		}else if (effectiveIncomeMetal > 20f || eFac) {
 			eRatio = 1.3f + (((float)fusions.size())/2f);
 		}else{
@@ -1245,7 +1250,7 @@ public class EconomyManager extends Module {
 		}
 
 		/*if (facManager.factories.size() == 0){
-			String facName = "factoryshield";
+			String facName = "factorycloak";
 			factory = callback.getUnitDefByName(facName);
 			potentialFacList.remove(facName);
 		}else*/ if ((facManager.factories.size() < 2 && !hasShields) || hasStriders) {
@@ -1463,14 +1468,16 @@ public class EconomyManager extends Module {
 			porcTasks.add(ct);
 		}
 
-		for (int i = 0; i < 2; i++) {
-			position = getRadialPoint(position, 100f);
-			position = callback.getMap().findClosestBuildSite(defender, position, 600f, 3, 0);
+		if (effectiveIncome > 20) {
+			for (int i = 0; i < 2; i++) {
+				position = getRadialPoint(position, 100f);
+				position = callback.getMap().findClosestBuildSite(defender, position, 600f, 3, 0);
 
-			ct = new ConstructionTask(defender, position, 0);
-			if (buildCheck(ct) && !porcTasks.contains(ct)) {
-				constructionTasks.add(ct);
-				porcTasks.add(ct);
+				ct = new ConstructionTask(defender, position, 0);
+				if (buildCheck(ct) && !porcTasks.contains(ct)) {
+					constructionTasks.add(ct);
+					porcTasks.add(ct);
+				}
 			}
 		}
 	}
@@ -1667,7 +1674,7 @@ public class EconomyManager extends Module {
 
 	void defendLinks(){
 		for (Link l:graphManager.getLinks()){
-			if (l.length < 600){
+			if (l.length < 600 && graphManager.isAllyTerritory(l.getPos())){
 				defendLink(l.getPos());
 			}
 		}
@@ -1930,6 +1937,9 @@ public class EconomyManager extends Module {
 	void collectReclaimables(){
 		List<Feature> feats = callback.getFeatures();
 		for (Feature f : feats) {
+			if (reclaimTasks.size() > facManager.numWorkers){
+				break;
+			}
 			if (f.getDef().getContainedResource(m) > 0){
 				 ReclaimTask rt = new ReclaimTask(f, f.getDef().getContainedResource(m));
 				if (!reclaimTasks.contains(rt)){

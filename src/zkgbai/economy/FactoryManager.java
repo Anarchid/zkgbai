@@ -39,6 +39,8 @@ public class FactoryManager extends Module {
     boolean enemyHasAmphs = false;
     boolean enemyHasHeavyPorc = false;
 
+    boolean glaiveSpam = false;
+
     public int numWorkers = 0;
     float workerValue = 0;
     float fighterValue = 0;
@@ -138,7 +140,7 @@ public class FactoryManager extends Module {
             }else{
                 fac = new Factory(unit, false);
             }
-            if (defName.equals("factoryspider") || defName.equals("factoryamph") || defName.equals("factoryveh")){
+            if (defName.equals("factoryspider") || defName.equals("factoryamph") || defName.equals("factoryveh") || defName.equals("factoryhover")){
                 earlyWorker = true;
             }
             factories.put(fac.id, fac);
@@ -481,8 +483,12 @@ public class FactoryManager extends Module {
         float metalratio = 4.0f;
         float workerRatio;
 
-        if (facType.equals("factorytank") /*|| facType.equals("factoryamph") || facType.equals("factoryspider")*/){
-            workerRatio = 2f + (economyManager.effectiveIncome/200f);
+        if (facType.equals("factorytank")){
+            if (bigMap) {
+                workerRatio = 1.5f;
+            }else{
+                workerRatio = 2f;
+            }
         }else if (bigMap){
             workerRatio = 1.5f + (economyManager.effectiveIncome/100f);
         }else{
@@ -498,6 +504,7 @@ public class FactoryManager extends Module {
         if ((float) numWorkers < Math.floor(economyManager.effectiveIncomeMetal/metalratio) + ((warManager.miscHandler.striders.size() + economyManager.fusions.size() + numFunnels + factories.size() - 1) * 3)
                 && (fighterValue > workerValue * workerRatio || numWorkers == 0 || (economyManager.metal > 400 && economyManager.energy > 100))
                 || (earlyWorker && numWorkers < 2)
+                || (bigMap && numWorkers < 3)
                 || (fac.getUnit().getDef().getName().equals("factoryshield") && !smallMap && numWorkers < 2)) {
             return true;
         }else if ((fac.raiderSpam >= 0 && numWorkers < 3 && !facType.equals("factorytank"))
@@ -522,7 +529,7 @@ public class FactoryManager extends Module {
                 fac.expensiveRaiderSpam++;
                 return "spherepole";
             }
-            if ((economyManager.effectiveIncome > 15 && numGlaives > 1 && Math.random() > 0.9)) {
+            if ((!glaiveSpam && economyManager.effectiveIncome > 15 && numGlaives > 1 && Math.random() > 0.9)) {
                 fac.expensiveRaiderSpam -= (int) Math.min(4, Math.max(2, Math.floor(economyManager.effectiveIncome / 10))) - 1;
                 return "spherepole";
             } else {
@@ -531,6 +538,10 @@ public class FactoryManager extends Module {
                 }
                 return "armpw";
             }
+        }
+
+        if (glaiveSpam){
+            glaiveSpam = false;
         }
 
         if (((enemyHasAir || enemyHasDrones) && warManager.AAs.size() < 3) ||
@@ -544,6 +555,11 @@ public class FactoryManager extends Module {
 
         if (economyManager.adjustedIncome > 15 && Math.random() > 0.9){
             return "armtick";
+        }
+
+        if (economyManager.effectiveIncome > 30 && Math.random() > 0.975){
+            glaiveSpam = true;
+            fac.raiderSpam -= Math.min(12, Math.max(6, (int) Math.floor(economyManager.effectiveIncome/5f)));
         }
 
         double rand = Math.random();
@@ -691,7 +707,8 @@ public class FactoryManager extends Module {
     }
 
     private String getLV(Factory fac) {
-        if (earlyWorker && needWorkers(fac)) {
+        if (numWorkers < 2
+                || (bigMap && numWorkers < 3)) {
             return "corned";
         }
 
@@ -707,7 +724,7 @@ public class FactoryManager extends Module {
             return "corgator";
         }
 
-        if (!earlyWorker && needWorkers(fac)) {
+        if (needWorkers(fac)) {
             return "corned";
         }
 
@@ -771,7 +788,7 @@ public class FactoryManager extends Module {
         }
 
         if (fac.raiderSpam < 0) {
-            if (fac.expensiveRaiderSpam < 0){
+            if (fac.expensiveRaiderSpam < 0 && warManager.raiderHandler.soloRaiders.size() > 1){
                 fac.expensiveRaiderSpam++;
                 return "hoverassault";
             }

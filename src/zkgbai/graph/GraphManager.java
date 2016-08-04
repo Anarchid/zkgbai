@@ -91,8 +91,8 @@ public class GraphManager extends Module {
 		pylonDefs.put("armfus", 150);
 		pylonDefs.put("cafus", 150);
 		
-		final int width = callback.getMap().getWidth();
-		final int height = callback.getMap().getHeight();
+		final int width = callback.getMap().getWidth()/4;
+		final int height = callback.getMap().getHeight()/4;
 
 		this.frontLineGraphics = new ByteArrayGraphics(width, height);
 		this.allyTerritoryGraphics = new ByteArrayGraphics(width, height);
@@ -302,10 +302,10 @@ public class GraphManager extends Module {
 		List<MetalSpot> frontLine = getFrontLineSpots();
 		for (MetalSpot ms: frontLine){
 			AIFloat3 pos = ms.getPos();
-			int x = (int) pos.x/8;
-			int y = (int) pos.z/8;
+			int x = (int) pos.x/32;
+			int y = (int) pos.z/32;
 
-			frontLineGraphics.paintCircle(x, y, 75, 1);
+			frontLineGraphics.paintCircle(x, y, 20, 1);
 		}
 
 		calcCenters();
@@ -320,10 +320,10 @@ public class GraphManager extends Module {
 
 		// paint territory circles
 		AIFloat3 pos = ms.getPos();
-		int x = (int) pos.x/8;
-		int y = (int) pos.z/8;
+		int x = (int) pos.x/32;
+		int y = (int) pos.z/32;
 
-		enemyTerritoryGraphics.paintCircle(x, y, 100, 1);
+		enemyTerritoryGraphics.paintCircle(x, y, 25, 1);
 
 		// set adjacent spots as enemyShadowed if they aren't already hostile
 		for (Link l:ms.links){
@@ -343,10 +343,10 @@ public class GraphManager extends Module {
 
 		// paint territory circles
 		AIFloat3 pos = ms.getPos();
-		int x = (int) pos.x/8;
-		int y = (int) pos.z/8;
+		int x = (int) pos.x/32;
+		int y = (int) pos.z/32;
 
-		allyTerritoryGraphics.paintCircle(x, y, 200, 1);
+		allyTerritoryGraphics.paintCircle(x, y, 50, 1);
 
 		// set adjacent spots as allyShadowed if they aren't already owned
 		for (Link l:ms.links){
@@ -365,20 +365,20 @@ public class GraphManager extends Module {
 
 			// unpaint territory circles
 			AIFloat3 pos = ms.getPos();
-			int x = (int) pos.x/8;
-			int y = (int) pos.z/8;
+			int x = (int) pos.x/32;
+			int y = (int) pos.z/32;
 
-			allyTerritoryGraphics.unpaintCircle(x, y, 200, 1);
+			allyTerritoryGraphics.unpaintCircle(x, y, 50, 1);
 		}
 		if (ms.hostile){
 			ms.enemyShadowed = true;
 
 			// unpaint territory circles
 			AIFloat3 pos = ms.getPos();
-			int x = (int) pos.x/8;
-			int y = (int) pos.z/8;
+			int x = (int) pos.x/32;
+			int y = (int) pos.z/32;
 
-			enemyTerritoryGraphics.unpaintCircle(x, y, 100, 1);
+			enemyTerritoryGraphics.unpaintCircle(x, y, 25, 1);
 		}
 		ms.hostile = false;
 		ms.owned = false;
@@ -604,22 +604,22 @@ public class GraphManager extends Module {
 	}
 
 	public boolean isAllyTerritory(AIFloat3 position){
-		int x = (int) (position.x/8);
-		int y = (int) (position.z/8);
+		int x = (int) (position.x/32);
+		int y = (int) (position.z/32);
 
 		return (allyTerritoryGraphics.getValue(x, y) > 0);
 	}
 
 	public boolean isEnemyTerritory(AIFloat3 position){
-		int x = (int) (position.x/8);
-		int y = (int) (position.z/8);
+		int x = (int) (position.x/32);
+		int y = (int) (position.z/32);
 
 		return (enemyTerritoryGraphics.getValue(x, y) > 0);
 	}
 
 	public boolean isFrontLine(AIFloat3 position){
-		int x = (int) (position.x/8);
-		int y = (int) (position.z/8);
+		int x = (int) (position.x/32);
+		int y = (int) (position.z/32);
 
 		return (frontLineGraphics.getValue(x, y) > 0);
 	}

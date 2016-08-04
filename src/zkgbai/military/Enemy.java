@@ -14,6 +14,7 @@ public class Enemy {
 	float threatRadius = 0;
 	public float value = 0;
 	float speed = 0;
+	float lastHealth = 0;
 	public int lastSeen = 0;
 	public boolean isPainted = false;
 	boolean visible = false;
@@ -151,13 +152,14 @@ public class Enemy {
 				return 0;
 			}
 
-			if (!isStatic) {
+			if (unit.getHealth() > 0) {
 				health = unit.getHealth();
-				danger = (ud.getPower() + health)/10;
-			} else {
+			}else if (lastHealth > 0){
+				health = lastHealth;
+			}else{
 				health = ud.getHealth();
-				danger = (ud.getPower() + health)/10;
 			}
+			danger = (ud.getPower() + health)/10;
 
 			if (isFlamer || ud.getName().equals("arm_venom") || ud.getName().equals("amphraider2")){
 				danger += 100;
