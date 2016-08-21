@@ -127,55 +127,62 @@ public class MilitaryManager extends Module {
 		allyThreatGraphics.clear();
 		aaThreatGraphics.clear();
 
-		// paint allythreat for raiders
-		for (Raider r : raiderHandler.soloRaiders) {
-			int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth())/20);
-			AIFloat3 pos = r.getPos();
-			int x = (int) pos.x / 32;
-			int y = (int) pos.z / 32;
-			int rad = 13;
-			allyThreatGraphics.paintCircle(x, y, rad, power);
-		}
+		// paint allythreat in a separate thread, since it's independent of enemy threat.
+		Thread thread = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				// paint allythreat for raiders
+				for (Raider r : raiderHandler.soloRaiders) {
+					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 20);
+					AIFloat3 pos = r.getPos();
+					int x = (int) pos.x / 32;
+					int y = (int) pos.z / 32;
+					int rad = 13;
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
 
-		for (Raider r : raiderHandler.smallRaiders.values()) {
-			int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth())/20);
-			AIFloat3 pos = r.getPos();
-			int x = (int) pos.x / 32;
-			int y = (int) pos.z / 32;
-			int rad = 13;
-			allyThreatGraphics.paintCircle(x, y, rad, power);
-		}
+				for (Raider r : raiderHandler.smallRaiders.values()) {
+					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 20);
+					AIFloat3 pos = r.getPos();
+					int x = (int) pos.x / 32;
+					int y = (int) pos.z / 32;
+					int rad = 13;
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
 
-		for (Raider r : raiderHandler.mediumRaiders.values()) {
-			int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth())/20);
-			AIFloat3 pos = r.getPos();
-			int x = (int) pos.x / 32;
-			int y = (int) pos.z / 32;
-			int rad = 13;
-			allyThreatGraphics.paintCircle(x, y, rad, power);
-		}
+				for (Raider r : raiderHandler.mediumRaiders.values()) {
+					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 20);
+					AIFloat3 pos = r.getPos();
+					int x = (int) pos.x / 32;
+					int y = (int) pos.z / 32;
+					int rad = 13;
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
 
-		// paint allythreat for fighters
-		for (Fighter f : squadHandler.fighters.values()) {
-			int power = (int) ((f.getUnit().getPower() + f.getUnit().getMaxHealth())/8);
-			AIFloat3 pos = f.getPos();
-			int x = (int) pos.x / 32;
-			int y = (int) pos.z / 32;
-			int rad = 40;
+				// paint allythreat for fighters
+				for (Fighter f : squadHandler.fighters.values()) {
+					int power = (int) ((f.getUnit().getPower() + f.getUnit().getMaxHealth()) / 8);
+					AIFloat3 pos = f.getPos();
+					int x = (int) pos.x / 32;
+					int y = (int) pos.z / 32;
+					int rad = 40;
 
-			allyThreatGraphics.paintCircle(x, y, rad, power);
-		}
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
 
-		// paint allythreat for striders
-		for (Strider s : miscHandler.striders.values()) {
-			int power = (int)  ((s.getUnit().getPower() + s.getUnit().getMaxHealth())/5);
-			AIFloat3 pos = s.getPos();
-			int x = (int) pos.x / 32;
-			int y = (int) pos.z / 32;
-			int rad = 40;
+				// paint allythreat for striders
+				for (Strider s : miscHandler.striders.values()) {
+					int power = (int) ((s.getUnit().getPower() + s.getUnit().getMaxHealth()) / 5);
+					AIFloat3 pos = s.getPos();
+					int x = (int) pos.x / 32;
+					int y = (int) pos.z / 32;
+					int rad = 40;
 
-			allyThreatGraphics.paintCircle(x, y, rad, power);
-		}
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
+			}
+		});
+		thread.start();
 
 		// Note: allythreat for porc is painted separately.
 
@@ -218,6 +225,13 @@ public class MilitaryManager extends Module {
 		
 		for(TargetMarker tm:deadMarkers){
 			targetMarkers.remove(tm);
+		}
+
+		try {
+			thread.join();
+		}catch (Exception e){
+			ai.printException(e);
+			System.exit(-1);
 		}
 	}
 	

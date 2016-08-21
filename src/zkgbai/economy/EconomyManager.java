@@ -140,7 +140,7 @@ public class EconomyManager extends Module {
 			this.waterDamage = true;
 		}
 
-		this.bigMap = (callback.getMap().getHeight() > 768 || callback.getMap().getWidth() > 768);
+		this.bigMap = (callback.getMap().getHeight() + callback.getMap().getWidth() > 1536);
 
 		// find out how many allies we have to weight resource income
 		/*if (callback.getTeams().getSize() > 2){

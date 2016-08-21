@@ -88,9 +88,9 @@ public class FactoryManager extends Module {
         this.factories = new HashMap<Integer, Factory>();
 
         this.smallMap = (callback.getMap().getWidth() + callback.getMap().getHeight() < 1280);
-        this.bigMap = (callback.getMap().getHeight() + callback.getMap().getWidth() > 1280);
+        this.bigMap = (callback.getMap().getHeight() + callback.getMap().getWidth() > 1664);
 
-        this.earlyWorker = bigMap;
+        this.earlyWorker = (callback.getMap().getHeight() + callback.getMap().getWidth() > 768);
         this.m = callback.getResourceByName("Metal");
     }
 
@@ -139,9 +139,6 @@ public class FactoryManager extends Module {
                 fac = new Factory(unit, true);
             }else{
                 fac = new Factory(unit, false);
-            }
-            if (defName.equals("factoryspider") || defName.equals("factoryamph") || defName.equals("factoryveh") || defName.equals("factoryhover")){
-                earlyWorker = true;
             }
             factories.put(fac.id, fac);
             assignFactoryTask(fac);

@@ -455,6 +455,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
 	   if(g.getRulesParamFloat("startbox_custom_shapes", 0.0f) == 1f){
 		   startType = StartType.ZK_STARTPOS;
+		   debug("Polygon boxes detected");
 				
 		   int maxBox = (int) g.getRulesParamFloat("startbox_max_n", 0.0f);
 				
@@ -504,7 +505,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	        	startBoxes.put(allyTeamID, startbox);
     		}    	
     	}else{
-    		
+			debug("Spring boxes detected");
 			startType = StartType.SPRING_BOX;
 
 	    	Pattern p = Pattern.compile("\\[allyteam(\\d)\\]\\s*\\{([^\\}]*)\\}");
