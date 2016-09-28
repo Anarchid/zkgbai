@@ -269,7 +269,7 @@ public class RaiderHandler {
             }
         }
 
-        cost += (1000f * warManager.getThreat(task.target));
+        cost += (500f * warManager.getThreat(task.target));
 
         if (warManager.getEffectiveThreat(task.target) > warManager.getFriendlyThreat(raider.getPos())){
             cost += 9001f;
@@ -453,10 +453,12 @@ public class RaiderHandler {
                     }
                     if (e.isWorker){
                         tmpcost = (tmpcost/4)-100;
+                        tmpcost += 750f * warManager.getThreat(e.position);
                     }
 
                     if (e.isStatic && e.getDanger() > 0f){
-                        tmpcost = (tmpcost/5)-200;
+                        tmpcost = (tmpcost/4)-100;
+                        tmpcost += 500f * warManager.getThreat(e.position);
                     }
 
                     if (tmpcost < cost){

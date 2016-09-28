@@ -24,7 +24,6 @@ import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 
 import zkgbai.Module;
-import zkgbai.StartArea;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.los.LosManager;
 import zkgbai.military.ByteArrayGraphics;
@@ -455,66 +454,20 @@ public class GraphManager extends Module {
     }
     
     private void doInitialInference(){
-		Set<Integer> enemies = ai.getEnemyAllyTeamIDs();
-		if(ai.startType == ZKGraphBasedAI.StartType.ZK_STARTPOS){
-			// identify ally startbox ID's
-			Set<Integer> allyBoxes = new HashSet<Integer>();
-			for(Team a:callback.getAllyTeams()){
-				int boxID = (int)a.getRulesParamFloat("start_box_id", 0.0f);
-				allyBoxes.add(boxID);
-				ai.debug("team "+a.getTeamId()+" of allyteam "+ai.getCallback().getGame().getTeamAllyTeam(a.getTeamId())+" is ally with boxID "+boxID);
-			}
-			
-			for(Entry<Integer, StartArea> s:ai.startBoxes.entrySet()){
-				if(!allyBoxes.contains(s.getKey())){
-					ai.debug(s.getKey()+" is an enemy startbox");
-					for (MetalSpot ms:metalSpots){
-						AIFloat3 pos = ms.position;
-						if(s.getValue().contains(pos)){
-							setHostile(ms);
-							setNeutral(ms);
-						}
-					}
-				}else{
-					ai.debug(s.getKey()+" is an allied startbox");
-					for (MetalSpot ms:metalSpots){
-						AIFloat3 pos = ms.position;
-						if(s.getValue().contains(pos)){
-							ms.allyShadowed = true;
-						}
-					}
-				}
-			}
-			
-		}else{
-			StartArea box = null;
-			for(int enemy:enemies){
-				box = ai.getStartArea(enemy);
-			
-				if(box!=null){
-					for (MetalSpot ms:metalSpots){
-						AIFloat3 pos = ms.position;
-						if(box.contains(pos)){
-							setHostile(ms);
-							setNeutral(ms);
-						}
-					}
-				}
-			}
-
-			box = ai.getStartArea(ai.allyTeamID);
-			for (MetalSpot ms:metalSpots){
-				AIFloat3 pos = ms.position;
-				if(box.contains(pos)){
-					ms.allyShadowed = true;
-				}
-			}
-		}
-
 		for (MetalSpot ms: metalSpots){
-			if (callback.getMap().getElevationAt(ms.getPos().x, ms.getPos().z) < 10f){
+			if (!isWaterMap && callback.getMap().getElevationAt(ms.getPos().x, ms.getPos().z) < 10f){
 				this.isWaterMap = true;
-				break;
+			}
+
+			String checkpos = "ai_is_valid_startpos:" + ms.getPos().x + "/" + ms.getPos().z;
+			if (callback.getLua().callRules(checkpos, checkpos.length()).equals("1")){
+				ms.allyShadowed = true;
+			}
+
+			checkpos = "ai_is_valid_enemy_startpos:" + ms.getPos().x + "/" + ms.getPos().z;
+			if (callback.getLua().callRules(checkpos, checkpos.length()).equals("1")){
+				setHostile(ms);
+				setNeutral(ms);
 			}
 		}
     }

@@ -19,7 +19,8 @@ public class Factory extends Worker {
             this.raiderSpam = ((int) Math.ceil(Math.random()*9.0));
             raiderSpam = Math.max(6, raiderSpam) * -1;
 
-            if (callback.getMap().getHeight() > 896 || callback.getMap().getWidth() > 896){
+            boolean bigMap = (callback.getMap().getHeight() + callback.getMap().getWidth() > 1664);
+            if (bigMap){
                 raiderSpam = -9;
 
                 if (u.getDef().getName().equals("factorytank")){
@@ -27,8 +28,12 @@ public class Factory extends Worker {
                 }
             }
 
-            if (u.getDef().getName().equals("factoryveh")){
-                raiderSpam = -4;
+            if (u.getDef().getName().equals("factoryveh")) {
+                if (bigMap) {
+                    raiderSpam = -5;
+                } else {
+                    raiderSpam = -4;
+                }
             }
 
             if (u.getDef().getName().equals("factoryhover")){

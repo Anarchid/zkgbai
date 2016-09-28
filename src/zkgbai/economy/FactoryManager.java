@@ -162,8 +162,8 @@ public class FactoryManager extends Module {
             if (def.getBuildSpeed() < 8f) {
                 workerValue += unit.getDef().getCost(m);
             }
-        }else if (unit.getMaxSpeed() > 0 && !unitTypes.AAs.contains(defName) && !unitTypes.striders.contains(defName)){
-            fighterValue += Math.min(unit.getDef().getCost(m), 500f);
+        }else if (unit.getMaxSpeed() > 0 && !unitTypes.AAs.contains(defName) /*&& !unitTypes.striders.contains(defName)*/){
+            fighterValue += Math.min(unit.getDef().getCost(m), 750f);
         }
 
         if(defName.equals("cormart") || defName.equals("armham") || defName.equals("armmerl") || defName.equals("trem") || defName.equals("armmanni") || defName.equals("armcrabe")){
@@ -280,8 +280,8 @@ public class FactoryManager extends Module {
             if (def.getBuildSpeed() < 8f) {
                 workerValue -= unit.getDef().getCost(m);
             }
-        }else if (unit.getMaxSpeed() > 0 && !unitTypes.AAs.contains(defName) && !unitTypes.striders.contains(defName)){
-            fighterValue -= Math.min(unit.getDef().getCost(m), 500f);
+        }else if (unit.getMaxSpeed() > 0 && !unitTypes.AAs.contains(defName) /*&& !unitTypes.striders.contains(defName)*/){
+            fighterValue -= Math.min(unit.getDef().getCost(m), 750f);
         }
 
         if (defName.equals("armfus") || defName.equals("cafus")){
@@ -477,8 +477,11 @@ public class FactoryManager extends Module {
 
     private Boolean needWorkers(Factory fac){
         String facType = fac.getUnit().getDef().getName();
-        float metalratio = 4.0f;
+        float metalratio = 3.5f;
         float workerRatio;
+        float reclaimValue = economyManager.getReclaimValue();
+        float fv = fighterValue + reclaimValue;
+        float income = economyManager.effectiveIncomeMetal + reclaimValue/100f;
 
         if (facType.equals("factorytank")){
             if (bigMap) {
@@ -487,9 +490,9 @@ public class FactoryManager extends Module {
                 workerRatio = 2f;
             }
         }else if (bigMap){
-            workerRatio = 1.5f + (economyManager.effectiveIncome/100f);
+            workerRatio = 1.5f + (economyManager.staticIncome/100f);
         }else{
-            workerRatio = 2f + (economyManager.effectiveIncome/100f);
+            workerRatio = 2f + (economyManager.staticIncome/100f);
         }
 
         if (facType.equals("factorytank") || facType.equals("factoryship") || facType.equals("factoryplane") || facType.equals("factorygunship")){
@@ -498,14 +501,12 @@ public class FactoryManager extends Module {
             metalratio = 5f;
         }
 
-        if ((float) numWorkers < Math.floor(economyManager.effectiveIncomeMetal/metalratio) + ((warManager.miscHandler.striders.size() + economyManager.fusions.size() + numFunnels + factories.size() - 1) * 3)
-                && (fighterValue > workerValue * workerRatio || numWorkers == 0 || (economyManager.metal > 400 && economyManager.energy > 100))
+        if ((float) numWorkers < Math.floor(income/metalratio) + warManager.miscHandler.striders.size() + numFunnels + ((economyManager.fusions.size() + factories.size() - 1) * 3)
+                && (fv > workerValue * workerRatio || numWorkers == 0 || (economyManager.effectiveIncome > 15 && economyManager.metal/economyManager.maxStorage > 0.8 && economyManager.energy/economyManager.maxStorage > 0.5))
                 || (earlyWorker && numWorkers < 2)
-                || (bigMap && numWorkers < 3)
-                || (fac.getUnit().getDef().getName().equals("factoryshield") && !smallMap && numWorkers < 2)) {
+                /*|| (bigMap && numWorkers < 3 && !facType.equals("factorytank"))*/) {
             return true;
         }else if ((fac.raiderSpam >= 0 && numWorkers < 3 && !facType.equals("factorytank"))
-                || (facType.equals("factorytank") && fac.raiderSpam >= 0 && numWorkers < 2)
                 || (fac.raiderSpam >= 0 && earlyWorker && facType.equals("factorytank") && numWorkers < 3)){
             return true;
         }
@@ -704,8 +705,7 @@ public class FactoryManager extends Module {
     }
 
     private String getLV(Factory fac) {
-        if (numWorkers < 2
-                || (bigMap && numWorkers < 3)) {
+        if (earlyWorker && needWorkers(fac)) {
             return "corned";
         }
 
@@ -739,16 +739,8 @@ public class FactoryManager extends Module {
             }
         }
 
-        /*if (bigMap && economyManager.adjustedIncome < 50) {
-            fac.raiderSpam -= 2;
-        }else if (economyManager.adjustedIncome < 30){
-            fac.raiderSpam -= 3;
-        }else{
-            fac.raiderSpam--;
-        }*/
-
         if (Math.random() > 0.85){
-            fac.raiderSpam -= Math.min(8f, Math.max(4f, Math.floor(economyManager.effectiveIncome / 4f)));
+            fac.raiderSpam -= Math.min(8f, Math.max(4f, Math.floor(economyManager.effectiveIncome / 4f))) + 1;
         }
 
         double rand = Math.random();

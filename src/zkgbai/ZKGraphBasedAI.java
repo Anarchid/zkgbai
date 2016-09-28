@@ -3,7 +3,6 @@ package zkgbai;
 import java.util.*;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.Game;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Team;
 import com.springrts.ai.oo.clb.Unit;
@@ -12,24 +11,21 @@ import com.springrts.ai.oo.clb.WeaponDef;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import zkgbai.economy.EconomyManager;
 import zkgbai.economy.FactoryManager;
-import zkgbai.economy.tasks.ConstructionTask;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
-import zkgbai.gui.DebugView;
 import zkgbai.los.LosManager;
 import zkgbai.military.MilitaryManager;
+
+import static zkgbai.kgbutil.KgbUtil.*;
 
 public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	private static ZKGraphBasedAI instance = null;
 
 	private OOAICallback callback;
     private List<Module> modules = new LinkedList<Module>();
-    public HashMap<Integer, StartArea> startBoxes;
 	HashSet<Integer> enemyTeams = new HashSet<Integer>();
 	HashSet<Integer> enemyAllyTeams = new HashSet<Integer>();
 	public List<Integer> allies;
@@ -70,10 +66,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         this.callback = callback;
         this.teamID = callback.getGame().getMyTeam(); // teamID as passed by interface is broken 0_0
         this.allyTeamID = callback.getGame().getMyAllyTeam();
-        startBoxes = new HashMap<Integer, StartArea>();
 		this.allies = new ArrayList<Integer>();
 
-        parseStartBoxes();
         identifyEnemyTeams();
 		identifyAllyTeams();
 
@@ -193,7 +187,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    /*if (message.equals("kgbdebug")){
-			//add debugging code here
+			for (MetalSpot ms:graphManager.getEnemyTerritory()){
+				callback.getMap().getDrawer().addPoint(ms.getPos(), "enemy mex");
+			}
 		}*/
 
 		for (Module module : modules) {
@@ -447,103 +443,6 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         return 0; // signaling: OK
     }
     
-   private void parseStartBoxes(){
-		int mapWidth  = 8* callback.getMap().getWidth();
-		int mapHeight = 8* callback.getMap().getHeight();
-			
-		Game g = callback.getGame();
-
-	   if(g.getRulesParamFloat("startbox_custom_shapes", 0.0f) == 1f){
-		   startType = StartType.ZK_STARTPOS;
-		   debug("Polygon boxes detected");
-				
-		   int maxBox = (int) g.getRulesParamFloat("startbox_max_n", 0.0f);
-				
-		   for(int i=0;i<=maxBox;i++){
-			   ArrayList<AIFloat3> starts = new ArrayList<AIFloat3>();
-			   int numStarts = (int) g.getRulesParamFloat("startpos_n_"+i, 0.0f);
-			   for(int j = 1;j<=numStarts;j++){
-				   float x = g.getRulesParamFloat("startpos_x_"+i+"_"+j, 0.0f);
-				   float z = g.getRulesParamFloat("startpos_z_"+i+"_"+j, 0.0f);
-				   starts.add(new AIFloat3(x,0,z));
-				   debug("startbox "+i+" contains startpos <"+x+","+z+">");
-			   }
-			   startBoxes.put(i,new ZKStartLocation(starts));
-		   }
-	
-		   return;
-	   }
-
-		String script = callback.getGame().getSetupScript();
-    	
-    	Pattern z = Pattern.compile("startboxes=return \\{(.*)\\};");
-    	Matcher zkBoxes = z.matcher(script);
-    	
-    	if(zkBoxes.find()){
-			startType = StartType.ZK_BOX;
-
-        	Pattern zkBox = Pattern.compile(" \\[(\\d+)\\] = \\{ (\\d+(?:\\.\\d+)?)[,]? (\\d+(?:\\.\\d+)?), (\\d+(?:\\.\\d+)?), (\\d+(?:\\.\\d+)?) \\},");
-    		Matcher b = zkBox.matcher(zkBoxes.group(1));
-    		debug("ZK boxes detected");
-    		while(b.find()){
-    			int allyTeamID = Integer.parseInt(b.group(1));
-    			
-	    		float[] box = new float[4];
-
-    			for(int i =0;i<4;i++){
-    				// left top width height
-    				box[i] = Float.parseFloat(b.group(i+2));
-    			}
-    			
-    			StartBox startbox = new StartBox(
-    				box[0] * mapWidth,
-    				box[1] * mapHeight,
-    				(box[0] + box[2]) * mapWidth, 
-    				(box[1] + box[3]) * mapWidth
-    			);
-	        	
-	        	startBoxes.put(allyTeamID, startbox);
-    		}    	
-    	}else{
-			debug("Spring boxes detected");
-			startType = StartType.SPRING_BOX;
-
-	    	Pattern p = Pattern.compile("\\[allyteam(\\d)\\]\\s*\\{([^\\}]*)\\}");
-	    	Matcher m = p.matcher(script);
-	    
-	    	 while (m.find()) {
-	    		 int allyTeamId = Integer.parseInt(m.group(1));
-	    		 String teamDefBody = m.group(2);
-	    		 Pattern sbp = Pattern.compile("startrect\\w+=(\\d+(\\.\\d+)?);");
-	    		 Matcher mb = sbp.matcher(teamDefBody);
-	    		     		 
-	    		 float[] startbox = new float[4];
-	    		 int i = 0;
-	 	        
-	 	         // 0 -> bottom
-	 	         // 1 -> left
-	 	         // 2 -> right
-	 	         // 3 -> top
-	        	 while (mb.find()) {
-	        		 startbox[i] = Float.parseFloat(mb.group(1));
-	        		 i++;
-	        	 }
-	        	 
-	        	 startbox[0] *= mapHeight;
-	        	 startbox[1] *= mapWidth;
-	        	 startbox[2] *= mapWidth;
-	        	 startbox[3] *= mapHeight;
-	        	 
-	        	 startBoxes.put(allyTeamId, new StartBox(
-	        		startbox[1],
-	        		startbox[3],
-	        		startbox[2],
-	        		startbox[0]
-	        	 ));
-	    	}    		 
-    	}
-    }
-    
     private void identifyEnemyTeams(){
     	List<Team> enemies = callback.getEnemyTeams();
 		
@@ -595,10 +494,6 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	return this.enemyTeams;
     }
     
-    public StartArea getStartArea(int id){
-    	return this.startBoxes.get(id);
-    }
-    
     public void printException(Exception ex) {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
@@ -616,10 +511,28 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	private void chooseStartPos(){
 		List<MetalSpot> spots = graphManager.getAllyTerritory();
 		if (!spots.isEmpty()) {
-			int rand = (int) Math.floor(Math.random() * spots.size());
-			MetalSpot spot = spots.get(rand);
-			callback.getGame().sendStartPosition(true, spot.getPos());
-			graphManager.setStartPos(spot.getPos());
+			MetalSpot best = null;
+			float dist = Float.MAX_VALUE;
+			for (MetalSpot ms:spots){
+				float distmod = 1f;
+				for (MetalSpot m:graphManager.getMetalSpots()){
+					if (m != ms) {
+						float msdist = distance(m.getPos(), ms.getPos());
+						if (msdist < 400) {
+							distmod++;
+						}
+					}
+				}
+
+				float tmpdist = distance(ms.getPos(), graphManager.getMapCenter())/distmod;
+				if (tmpdist < dist){
+					best = ms;
+					dist = tmpdist;
+				}
+			}
+
+			callback.getGame().sendStartPosition(true, best.getPos());
+			graphManager.setStartPos(best.getPos());
 			debug("Start Position Selected!");
 		}else{
 			debug("chooseStartPos: Startbox inference failed, or there were no mexes within the startbox.");

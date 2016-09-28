@@ -37,6 +37,7 @@ public class EconomyManager extends Module {
 	List<ConstructionTask> pylonTasks;
 	public List<ConstructionTask> porcTasks;
 	List<ConstructionTask> nanoTasks;
+	List<ConstructionTask> storageTasks;
 	List<ConstructionTask> AATasks;
 	List<ConstructionTask> airpadTasks;
 	List<Unit> radars;
@@ -53,6 +54,9 @@ public class EconomyManager extends Module {
 	
 	public float effectiveIncomeMetal = 0;
 	float effectiveIncomeEnergy = 0;
+	public float staticIncome = 0;
+
+	public float maxStorage = 0;
 
 	float rawMexIncome = 0;
 	public float baseIncome = 0;
@@ -63,6 +67,8 @@ public class EconomyManager extends Module {
 	
 	float metal = 0;
 	public float energy = 0;
+
+	float reclaimValue = 0;
 
 	public float adjustedIncome = 0;
 
@@ -77,6 +83,7 @@ public class EconomyManager extends Module {
 	
 	int frame = 0;
 	int lastPorcPushFrame = 0;
+	int lastRCValueFrame = 0;
 
 	static short OPTION_SHIFT_KEY = (1 << 5);
 	static int CMD_PRIORITY = 34220;
@@ -118,6 +125,7 @@ public class EconomyManager extends Module {
 		this.pylonTasks = new ArrayList<ConstructionTask>();
 		this.porcTasks = new ArrayList<ConstructionTask>();
 		this.nanoTasks = new ArrayList<ConstructionTask>();
+		this.storageTasks = new ArrayList<ConstructionTask>();
 		this.AATasks = new ArrayList<ConstructionTask>();
 		this.airpadTasks = new ArrayList<ConstructionTask>();
 		this.radars = new ArrayList<Unit>();
@@ -173,10 +181,11 @@ public class EconomyManager extends Module {
 		this.frame = frame;
 		cleanWorkers();
 
-		effectiveIncomeEnergy = eco.getIncome(e);
-
 		if (frame % 15 == 0) {
 			rawMexIncome = 0;
+			effectiveIncomeEnergy = eco.getIncome(e);
+			maxStorage = eco.getStorage(m);
+
 			for (Unit ms : mexes) {
 				rawMexIncome += ms.getRulesParamFloat("mexIncome", 0.0f);
 			}
@@ -192,21 +201,23 @@ public class EconomyManager extends Module {
 
 			baseIncome = Math.min(effectiveIncomeMetal, effectiveIncomeEnergy);
 
+			metal = eco.getCurrent(m);
+			energy = eco.getCurrent(e);
+
+			float expendMetal = eco.getUsage(m);
+			float expendEnergy = eco.getUsage(e);
+
+			effectiveIncome = Math.min(effectiveIncomeMetal, effectiveIncomeEnergy);
+			effectiveExpenditure = Math.min(expendMetal, expendEnergy);
+
+			adjustedIncome = effectiveIncome + ai.allies.size() + (((float) frame)/1800f);
+
+			staticIncome = effectiveIncome;
+
 			if (effectiveIncomeMetal > 20) {
-				effectiveIncomeMetal += 0.5 * (eco.getIncome(m) - effectiveIncomeMetal);
+				staticIncome += 0.5 * (eco.getIncome(m) - effectiveIncomeMetal);
 			}
 		}
-
-		metal = eco.getCurrent(m);
-		energy = eco.getCurrent(e);
-
-		float expendMetal = eco.getUsage(m);
-		float expendEnergy = eco.getUsage(e);
-
-		effectiveIncome = Math.min(effectiveIncomeMetal, effectiveIncomeEnergy);
-		effectiveExpenditure = Math.min(expendMetal, expendEnergy);
-
-		adjustedIncome = effectiveIncome + ai.allies.size() + (((float) frame)/1800f);
 
 		leader = true;
 		teamIncome = effectiveIncome;
@@ -251,8 +262,23 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if (frame % 6 == 0) {
-			assignWorkers(); // assign workers to tasks
+		if (frame % 2 == 0) {
+			if (!idlers.isEmpty()) {
+				assignWorkers(idlers.poll()); // assign workers to tasks
+			}else if (frame % 10 == 0){
+				boolean asn = false;
+				for (Worker w : workers) {
+					if (!assigned.contains(w) && !w.isChicken) {
+						assignWorkers(w);
+						asn = true;
+						break;
+					}
+				}
+
+				if (!asn) {
+					assigned.clear();
+				}
+			}
 		}
 
 		return 0;
@@ -295,7 +321,7 @@ public class EconomyManager extends Module {
     	if (unit.getMaxSpeed() > 0 && def.getBuildOptions().size() > 0) {
 			Worker w = new Worker(unit);
 			workers.add(w);
-			idlers.add(w);
+			assignWorkers(w);
 			unit.setMoveState(0, (short) 0, frame+300);
 			if (def.getBuildSpeed() > 8) {
 				commanders.add(w);
@@ -323,6 +349,7 @@ public class EconomyManager extends Module {
 		fusionTasks.remove(finished);
 		porcTasks.remove(finished);
 		nanoTasks.remove(finished);
+		storageTasks.remove(finished);
 		airpadTasks.remove(finished);
 		factoryTasks.remove(finished);
 		AATasks.remove(finished);
@@ -642,29 +669,10 @@ public class EconomyManager extends Module {
 		}
 	}
 
-	void assignWorkers() {
-		// assign idle workers first
-		Worker toAssign = idlers.poll();
-
-		if (toAssign != null && toAssign.isChicken){
-			toAssign = null;
+	void assignWorkers(Worker toAssign) {
+		if (toAssign.isChicken){
+			return;
 		}
-
-		// limit the number of workers assigned at one time to prevent super lag.
-		if (toAssign == null) {
-			for (Worker w : workers) {
-				if (!assigned.contains(w) && !w.isChicken) {
-					toAssign = w;
-					break;
-				}
-			}
-
-			if (toAssign == null) {
-				assigned.clear();
-				return;
-			}
-		}
-
 		Worker w = toAssign;
 		assigned.add(w);
 
@@ -794,8 +802,8 @@ public class EconomyManager extends Module {
 					return dist+300;
 				}
 				return dist - 400 + Math.max(0, (1500 * (costMod - 2)));
-			}else if (ctask.buildType.getName().equals("armnanotc") || ctask.buildType.getName().equals("armasp") || ctask.buildType.getName().equals("corrazor") || ctask.buildType.getName().equals("corflak")) {
-				// for nanotowers and airpads and AA
+			}else if (ctask.buildType.getName().equals("armnanotc") || ctask.buildType.getName().equals("armmstor") || ctask.buildType.getName().equals("armasp") || ctask.buildType.getName().equals("corrazor") || ctask.buildType.getName().equals("corflak")) {
+				// for nanotowers, airpads, storages and AA
 				return dist - 1000 + (500 * (costMod - 2));
 			}else if (ctask.buildType.getName().equals("armestor")) {
 				// for pylons
@@ -818,7 +826,7 @@ public class EconomyManager extends Module {
 		if (task instanceof ReclaimTask) {
 			ReclaimTask rtask = (ReclaimTask) task;
 
-			if (metal > 400 || energy < 100){
+			if (metal/maxStorage > 0.9 || energy < 100){
 				// don't favor reclaim if excessing or estalled
 				return dist;
 			}
@@ -965,6 +973,7 @@ public class EconomyManager extends Module {
 		fusionTasks.removeAll(invalidtasks);
 		porcTasks.removeAll(invalidtasks);
 		nanoTasks.removeAll(invalidtasks);
+		storageTasks.removeAll(invalidtasks);
 		factoryTasks.removeAll(invalidtasks);
 		AATasks.removeAll(invalidtasks);
 
@@ -1071,9 +1080,9 @@ public class EconomyManager extends Module {
     	AIFloat3 position = worker.getPos();
 		// do we need a factory?
 		if ((facManager.factories.size() == 0 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 40 && facManager.factories.size() == 1 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 65 && facManager.factories.size() == 2 && factoryTasks.size() == 0)
-				|| (effectiveIncome > 120 && facManager.factories.size() == 3 && factoryTasks.size() == 0)) {
+				|| (staticIncome > 40 && facManager.factories.size() == 1 && factoryTasks.size() == 0)
+				|| (staticIncome > 65 && facManager.factories.size() == 2 && factoryTasks.size() == 0)
+				|| (staticIncome > 120 && facManager.factories.size() == 3 && factoryTasks.size() == 0)) {
 			createFactoryTask(worker);
 		}
 
@@ -1101,10 +1110,12 @@ public class EconomyManager extends Module {
 		}
 
 		float eRatio;
-		if (effectiveIncomeMetal > 25f && eFac){
-			eRatio = 2.0f + (((float)fusions.size())/2f);
+		if (effectiveIncomeMetal > 25f && eFac) {
+			eRatio = 2.0f + (((float) fusions.size()) / 2f);
+		}else if (bigMap) {
+			eRatio = 1.5f;
 		}else if (effectiveIncomeMetal > 20f || eFac) {
-			eRatio = 1.3f + (((float)fusions.size())/2f);
+			eRatio = 1.5f + (((float)fusions.size())/2f);
 		}else{
 			eRatio = 1f;
 		}
@@ -1118,11 +1129,17 @@ public class EconomyManager extends Module {
 
     	
     	// do we need caretakers?
-    	if(((float)nanos.size() < (effectiveIncome/10)-2 || (metal > 250 && energy > 100))
+    	if(((float)nanos.size() < (staticIncome/10)-2 || (metal/maxStorage > 0.5 && energy/maxStorage > 0.5))
 				&& facManager.factories.size() > 0 && nanoTasks.isEmpty() && effectiveIncome > 20){
 			Worker target = getCaretakerTarget();
 			createNanoTurretTask(target.getUnit());
     	}
+
+		//do we need storages?
+		if (metal/maxStorage > 0.8f && effectiveIncomeMetal > 15f && storageTasks.isEmpty()){
+			Worker target = getNearestFac(position);
+			createStorageTask(target.getUnit());
+		}
 
 		// do we need airpads for planes
 		if (havePlanes && airpadTasks.isEmpty() && effectiveIncome > 15
@@ -1250,7 +1267,7 @@ public class EconomyManager extends Module {
 		}
 
 		/*if (facManager.factories.size() == 0){
-			String facName = "factorycloak";
+			String facName = "factoryveh";
 			factory = callback.getUnitDefByName(facName);
 			potentialFacList.remove(facName);
 		}else*/ if ((facManager.factories.size() < 2 && !hasShields) || hasStriders) {
@@ -1488,16 +1505,9 @@ public class EconomyManager extends Module {
 		UnitDef defender = callback.getUnitDefByName("corrl");
 
 		// don't spam redundant porc
-		for(Unit u:porcs){
-			float dist = distance(position,u.getPos());
-			if (dist < 400){
-				return;
-			}
-		}
-
 		for(ConstructionTask c:porcTasks){
 			float dist = distance(position, c.getPos());
-			if (dist < 400){
+			if (dist < 250){
 				return;
 			}
 		}
@@ -1898,6 +1908,27 @@ public class EconomyManager extends Module {
 		}
     }
 
+	void createStorageTask(Unit target){
+		UnitDef stor = callback.getUnitDefByName("armmstor");
+		AIFloat3 position = null;
+		final float buildDist = 400f;
+
+		boolean good = false;
+		while (!good) {
+			position = getRadialPoint(target.getPos(), buildDist);
+			position = callback.getMap().findClosestBuildSite(stor, position, 600f, 3, 0);
+			if (distance(position, target.getPos()) < 500){
+				good = true;
+			}
+		}
+		ConstructionTask ct =  new ConstructionTask(stor, position, 0);
+		ct.frameIssued = frame;
+		if (buildCheck(ct) && !nanoTasks.contains(ct)){
+			constructionTasks.add(ct);
+			storageTasks.add(ct);
+		}
+	}
+
 	void createAirPadTask(Unit target){
 		UnitDef airpad = callback.getUnitDefByName("armasp");
 		AIFloat3 position = null;
@@ -1940,13 +1971,25 @@ public class EconomyManager extends Module {
 			if (reclaimTasks.size() > facManager.numWorkers){
 				break;
 			}
-			if (f.getDef().getContainedResource(m) > 0){
-				 ReclaimTask rt = new ReclaimTask(f, f.getDef().getContainedResource(m));
+			if (f.getDef().getContainedResource(m) > 0 && f.getDef().isReclaimable()){
+				ReclaimTask rt = new ReclaimTask(f, f.getDef().getContainedResource(m));
 				if (!reclaimTasks.contains(rt)){
 					reclaimTasks.add(rt);
 				}
 			}
 		}
+	}
+
+	float getReclaimValue(){
+		if (lastRCValueFrame == 0 || frame - lastRCValueFrame > 300){
+			reclaimValue = 0;
+			lastRCValueFrame = frame;
+			List<Feature> feats = callback.getFeatures();
+			for (Feature f : feats) {
+				reclaimValue += f.getDef().getContainedResource(m);
+			}
+		}
+		return reclaimValue;
 	}
 	
 	public Worker getNearestFac(AIFloat3 position){
