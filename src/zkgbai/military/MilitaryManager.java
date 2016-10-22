@@ -194,7 +194,8 @@ public class MilitaryManager extends Module {
 			if (position != null && t.ud != null
 					&& effectivePower > 0
 					&& !unitTypes.planes.contains(t.ud.getName())
-					&& !t.unit.isBeingBuilt()) {
+					&& !t.unit.isBeingBuilt()
+					&& !t.unit.isParalyzed()) {
 				int x = (int) (position.x / 32);
 				int y = (int) (position.z / 32);
 				int r = (int) ((t.threatRadius) / 32);
