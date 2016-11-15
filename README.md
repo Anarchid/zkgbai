@@ -8,8 +8,6 @@ This is a "Zero-K Graph-Based AI", built upon the Spring Java AI interface to pl
 
 It uses a static graph derived from resource points on the game map as a major part in its decisions.
 
-It might get a better name eventually.
-
 Compiling
 =========
 The git repository contains everything necessary to build the AI except for the ant build tool. 
