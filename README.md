@@ -4,7 +4,7 @@
 zkgbai
 ======
 
-This is a "Zero-K Graph-Based AI", built upon the Spring Java AI interface to play the Zero-K RTS. 
+This is the "Zero-K Graph-Based AI", built upon the SpringRTS Java AI interface to play the Zero-K RTS. 
 
 It uses a static graph derived from resource points on the game map as a major part in its decisions.
 
