@@ -30,7 +30,9 @@ public class ShieldSquad extends Squad {
         // for funnels
         if (getUnitWeight(f) == 1){
             hasFunnel = true;
-            leader.getUnit().setWantedMaxSpeed(1.3f, (short) 0, frame+30);
+            if (leader != null) {
+                leader.getUnit().setWantedMaxSpeed(1.3f, (short) 0, frame + 30);
+            }
         }
 
         if (leader == null){
@@ -79,7 +81,7 @@ public class ShieldSquad extends Squad {
 
     @Override
     public void removeUnit(Fighter f){
-        if (leader.equals(f)){
+        if (leader != null && leader.equals(f)){
             metalValue -= f.metalValue;
             leader = getNewLeader();
             if (leader == null){

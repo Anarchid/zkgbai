@@ -15,7 +15,7 @@ import java.util.List;
  * Created by aeonios on 12/5/2015.
  */
 public class TerrainAnalyzer {
-    ZKGraphBasedAI parent;
+    ZKGraphBasedAI ai;
     OOAICallback callback;
     GraphManager graphManager;
     List<String> initialFacList;
@@ -30,9 +30,9 @@ public class TerrainAnalyzer {
     static String taMsg = "Terrain Analysis: ";
 
     public TerrainAnalyzer(){
-        this.parent = ZKGraphBasedAI.getInstance();
-        this.callback = parent.getCallback();
-        this.graphManager = parent.graphManager;
+        this.ai = ZKGraphBasedAI.getInstance();
+        this.callback = ai.getCallback();
+        this.graphManager = ai.graphManager;
         this.initialFacList = new ArrayList<String>();
         this.path = callback.getPathing();
 
@@ -47,12 +47,6 @@ public class TerrainAnalyzer {
     }
 
     private void populateFacList(){
-        if (parent.allies.size() > 2){
-            debug(taMsg + "Allies detected, enabling air starts!");
-            initialFacList.add("factorygunship");
-            initialFacList.add("factoryplane");
-        }
-
         debug(taMsg + "Checking Veh Pathability..");
         PathResult veh = checkPathing(vehPath, 1.35f);
         if (veh.result){
@@ -73,7 +67,7 @@ public class TerrainAnalyzer {
 
         debug(taMsg + "Checking Bot Pathability..");
         PathResult bot = checkPathing(botPath, 1.4f);
-        if ((bot.avgCostRatio < veh.avgCostRatio - 0.05f || !veh.result) && bot.result){
+        if ((bot.avgCostRatio < veh.avgCostRatio - 0.05f || !veh.result || ai.mergedAllies > 3) && bot.result){
             debug(taMsg + "Bot path check succeeded, enabling bots!");
             initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");
@@ -84,16 +78,14 @@ public class TerrainAnalyzer {
 
         debug(taMsg + "Checking Spider Pathability..");
         PathResult spider = checkPathing(spiderPath, 5f);
-        if (spider.avgCostRatio < bot.avgCostRatio - 0.02f && spider.avgCostRatio < veh.avgCostRatio - 0.05f && spider.result){
+        if (((spider.avgCostRatio < bot.avgCostRatio - 0.02f && spider.avgCostRatio < veh.avgCostRatio - 0.05f) || ai.mergedAllies > 7) && spider.result){
             debug(taMsg + "Spider path check succeeded, enabling spiders and jumps!");
             initialFacList.add("factoryspider");
             if (!initialFacList.contains("factoryjump")) {
                 //initialFacList.add("factoryjump");
             }
-            return;
         } else if (spider.avgCostRatio >= bot.avgCostRatio - 0.02f || spider.avgCostRatio >= veh.avgCostRatio - 0.05f) {
             debug(taMsg + "Spiders not cost competitive, skipping!");
-            return;
         }
 
         debug(taMsg + "Checking Boat Pathability..");
@@ -101,22 +93,40 @@ public class TerrainAnalyzer {
         if (boat.result){
             debug(taMsg + "Boat path check succeeded, enabling boats!");
             //initialFacList.add("factoryship");
-            //return;
         }
 
         debug(taMsg + "Checking Amph Pathability..");
         PathResult amph = checkPathing(amphPath, 5f);
-        if (amph.result){
+        if (amph.result && !bot.result){
             debug(taMsg + "Amph path check succeeded, stopping!");
             initialFacList.add("factoryamph");
-            return;
         }
 
-        if (initialFacList.isEmpty()) {
-            debug(taMsg + "Analysis Failed! Going air by default.");
+        if (ai.allies.size() > 2){
+            debug(taMsg + "Allies detected, enabling air starts!");
+            initialFacList.add("factorygunship");
+            initialFacList.add("factoryplane");
+        }
+
+        if (initialFacList.size() < 3 || (initialFacList.size() < ai.mergedAllies + 1)) {
+            debug(taMsg + "Terrain Analysis Failed! Enabling random factories.");
             if (!initialFacList.contains("factorygunship")) {
                 initialFacList.add("factorygunship");
                 initialFacList.add("factoryplane");
+            }
+            if (!initialFacList.contains("factorycloak")) {
+                initialFacList.add("factorycloak");
+                initialFacList.add("factoryshield");
+            }
+            if (!initialFacList.contains("factoryamph")) {
+                initialFacList.add("factoryamph");
+            }
+            if (!initialFacList.contains("factoryveh")) {
+                initialFacList.add("factoryveh");
+                initialFacList.add("factorytank");
+            }
+            if (!initialFacList.contains("factoryhover")) {
+                initialFacList.add("factoryhover");
             }
         }
     }

@@ -61,6 +61,7 @@ public class UnitClasses {
         soloRaiders.add("corfav");
         soloRaiders.add("corstorm");
         soloRaiders.add("corclog");
+        soloRaiders.add("blastwing");
 
         // assaults; stuff that attacks in mobs
         assaults.add("armzeus");
@@ -123,8 +124,8 @@ public class UnitClasses {
         AAs.add("amphaa");
         AAs.add("hoveraa");
         AAs.add("armaak");
-        AAs.add("corvamp");
-        AAs.add("fighter");
+        //AAs.add("corvamp");
+        //AAs.add("fighter");
         AAs.add("corcrash");
         AAs.add("shipaa");
         AAs.add("spideraa");
@@ -146,17 +147,19 @@ public class UnitClasses {
         bombers.add("corshad");
         bombers.add("armcybr");
         bombers.add("corhurc2");
+        bombers.add("armstiletto_laser");
 
         // Sappers
         sappers.add("armtick");
         sappers.add("corroach");
         sappers.add("corsktl");
-        sappers.add("blastwing");
 
         // Things that should not retreat
         noRetreat.add("armcrabe");
         noRetreat.add("core_spectre");
         noRetreat.add("corshad");
+        noRetreat.add("blastwing");
+        noRetreat.add("fighter");
     }
 
     public static UnitClasses getInstance(){

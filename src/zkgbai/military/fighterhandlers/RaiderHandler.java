@@ -76,7 +76,7 @@ public class RaiderHandler {
         }
         nextSmallRaiderSquad.addUnit(r, frame);
 
-        if (nextSmallRaiderSquad.raiders.size() >= min(12, max(6, (int) floor(ecoManager.effectiveIncome/5f)))){
+        if (nextSmallRaiderSquad.raiders.size() >= min(12, max(6, (int) floor(ecoManager.adjustedIncome/(5f))))){
             raiderSquads.add(nextSmallRaiderSquad);
             nextSmallRaiderSquad.status = 'r';
             nextSmallRaiderSquad = null;
@@ -96,7 +96,7 @@ public class RaiderHandler {
             }
             nextScorcherSquad.addUnit(r, frame);
 
-            if (nextScorcherSquad.raiders.size() >= (int) min(8f, max(4f, floor(ecoManager.effectiveIncome / 4f)))){
+            if (nextScorcherSquad.raiders.size() >= (int) min(8f, max(4f, floor(ecoManager.adjustedIncome / 4f)))){
                 raiderSquads.add(nextScorcherSquad);
                 nextScorcherSquad.status = 'r';
                 nextScorcherSquad = null;
@@ -110,7 +110,7 @@ public class RaiderHandler {
             }
             nextBansheeSquad.addUnit(r, frame);
 
-            if (nextBansheeSquad.raiders.size() >= (int) min(6, max(4, floor(ecoManager.effectiveIncome / 5)))){
+            if (nextBansheeSquad.raiders.size() >= (int) min(6, max(4, floor(ecoManager.adjustedIncome / 5f)))){
                 raiderSquads.add(nextBansheeSquad);
                 nextBansheeSquad.status = 'r';
                 nextBansheeSquad = null;
@@ -123,7 +123,7 @@ public class RaiderHandler {
             }
             nextScytheSquad.addUnit(r, frame);
 
-            if (nextScytheSquad.raiders.size() >= (int) min(4, max(2, floor(ecoManager.effectiveIncome / 10)))) {
+            if (nextScytheSquad.raiders.size() >= (int) min(4, max(2, floor(ecoManager.adjustedIncome / 10f)))) {
                 raiderSquads.add(nextScytheSquad);
                 nextScytheSquad.status = 'r';
                 nextScytheSquad = null;
@@ -349,6 +349,9 @@ public class RaiderHandler {
             }
 
             for (Enemy e: warManager.getTargets()){
+                if (r.getUnit().getDef().getName().equals("blastwing")){
+                    break;
+                }
                 if (warManager.getEffectiveThreat(e.position) > warManager.getFriendlyThreat(r.getPos()) || e.isRiot){
                     continue;
                 }

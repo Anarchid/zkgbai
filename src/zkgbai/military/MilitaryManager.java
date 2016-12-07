@@ -27,6 +27,7 @@ public class MilitaryManager extends Module {
 	List<DefenseTarget> defenseTargets;
 
 	public java.util.Map<Integer, Fighter> AAs;
+	public java.util.Map<Integer, Fighter> hawks = new HashMap<>();
 
 	RadarIdentifier radarID;
 
@@ -365,6 +366,91 @@ public class MilitaryManager extends Module {
 		return nullpos;
     }
 
+	public AIFloat3 getSoloTarget(AIFloat3 origin, boolean defend){
+		AIFloat3 target = null;
+		float cost = Float.MAX_VALUE;
+
+		// first check defense targets
+		if (defend) {
+			// check for defense targets first
+			for (DefenseTarget d : defenseTargets) {
+				float tmpcost = distance(origin, d.position) - d.damage;
+
+				if (tmpcost < cost) {
+					cost = tmpcost;
+					target = d.position;
+				}
+			}
+		}
+
+		// then look for enemy mexes to kill, and see which is cheaper
+		List<MetalSpot> ms = graphManager.getEnemySpots();
+		for (MetalSpot m:ms){
+			float tmpcost = (distance(m.getPos(), origin)/4) - (500 * getThreat(m.getPos()));
+
+			if (tmpcost < cost){
+				target = m.getPos();
+				cost = tmpcost;
+			}
+		}
+
+
+		// then look for enemy units to kill, and see if any are better targets
+		// then check for nearby enemies that aren't raiders.
+		for (Enemy e : targets.values()) {
+			if ((e.identified && e.ud.isAbleToFly())
+					|| (e.isRaider)){
+				continue;
+			}
+			float tmpcost = distance(origin, e.position) - (500 * getThreat(e.position));
+
+			if (e.isMajorCancer){
+				tmpcost /= 4;
+				tmpcost -= 1000;
+			}else if (e.isMinorCancer){
+				tmpcost /= 2;
+				tmpcost -= 500;
+			}
+
+			if (graphManager.isAllyTerritory(e.position)){
+				tmpcost /= 2;
+				tmpcost -= 250;
+			}
+
+			if (tmpcost < cost) {
+				cost = tmpcost;
+				target = e.position;
+			}
+		}
+
+		if (target != null){
+			TargetMarker tm = new TargetMarker(target, frame);
+			targetMarkers.add(tm);
+			return target;
+		}
+
+		// if no targets are available attack enemyshadowed metal spots until we find one
+		ms = graphManager.getUnownedSpots();
+		for (MetalSpot m:ms){
+			if (m.enemyShadowed){
+				float tmpcost = distance(m.getPos(), origin);
+				tmpcost /= 1+getThreat(m.getPos());
+				tmpcost /= (frame-m.getLastSeen())/600;
+
+				if (tmpcost < cost) {
+					target = m.getPos();
+					cost = tmpcost;
+				}
+			}
+		}
+		if (target != null) {
+			TargetMarker tm = new TargetMarker(target, frame);
+			targetMarkers.add(tm);
+			return target;
+		}
+		return nullpos;
+	}
+
 	public AIFloat3 getAirTarget(AIFloat3 origin, boolean defend){
 		AIFloat3 target = null;
 		float fthreat = getFriendlyThreat(origin);
@@ -450,6 +536,43 @@ public class MilitaryManager extends Module {
 			targetMarkers.add(tm);
 			return target;
 		}
+		return nullpos;
+	}
+
+	public AIFloat3 getBerthaTarget(AIFloat3 origin){
+		AIFloat3 target = null;
+		float cost = Float.MIN_VALUE;
+
+		// for berthas the more expensive the target the better
+		for (Enemy e : targets.values()) {
+			if (!e.identified || e.position == null || e.position.equals(nullpos) || distance(e.position, origin) > 6200 || e.ud.isAbleToFly() || e.ud.getName().equals("armamd")){
+				// berthas can't target things outside their range, and are not good vs air.
+				// we also ignore antinukes because kgb doesn't build nukes anyway.
+				continue;
+			}
+			float tmpcost = 0;
+
+			tmpcost = e.ud.getCost(m) - ((frame - e.lastSeen)/2f);
+			if (e.ud.getName().contains("factory") || e.ud.getName().contains("hub")){
+				tmpcost += 800;
+				if (e.ud.getName().contains("hub")){
+					tmpcost *= 2;
+				}
+			}
+
+
+			if (tmpcost > cost) {
+				cost = tmpcost;
+				target = e.position;
+			}
+		}
+
+		if (target != null){
+			TargetMarker tm = new TargetMarker(target, frame);
+			targetMarkers.add(tm);
+			return target;
+		}
+
 		return nullpos;
 	}
 
@@ -826,6 +949,11 @@ public class MilitaryManager extends Module {
 			unit.setOn(true, (short) 0, frame+300);
 		}
 
+		if (defName.equals("fighter")){
+			unit.setMoveState(0, (short) 0, frame + 10);
+			miscHandler.addSwift(unit);
+		}
+
 		if (unitTypes.striders.contains(defName)){
 			Strider st = new Strider(unit, unit.getDef().getCost(m));
 			unit.setMoveState(1, (short) 0, frame + 10);
@@ -844,6 +972,7 @@ public class MilitaryManager extends Module {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiderHandler.addSoloRaider(r);
 		}else if (unitTypes.assaults.contains(defName)) {
+			unit.setMoveState(2, (short) 0, frame + 10);
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			squadHandler.addAssault(f);
 		}else if (unitTypes.shieldMobs.contains(defName)){
@@ -887,6 +1016,8 @@ public class MilitaryManager extends Module {
 			unit.setFireState(2, (short) 0, frame + 10);
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			bomberHandler.addBomber(f);
+		}else if (defName.equals("armbrtha")) {
+			miscHandler.addBertha(unit);
 		}
     	
     	if (unit.getMaxSpeed() > 0 && unit.getDef().getBuildOptions().size() == 0
@@ -899,8 +1030,8 @@ public class MilitaryManager extends Module {
 
 	@Override
 	public int unitCreated(Unit unit, Unit builder){
-		if (unit.getDef().getName().equals("cormex")){
-			DefenseTarget dt = new DefenseTarget(unit.getPos(), -1000, frame);
+		if ((unit.getDef().getName().equals("cormex") || unit.getDef().getName().equals("corllt")) && builder.getDef().getBuildSpeed() < 8f){
+			DefenseTarget dt = new DefenseTarget(unit.getPos(), -500, frame+300);
 			defenseTargets.add(dt);
 		}
 
@@ -943,11 +1074,11 @@ public class MilitaryManager extends Module {
 			DefenseTarget dt = null;
 			if (attacker != null){
 				if (attacker.getPos() != null && attacker.getDef() != null && !attacker.getDef().isAbleToFly()) {
-					dt = new DefenseTarget(attacker.getPos(), 1000, frame);
+					dt = new DefenseTarget(attacker.getPos(), unit.getDef().getHealth(), frame);
 				}
 			}
 			if (dt == null){
-				dt = new DefenseTarget(unit.getPos(), 1000, frame);
+				dt = new DefenseTarget(unit.getPos(), unit.getDef().getHealth(), frame);
 			}
 			defenseTargets.add(dt);
 
@@ -1014,7 +1145,7 @@ public class MilitaryManager extends Module {
 					target.z = pos.z + z;
 					dt = new DefenseTarget(target, 2000f, frame);
 				}else if (h.getDef().isBuilder()){
-					dt = new DefenseTarget(h.getPos(), 2000f, frame);
+					dt = new DefenseTarget(h.getPos(), h.getDef().getHealth() - h.getHealth(), frame);
 				}
 
 				// don't create defense targets vs air units.

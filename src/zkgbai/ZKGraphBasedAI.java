@@ -3,11 +3,7 @@ package zkgbai;
 import java.util.*;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.OOAICallback;
-import com.springrts.ai.oo.clb.Team;
-import com.springrts.ai.oo.clb.Unit;
-import com.springrts.ai.oo.clb.UnitDef;
-import com.springrts.ai.oo.clb.WeaponDef;
+import com.springrts.ai.oo.clb.*;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -34,6 +30,11 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int currentFrame = 0;
     //DebugView debugView;
     boolean debugActivated;
+
+	private boolean slave = false;
+	private int mergeTarget = Integer.MAX_VALUE;
+	public int mergedAllies = 0;
+	public int unmergedAllies = 0;
     
 	public LosManager losManager;
 	public GraphManager graphManager;
@@ -64,23 +65,33 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int init(int AIId, OOAICallback callback) {
 		this.debugActivated = false;
         this.callback = callback;
-        this.teamID = callback.getGame().getMyTeam(); // teamID as passed by interface is broken 0_0
+        this.teamID = callback.getGame().getMyTeam();
         this.allyTeamID = callback.getGame().getMyAllyTeam();
 		this.allies = new ArrayList<Integer>();
 
         identifyEnemyTeams();
 		identifyAllyTeams();
+		checkTeamsMerging();
+
+		try{
+			graphManager = new GraphManager(this);
+			debug(graphManager.getModuleName() + " initialized.");
+		} catch (Throwable e){
+			printException(e);
+		}
+
+		if (slave){
+			selectRandomCommander();
+			chooseStartPos();
+			debug("Entering merge mode! Discarding modules.");
+			graphManager = null;
+			return 0;
+		}
 
 		// load modules
         try {
 			losManager = new LosManager(this);
 			debug(losManager.getModuleName() + " initialized.");
-		} catch (Throwable e){
-			printException(e);
-		}
-		try{
-			graphManager = new GraphManager(this);
-			debug(graphManager.getModuleName() + " initialized.");
 		} catch (Throwable e){
 			printException(e);
 		}
@@ -172,6 +183,16 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     
     @Override
     public int update(int frame) {
+		if (slave && frame % 30 == 0) {
+			// give away income from communism when merged with another AI instance.
+			Resource metal = callback.getResources().get(0);
+			Resource energy = callback.getResources().get(1);
+			callback.getEconomy().sendResource(metal, Math.min(10, callback.getEconomy().getCurrent(metal)) + callback.getEconomy().getIncome(metal), mergeTarget);
+			callback.getEconomy().sendResource(energy, Math.min(10, callback.getEconomy().getCurrent(energy)) + callback.getEconomy().getIncome(energy), mergeTarget);
+		
+			return 0;
+		}
+		
     	currentFrame = frame;
 
 		for (Module module : modules) {
@@ -205,6 +226,13 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     
     @Override
     public int unitCreated(Unit unit, Unit builder) {
+		if (slave){
+			List<Unit> l = new ArrayList();
+			l.add(unit);
+			callback.getEconomy().sendUnits(l, mergeTarget);
+			return 0;
+		}
+
 	    for (Module module : modules) {
 	    	try {
 	            module.unitCreated(unit, builder);
@@ -253,7 +281,6 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
     @Override
     public int unitDamaged(Unit unit, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {
-        //log.info("unitDamaged: " + unit.getDef().getName());
 	    for (Module module : modules) {
         	try {
         		module.unitDamaged(unit, attacker, damage, dir, weaponDef, paralyzed);
@@ -283,11 +310,13 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
     @Override
     public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
-        try {
-        	//this.unitManager.registerUnit(unit);
-    	} catch (Throwable e) {
-    		printException(e);
-    	}
+		if (slave){
+			List<Unit> l = new ArrayList();
+			l.add(unit);
+			callback.getEconomy().sendUnits(l, mergeTarget);
+			return 0;
+		}
+
         for (Module module : modules) {
         	try {
         		module.unitGiven(unit, oldTeamId, newTeamId);
@@ -510,32 +539,126 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
 	private void chooseStartPos(){
 		List<MetalSpot> spots = graphManager.getAllyTerritory();
+		int priorityStarts = 0;
+
+		for (int allyid: allies){
+			if (allyid < teamID){
+				priorityStarts++;
+			}
+		}
+
 		if (!spots.isEmpty()) {
-			MetalSpot best = null;
-			float dist = Float.MAX_VALUE;
-			for (MetalSpot ms:spots){
-				float distmod = 1f;
-				for (MetalSpot m:graphManager.getMetalSpots()){
-					if (m != ms) {
-						float msdist = distance(m.getPos(), ms.getPos());
-						if (msdist < 400) {
-							distmod++;
+			if (allies.size() == 0 || (allies.size() > 1 && priorityStarts == 0)) { // when starting solo, pick a spot near map center
+				MetalSpot best = null;
+				float dist = Float.MAX_VALUE;
+				for (MetalSpot ms : spots) {
+					float distmod = 1f;
+					for (MetalSpot m : graphManager.getMetalSpots()) {
+						if (m != ms) {
+							float msdist = distance(m.getPos(), ms.getPos());
+							if (msdist < 400) {
+								distmod++;
+							}
 						}
+					}
+
+					float tmpdist = distance(ms.getPos(), graphManager.getMapCenter()) / distmod;
+					if (tmpdist < dist) {
+						best = ms;
+						dist = tmpdist;
 					}
 				}
 
-				float tmpdist = distance(ms.getPos(), graphManager.getMapCenter())/distmod;
-				if (tmpdist < dist){
-					best = ms;
-					dist = tmpdist;
+				callback.getGame().sendStartPosition(false, best.getPos());
+				graphManager.setStartPos(best.getPos());
+				debug("Solo Mode: Start Position Selected!");
+			}else{ // when playing on teams, generate a position based on relative teamID
+				AIFloat3 startPos;
+				List<AIFloat3> cachedPositions = new ArrayList<>();
+				AIFloat3 mapCenter = graphManager.getMapCenter();
+
+				MetalSpot best = null;
+				float distance = 0;
+				for (MetalSpot ms: spots){
+					float tmpdist = distance(ms.getPos(), mapCenter);
+					if (tmpdist > distance){
+						distance = tmpdist;
+						best = ms;
+					}
+				}
+
+				startPos = best.getPos();
+				cachedPositions.add(startPos);
+				spots.remove(best);
+
+				if (priorityStarts > 1 || (allies.size() == 1 && priorityStarts > 0)){
+					for (int i = 0; i < Math.max(1, priorityStarts - 1); i++){
+						if (spots.isEmpty()) break;
+						best = null;
+						distance = 0;
+						for (MetalSpot ms: spots){
+							// for each metal spot
+							float tmpdist = Float.MAX_VALUE;
+							for (AIFloat3 spos: cachedPositions){
+								// for each previously produced startpos,
+								// find the closest one to the current metal spot
+								// and use its distance as cost.
+
+								// basically we're looking for the metal spot with the largest distance
+								// from the closest previously chosen spot to it.
+								float tmpclose = distance(spos, ms.getPos());
+								if (tmpclose < tmpdist){
+									tmpdist = tmpclose;
+								}
+							}
+							if (tmpdist > distance){
+								distance = tmpdist;
+								best = ms;
+							}
+						}
+						startPos = best.getPos();
+						cachedPositions.add(startPos);
+						spots.remove(best);
+						if (spots.isEmpty()) break;
+					}
+				}
+
+				if (best != null) {
+					callback.getGame().sendStartPosition(false, startPos);
+					graphManager.setStartPos(startPos);
+					debug("Teams Mode: Start Position Selected!");
+				}else{
+					debug("Teams Mode: No start positions available!");
 				}
 			}
-
-			callback.getGame().sendStartPosition(true, best.getPos());
-			graphManager.setStartPos(best.getPos());
-			debug("Start Position Selected!");
 		}else{
 			debug("chooseStartPos: Startbox inference failed, or there were no mexes within the startbox.");
 		}
+	}
+
+	private void checkTeamsMerging(){
+		for (int tID : allies){
+			if (isIngroup(tID) && tID < teamID){
+				slave = true;
+				mergedAllies++;
+				if (tID < mergeTarget){
+					mergeTarget = tID;
+				}
+			}else if (isIngroup(tID)) {
+				mergedAllies++;
+			}else{
+				unmergedAllies++;
+			}
+		}
+	}
+
+	private boolean isIngroup(int tId) {
+		String[] script = callback.getGame().getSetupScript().split("\n");
+		for (int line = 0; line < script.length; line++) {
+			if (script[line].startsWith("team=" + tId) && (script[line - 1].startsWith("shortname=ZKGBAI") || script[line - 2].startsWith("shortname=ZKGBAI"))) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

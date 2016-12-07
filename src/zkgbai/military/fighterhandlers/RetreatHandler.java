@@ -7,6 +7,7 @@ import zkgbai.graph.GraphManager;
 import zkgbai.military.MilitaryManager;
 import zkgbai.kgbutil.Pathfinder;
 import zkgbai.military.UnitClasses;
+import zkgbai.military.unitwrappers.Fighter;
 
 import java.util.ArrayList;
 import java.util.Deque;
@@ -104,8 +105,12 @@ public class RetreatHandler {
                 }
 
                 AIFloat3 position;
-                if (!u.getDef().isAbleToFly()) {
-                    position = graphManager.getClosestHaven(u.getPos());
+                if (!unitTypes.bombers.contains(u.getDef().getName()) && !u.getDef().getName().equals("fighter") && !u.getDef().getName().equals("corvamp")) {
+                    if (u.getDef().isAbleToFly()){
+                        position = graphManager.getClosestAirHaven(u.getPos());
+                    }else {
+                        position = graphManager.getClosestHaven(u.getPos());
+                    }
                     Deque<AIFloat3> path = pathfinder.findPath(u, position, pathfinder.AVOID_ENEMIES);
                     u.moveTo(path.poll(), (short) 0, frame + 300); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
                     if (path.size() > 2){
@@ -127,17 +132,23 @@ public class RetreatHandler {
                             // skip every other waypoint except the last, since they're not very far apart.
                             if (path.size() > 1) {
                                 path.poll();
+                                // skip two out of three waypoints for flying units, since they move quickly.
+                                if (path.size() > 1 && u.getDef().isAbleToFly()) {
+                                    path.poll();
+                                }
                             }
                         }
                         // let the rest of the waypoints get handled the next time around.
                     }
                 }else{
-                    if (unitTypes.bombers.contains(u.getDef().getName())){
-                        List<Float> params = new ArrayList<Float>();
-                        u.executeCustomCommand(CMD_FIND_PAD, params, (short) 0, frame+300); // have bombers return to pad.
-                    }else {
-                        position = graphManager.getClosestAirHaven(u.getPos());
-                        u.moveTo(position, (short) 0, frame + 300); // don't use pathing for air units.
+                    List<Float> params = new ArrayList<Float>();
+
+                    if (!graphManager.isEnemyTerritory(u.getPos())) {
+                        u.executeCustomCommand(CMD_FIND_PAD, params, (short) 0, frame + 300);
+                    }else{
+                        Fighter b = new Fighter(u, 0);
+                        b.moveTo(graphManager.getAllyCenter(), frame); // if in enemy territory, maneuver back to safety before finding an airpad.
+                        b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 32, frame + 300);
                     }
                 }
 

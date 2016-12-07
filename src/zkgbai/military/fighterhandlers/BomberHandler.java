@@ -67,6 +67,10 @@ public class BomberHandler {
         }
     }
 
+    public int getBomberSize(){
+        return unarmedBombers.size() + readyBombers.size() + activeBombers.size();
+    }
+
     public void update(int frame){
         this.frame = frame;
 
@@ -106,7 +110,7 @@ public class BomberHandler {
 
         // Allow all bombers to sift themselves into readyBombers before sending them to attack.
         // Also ensure that there are enough bombers to do damage.
-        if (activeBombers.isEmpty() && unarmedBombers.isEmpty() && readyBombers.size() > ecoManager.baseIncome/12){
+        if (activeBombers.isEmpty() && unarmedBombers.isEmpty() && readyBombers.size() > ecoManager.baseIncome/(12 * (1 + (0.5 * ai.mergedAllies)))){
             activeBombers.putAll(readyBombers);
             readyBombers.clear();
         }
@@ -132,7 +136,7 @@ public class BomberHandler {
                 continue;
             }
 
-            b.getUnit().fight(getRadialPoint(target, 800f), (short) 0,  frame+300);
+            b.fightTo(getRadialPoint(target, 300f), frame);
         }
 
         for (Integer id:swap){
@@ -142,7 +146,12 @@ public class BomberHandler {
         // have all unarmed bombers reload/heal themselves.
         List<Float> params = new ArrayList<Float>();
         for (Fighter b:unarmedBombers.values()) {
-            b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 0, frame+300);
+            if (!graphManager.isEnemyTerritory(b.getPos())) {
+                b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 0, frame + 300);
+            }else{
+                b.moveTo(graphManager.getAllyCenter(), frame); // if in enemy territory, maneuver back to safety before finding an airpad.
+                b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 32, frame + 300);
+            }
         }
     }
 

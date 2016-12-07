@@ -1,5 +1,6 @@
 package zkgbai.economy;
 
+import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Unit;
 import zkgbai.ZKGraphBasedAI;
@@ -10,9 +11,11 @@ import zkgbai.ZKGraphBasedAI;
 public class Factory extends Worker {
     public float raiderSpam = 0;
     public float expensiveRaiderSpam = 0;
+    AIFloat3 pos;
 
     public Factory(Unit u, boolean firstFac){
         super(u);
+        pos = u.getPos();
 
         if (firstFac){
             OOAICallback callback = ZKGraphBasedAI.getInstance().getCallback();
@@ -28,6 +31,10 @@ public class Factory extends Worker {
                 }
             }
 
+            if (u.getDef().getName().equals("factorygunship")){
+                raiderSpam = -4;
+            }
+
             if (u.getDef().getName().equals("factoryveh")) {
                 if (bigMap) {
                     raiderSpam = -5;
@@ -37,8 +44,12 @@ public class Factory extends Worker {
             }
 
             if (u.getDef().getName().equals("factoryhover")){
-                raiderSpam = -4;
-                expensiveRaiderSpam = -2;
+                if (bigMap) {
+                    raiderSpam = -7;
+                } else {
+                    raiderSpam = -6;
+                }
+                expensiveRaiderSpam = -1;
             }
 
             if (u.getDef().getName().equals("factoryspider")){
@@ -48,6 +59,15 @@ public class Factory extends Worker {
             if (callback.getMap().getHeight() < 640 && callback.getMap().getWidth() < 640){
                 raiderSpam /= 2;
             }
+
+            if (u.getDef().getName().equals("factoryplane")){
+                raiderSpam = 0;
+            }
         }
+    }
+
+    @Override
+    public AIFloat3 getPos(){
+        return pos;
     }
 }

@@ -10,6 +10,8 @@ import zkgbai.graph.MetalSpot;
 import zkgbai.military.MilitaryManager;
 import zkgbai.military.tasks.DefenseTarget;
 import zkgbai.military.unitwrappers.Fighter;
+import zkgbai.military.unitwrappers.Raider;
+import zkgbai.military.unitwrappers.Squad;
 import zkgbai.military.unitwrappers.Strider;
 
 import java.util.ArrayList;
@@ -32,11 +34,16 @@ public class MiscHandler {
 
     java.util.Map<Integer, Fighter> supports;
     java.util.Map<Integer, Unit> sappers;
+    java.util.Map<Integer, Unit> berthas;
+    java.util.Map<Integer, Unit> swifts;
+    java.util.Map<Integer, Unit> activeSwifts;
     public java.util.Map<Integer, Fighter> loners;
     public java.util.Map<Integer, Strider> striders;
 
     int frame = 0;
     Resource m;
+
+    static final int CMD_ONECLICK_WEAPON = 35000;
 
     public MiscHandler(){
         this.ai = ZKGraphBasedAI.getInstance();
@@ -52,6 +59,9 @@ public class MiscHandler {
         this.supports = new HashMap<Integer, Fighter>();
         this.loners = new HashMap<Integer, Fighter>();
         this.sappers = new HashMap<Integer, Unit>();
+        this.berthas = new HashMap<Integer, Unit>();
+        this.swifts = new HashMap<Integer, Unit>();
+        this.activeSwifts = new HashMap<Integer, Unit>();
         this.striders = new HashMap<Integer, Strider>();
     }
 
@@ -62,12 +72,13 @@ public class MiscHandler {
             cleanUnits();
             updateSupports();
             updateSappers();
+            updateSwifts();
 
             if (frame % 30 == 0) {
                 for (Strider st : striders.values()) {
                     Unit u = st.getUnit();
                     if (!retreatHandler.isRetreating(u)) {
-                        AIFloat3 target = warManager.getTarget(st.getPos(), false);
+                        AIFloat3 target = warManager.getSoloTarget(st.getPos(), false);
                         st.fightTo(target, frame);
                     }
                 }
@@ -78,11 +89,18 @@ public class MiscHandler {
             }
         }
 
+        if (frame % 150 == 0){
+            for (Unit b: berthas.values()){
+                AIFloat3 target = warManager.getBerthaTarget(b.getPos());
+                b.attackArea(target, 0f, (short) 0, frame+300);
+            }
+        }
+
         if (frame % 300 == 0){
             for (Fighter l:loners.values()){
                 Unit u = l.getUnit();
                 if (!retreatHandler.isRetreating(u)){
-                    AIFloat3 target = warManager.getTarget(l.getPos(), true);
+                    AIFloat3 target = warManager.getSoloTarget(l.getPos(), true);
                     l.fightTo(target, frame);
                 }
             }
@@ -105,6 +123,18 @@ public class MiscHandler {
         striders.put(st.id, st);
     }
 
+    public void addBertha(Unit u){
+        berthas.put(u.getUnitId(), u);
+    }
+
+    public void addSwift(Unit u){
+        swifts.put(u.getUnitId(), u);
+        if (swifts.size() > 4){
+            activeSwifts.putAll(swifts);
+            swifts.clear();
+        }
+    }
+
     public void removeUnit(Unit unit){
         if (loners.containsKey(unit.getUnitId())){
             loners.remove(unit.getUnitId());
@@ -120,6 +150,14 @@ public class MiscHandler {
 
         if (sappers.containsKey(unit.getUnitId())){
             sappers.remove(unit.getUnitId());
+        }
+
+        if (swifts.containsKey(unit.getUnitId())){
+            swifts.remove(unit.getUnitId());
+        }
+
+        if (berthas.containsKey(unit.getUnitId())){
+            berthas.remove(unit.getUnitId());
         }
     }
 
@@ -158,12 +196,15 @@ public class MiscHandler {
                     }
                 }
 
-                if (s.squad == null && (squadHandler.nextSquad != null || squadHandler.nextShieldSquad != null)) {
+                if (s.squad == null) {
 
-                    if (s.getUnit().getDef().getName().equals("spherecloaker") && squadHandler.nextSquad != null) {
-                        s.squad = squadHandler.nextSquad;
-                    }
-                    if (s.squad == null && s.getUnit().getDef().getName().equals("core_spectre") && squadHandler.nextShieldSquad != null && squadHandler.nextShieldSquad.getPos() != null) {
+                    if (s.getUnit().getDef().getName().equals("spherecloaker") && !squadHandler.squads.isEmpty()) {
+                        int rand = (int) (Math.random() * (squadHandler.squads.size() - 1));
+                        Squad randomSquad = squadHandler.squads.get(rand);
+                        if (!randomSquad.isAirSquad) {
+                            s.squad = randomSquad;
+                        }
+                    }else if (s.getUnit().getDef().getName().equals("core_spectre") && squadHandler.nextShieldSquad != null && squadHandler.nextShieldSquad.getPos() != null) {
                         s.squad = squadHandler.nextShieldSquad;
                     }
 
@@ -173,9 +214,9 @@ public class MiscHandler {
                         } else if (s.squad.getPos() != null) {
                             s.moveTo(s.squad.getPos(), frame);
                         }
+                    }else {
+                        s.moveTo(warManager.getRallyPoint(s.getPos()), frame);
                     }
-                } else if (s.squad == null) {
-                    s.moveTo(warManager.getRallyPoint(s.getPos()), frame);
                 }
             }
         }
@@ -215,6 +256,31 @@ public class MiscHandler {
 
             if (ms != null && distance(s.getPos(), ms.getPos()) > 500) {
                 s.fight(getDirectionalPoint(ms.getPos(), graphManager.getEnemyCenter(), 350f), (short) 0, frame + 300);
+            }
+        }
+    }
+
+    private void updateSwifts() {
+        List<MetalSpot> spots = graphManager.getUnownedSpots();
+        for (Unit u: activeSwifts.values()){
+            if (u.getHealth() <= 0) continue;
+            MetalSpot best = null;
+            float lastSeen = 0;
+            for (MetalSpot ms:spots){
+                float tmpseen = frame - ms.getLastSeen();
+                if (tmpseen > lastSeen){
+                    best = ms;
+                    lastSeen = ms.getLastSeen();
+                }
+            }
+
+            if (best != null){
+                u.moveTo(best.getPos(), (short) 0, frame + 300);
+                if (distance(u.getPos(), graphManager.getEnemyCenter()) < distance(u.getPos(), graphManager.getAllyCenter())){
+                    List<Float> params = new ArrayList<>();
+                    u.executeCustomCommand(CMD_ONECLICK_WEAPON, params, (short) 0, frame + 300);
+                }
+                spots.remove(best);
             }
         }
     }

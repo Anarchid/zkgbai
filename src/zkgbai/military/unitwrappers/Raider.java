@@ -15,7 +15,6 @@ public class Raider extends Fighter {
     private ScoutTask task;
     private int lastTaskFrame;
     private AIFloat3 lastpos;
-    private static Pathfinder pathfinder = null;
     public int index = 0;
     public RaiderSquad squad;
 
@@ -24,10 +23,6 @@ public class Raider extends Fighter {
         this.task = null;
         this.lastTaskFrame = 0;
         this.lastpos = getPos();
-
-        if (pathfinder == null){
-            pathfinder = Pathfinder.getInstance();
-        }
     }
 
     public void setTask(ScoutTask t) {

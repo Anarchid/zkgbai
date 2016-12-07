@@ -9,12 +9,21 @@ public class ConstructionTask extends WorkerTask {
 	public int facing;
 	public Unit target;
 	public int frameIssued;
+	public boolean facPlop = false;
 
 	public ConstructionTask(UnitDef def, AIFloat3 pos, int h) {
 		super();
 		this.position = pos;
 		this.buildType = def;
 		this.facing = h;
+	}
+
+	public ConstructionTask(UnitDef def, AIFloat3 pos, int h, boolean isPlop) {
+		super();
+		this.position = pos;
+		this.buildType = def;
+		this.facing = h;
+		this.facPlop = isPlop;
 	}
 
 	@Override

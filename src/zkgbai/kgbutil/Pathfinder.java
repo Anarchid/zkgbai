@@ -98,9 +98,23 @@ public class Pathfinder extends Object {
             return result;
         }
 
+        boolean flyer = true;
+        float flyheight = 0;
         float maxSlope = 1;
         if (u.getDef().getMoveData() != null) {
             maxSlope = u.getDef().getMoveData().getMaxSlope();
+            flyer = false;
+            if (maxSlope == callback.getUnitDefByName("arm_spider").getMoveData().getMaxSlope()){
+                // use special pathing for spiders, since they favor hills.
+                if (u.getDef().getName().equals("armflea") || u.getDef().getName().equals("armspy")){
+                    costs = SPIDER_RAIDER_PATH;
+                }else {
+                    costs = SPIDER_PATH;
+                }
+            }
+        }else{
+            costs = AIR_PATH;
+            flyheight = u.getDef().getHeight() - callback.getMap().getElevationAt(u.getPos().x, u.getPos().y);
         }
 
         int startPos = (int) (target.z / mapRes) * smwidth + (int) (target.x / mapRes); //reverse to return in right order when traversing backwards
@@ -207,7 +221,11 @@ public class Pathfinder extends Object {
 
         pos = targetPos;
         while (pos != startPos) {
-            result.add(toAIFloat3(pos));
+            if (flyer) {
+                result.add(toAIFloat3(pos, flyheight));
+            }else{
+                result.add(toAIFloat3(pos));
+            }
             pos = pathTo[pos];
         }
         result.add(target);
@@ -228,6 +246,12 @@ public class Pathfinder extends Object {
         return ret;
     }
 
+    private AIFloat3 toAIFloat3(int pos, float height) {
+        AIFloat3 ret = new AIFloat3(mapRes * (pos % (smwidth)), 0, mapRes * (pos / (smwidth)));
+        ret.y = callback.getMap().getElevationAt(ret.x, ret.z) + height;
+        return ret;
+    }
+
     /**
      * Fastest path to target (not shortest)
      */
@@ -239,6 +263,47 @@ public class Pathfinder extends Object {
                 return -1;
             }
             return 10 * ((slope / maxSlope) + 1);
+        }
+    };
+    /**
+     * Fastest path to target while avoiding AA
+     */
+    public final CostSupplier AIR_PATH = new CostSupplier() {
+
+        @Override
+        public float getCost(float slope, float maxSlope, AIFloat3 pos) {
+            if (slope > maxSlope) {
+                return -1;
+            }
+            return 10 * (1 + (4 * warManager.getAAThreat(pos)));
+        }
+    };
+    /**
+     * Best path to target while preferring steep slopes.
+     */
+    public final CostSupplier SPIDER_RAIDER_PATH = new CostSupplier() {
+
+        @Override
+        public float getCost(float slope, float maxSlope, AIFloat3 pos) {
+            if (slope > maxSlope) {
+                return -1;
+            }
+            // use inverse slope-cost relation for spiders, because they actually benefit from hills!
+            return 10 * ((1f - slope) + (4f * warManager.getThreat(pos)) + 1f);
+        }
+    };
+    /**
+     * Best path to target while preferring steep slopes.
+     */
+    public final CostSupplier SPIDER_PATH = new CostSupplier() {
+
+        @Override
+        public float getCost(float slope, float maxSlope, AIFloat3 pos) {
+            if (slope > maxSlope) {
+                return -1;
+            }
+            // use inverse slope-cost relation for spiders, because they actually benefit from hills!
+            return 10 * ((1f - slope) + warManager.getThreat(pos) + 1f);
         }
     };
     /**
@@ -264,7 +329,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return -1;
             }
-            return 10 * (slope / maxSlope) + 1 * warManager.getThreat(pos) + 1;
+            return 10 * ((slope / maxSlope) + warManager.getThreat(pos) + 1);
         }
     };
     /**

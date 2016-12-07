@@ -82,7 +82,7 @@ public class SquadHandler {
         if (nextSquad == null){
             nextSquad = new Squad();
             nextSquad.setTarget(warManager.getRallyPoint(f.getPos()), frame);
-            nextSquad.income = ecoManager.baseIncome;
+            nextSquad.income = ecoManager.adjustedIncome;
         }
 
         nextSquad.addUnit(f, frame);
@@ -113,13 +113,13 @@ public class SquadHandler {
         if (nextAirSquad == null){
             nextAirSquad = new Squad();
             nextAirSquad.setTarget(warManager.getRallyPoint(f.getPos()), frame);
-            nextAirSquad.income = ecoManager.effectiveIncome;
+            nextAirSquad.income = ecoManager.adjustedIncome;
             nextAirSquad.isAirSquad = true;
         }
 
         nextAirSquad.addUnit(f, frame);
 
-        if (nextAirSquad.metalValue > nextAirSquad.income * 60){
+        if (nextAirSquad.metalValue > nextAirSquad.income * 45){
             nextAirSquad.status = 'r';
             squads.add(nextAirSquad);
             nextAirSquad.setTarget(graphManager.getAllyCenter(), frame);
@@ -179,7 +179,7 @@ public class SquadHandler {
                     || (nextShieldSquad.leader != null && nextShieldSquad.leader.getUnit().getHealth()/nextShieldSquad.leader.getUnit().getMaxHealth() < 0.75)
                     || (warManager.getEffectiveThreat(nextShieldSquad.getPos()) > 0 && distance(nextShieldSquad.getPos(), nextShieldSquad.target) > 1200)){
                 nextShieldSquad.retreatTo(graphManager.getClosestHaven(nextShieldSquad.getAvgPos()), frame);
-            }else if (nextShieldSquad.metalValue > ecoManager.effectiveIncome * 30 && nextShieldSquad.metalValue > 1500){
+            }else if (nextShieldSquad.metalValue > ecoManager.adjustedIncome * 30 && nextShieldSquad.metalValue > 1500){
                 AIFloat3 target = warManager.getTarget(nextShieldSquad.getPos(), true);
                 // reduce redundant order spam.
                 if (!target.equals(nextShieldSquad.target)) {
@@ -196,6 +196,7 @@ public class SquadHandler {
         boolean assigned = false;
 
         for (Squad s: squads){
+            s.cutoff();
             if (s.isDead()){
                 deadSquads.add(s);
                 continue;
@@ -233,12 +234,12 @@ public class SquadHandler {
                 }
 
                 // reduce redundant order spam.
-                if (!target.equals(s.target)) {
+                //if (!target.equals(s.target)) {
                     assigned = true;
                     s.assigned = true;
                     s.setTarget(target, frame);
                     break;
-                }
+                //}
             }
         }
 

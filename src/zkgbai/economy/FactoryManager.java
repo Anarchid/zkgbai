@@ -7,6 +7,7 @@ import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
+import zkgbai.graph.GraphManager;
 import zkgbai.military.MilitaryManager;
 import zkgbai.military.UnitClasses;
 
@@ -22,6 +23,7 @@ public class FactoryManager extends Module {
     ZKGraphBasedAI ai;
     EconomyManager economyManager;
     MilitaryManager warManager;
+    GraphManager graphManager;
     private OOAICallback callback;
     UnitClasses unitTypes;
 
@@ -46,7 +48,8 @@ public class FactoryManager extends Module {
     float fighterValue = 0;
     float artyValue = 0;
     float assaultValue = 0;
-    int numSupports = 0;
+    int numErasers = 0;
+    int numAspis = 0;
 
     int numWarriors = 0;
     int numZeus = 0;
@@ -64,6 +67,9 @@ public class FactoryManager extends Module {
     int numRavagers = 0;
 
     int numScouts = 0;
+
+    int numInfis = 0;
+    int numUltis = 0;
 
     int numFelons = 0;
     int numThugs = 0;
@@ -90,7 +96,7 @@ public class FactoryManager extends Module {
         this.smallMap = (callback.getMap().getWidth() + callback.getMap().getHeight() < 1280);
         this.bigMap = (callback.getMap().getHeight() + callback.getMap().getWidth() > 1664);
 
-        this.earlyWorker = (callback.getMap().getHeight() + callback.getMap().getWidth() > 768);
+        this.earlyWorker = bigMap;
         this.m = callback.getResourceByName("Metal");
     }
 
@@ -98,6 +104,7 @@ public class FactoryManager extends Module {
     public int init(int AIID, OOAICallback cb){
         this.warManager = ai.warManager;
         this.economyManager = ai.ecoManager;
+        this.graphManager = ai.graphManager;
         this.unitTypes = UnitClasses.getInstance();
         
         return 0;
@@ -132,10 +139,15 @@ public class FactoryManager extends Module {
 
     @Override
     public int unitCreated(Unit unit,  Unit builder) {
-        String defName = unit.getDef().getName();
+        UnitDef def = unit.getDef();
+        String defName = def.getName();
+
+        if (defName.contains("hub")){
+            unit.setMoveState(0, (short) 0, frame + 10);
+        }
         if(defName.contains("factory") || defName.contains("hub")){
             Factory fac;
-            if (factories.size() == 0) {
+            if (factories.size() < 1 + ai.mergedAllies) {
                 fac = new Factory(unit, true);
             }else{
                 fac = new Factory(unit, false);
@@ -145,25 +157,17 @@ public class FactoryManager extends Module {
             unit.setMoveState(2, (short) 0, frame+300);
         }
 
-        if (defName.equals("armfus") || defName.equals("cafus")){
-            fighterValue += 250f;
-        }
-
-        return 0;
-    }
-
-    @Override
-    public int unitFinished(Unit unit) {
-        UnitDef def = unit.getDef();
-        String defName = def.getName();
-
-        if (def.isBuilder() && unit.getMaxSpeed() > 0){
+        if (def.isBuilder() && unit.getMaxSpeed() > 0 && !defName.equals("armcsa")){
             numWorkers++;
             if (def.getBuildSpeed() < 8f) {
                 workerValue += unit.getDef().getCost(m);
             }
-        }else if (unit.getMaxSpeed() > 0 && !unitTypes.AAs.contains(defName) /*&& !unitTypes.striders.contains(defName)*/){
+        }else if (unit.getMaxSpeed() > 0 && !unitTypes.AAs.contains(defName)){
             fighterValue += Math.min(unit.getDef().getCost(m), 750f);
+        }
+
+        if (defName.equals("armfus") || defName.equals("cafus")){
+            fighterValue += 250f;
         }
 
         if(defName.equals("cormart") || defName.equals("armham") || defName.equals("armmerl") || defName.equals("trem") || defName.equals("armmanni") || defName.equals("armcrabe")){
@@ -259,12 +263,45 @@ public class FactoryManager extends Module {
             numLevelers++;
         }
 
-        if (defName.equals("corshad")){
+        if (defName.equals("corshad") || defName.equals("corhurc2")){
             numRavens++;
         }
 
-        if (defName.equals("spherecloaker") || defName.equals("core_spectre")){
-            numSupports++;
+        if (defName.equals("armspy")){
+            numInfis++;
+        }
+
+        if (defName.equals("armcomdgun")){
+            numUltis++;
+        }
+
+        if (defName.equals("spherecloaker")){
+            numErasers++;
+        }
+
+        if (defName.equals("core_spectre")){
+            numAspis++;
+        }
+
+        return 0;
+    }
+
+    @Override
+    public int unitFinished(Unit unit) {
+        UnitDef def = unit.getDef();
+        String defName = def.getName();
+
+        if (defName.equals("dante") || defName.equals("scorpion") || defName.equals("armraven") || defName.equals("funnelweb")
+                || defName.equals("armbanth") || defName.equals("dantearmorco") || defName.equals("armcomdgun")){
+            // find striderhubs to manually reassign them because they're stupid.
+            List<Unit> units = callback.getFriendlyUnitsIn(unit.getPos(), 500f);
+            for (Unit u: units){
+                if (u.getTeam() == ai.teamID && u.getDef().getName().equals("striderhub")){
+                    Factory f = factories.get(u.getUnitId());
+                    assignFactoryTask(f);
+                    break;
+                }
+            }
         }
 
         return 0;
@@ -297,8 +334,12 @@ public class FactoryManager extends Module {
             assaultValue -= def.getCost(m);
         }
 
-        if (defName.equals("spherecloaker") || defName.equals("core_spectre")){
-            numSupports--;
+        if (defName.equals("spherecloaker")){
+            numErasers--;
+        }
+
+        if (defName.equals("core_spectre")){
+            numAspis--;
         }
 
         if(defName.equals("armwar")){
@@ -377,8 +418,16 @@ public class FactoryManager extends Module {
             numLevelers--;
         }
 
-        if (defName.equals("corshad")){
+        if (defName.equals("corshad") || defName.equals("corhurc2")){
             numRavens--;
+        }
+
+        if (defName.equals("armspy")){
+            numInfis--;
+        }
+
+        if (defName.equals("armcomdgun")){
+            numUltis--;
         }
 
         if (factories.containsKey(unit.getUnitId())){
@@ -398,20 +447,14 @@ public class FactoryManager extends Module {
     @Override
     public int unitGiven(Unit unit, int oldTeamID, int newTeamID){
         if (newTeamID == ai.teamID){
-            String defName = unit.getDef().getName();
-            if(defName.contains("factory") || defName.contains("hub")){
-                Factory fac = new Factory(unit, false);
-                factories.put(fac.id, fac);
-                assignFactoryTask(fac);
-                unit.setMoveState(2, (short) 0, frame+300);
-            }
+            return unitCreated(unit, null);
         }
         return 0;
     }
 
     @Override
     public int unitIdle(Unit unit) {
-        if (factories.containsKey(unit.getUnitId())){
+        if (factories.containsKey(unit.getUnitId()) && !unit.getDef().getName().equals("striderhub") && !unit.getDef().getName().equals("armcsa")){
             Factory fac = factories.get(unit.getUnitId());
             assignFactoryTask(fac);
         }
@@ -438,6 +481,7 @@ public class FactoryManager extends Module {
     }
 
     void assignFactoryTask(Factory fac){
+        fac.getUnit().stop((short) 0, frame+30);
         String defName = fac.getUnit().getDef().getName();
         UnitDef unit;
         if (defName.equals("factorycloak")){
@@ -472,7 +516,6 @@ public class FactoryManager extends Module {
             AIFloat3 pos = callback.getMap().findClosestBuildSite(unit, fac.getPos(), 250f, 3, 0);
             fac.getUnit().build(unit, pos, (short) 0, (short) 0, frame+3000);
         }
-
     }
 
     private Boolean needWorkers(Factory fac){
@@ -480,19 +523,24 @@ public class FactoryManager extends Module {
         float metalratio = 3.5f;
         float workerRatio;
         float reclaimValue = economyManager.getReclaimValue();
-        float fv = fighterValue + reclaimValue;
-        float income = economyManager.effectiveIncomeMetal + reclaimValue/100f;
+        float fv = fighterValue + reclaimValue/2f;
+        float income = economyManager.effectiveIncomeMetal + ((reclaimValue * ((1f + ai.mergedAllies)/(1f + ai.allies.size())))/150f);
+        float allymod = ai.unmergedAllies;
 
-        if (facType.equals("factorytank")){
+        if (facType.equals("factorytank") || facType.equals("factoryship") || facType.equals("factoryplane") || facType.equals("factorygunship")){
             if (bigMap) {
-                workerRatio = 1.5f;
+                workerRatio = 2f + allymod;
             }else{
-                workerRatio = 2f;
+                workerRatio = 2.5f + allymod;
             }
         }else if (bigMap){
-            workerRatio = 1.5f + (economyManager.staticIncome/100f);
+            workerRatio = 1.5f + allymod + ((economyManager.staticIncome * allymod)/100f);
         }else{
-            workerRatio = 2f + (economyManager.staticIncome/100f);
+            workerRatio = 2f + allymod + ((economyManager.staticIncome)/100f);
+        }
+
+        if ((float) graphManager.getOwnedSpots().size()/(float) graphManager.getMetalSpots().size() > 0.5){
+            workerRatio *= 1.5f;
         }
 
         if (facType.equals("factorytank") || facType.equals("factoryship") || facType.equals("factoryplane") || facType.equals("factorygunship")){
@@ -502,12 +550,12 @@ public class FactoryManager extends Module {
         }
 
         if ((float) numWorkers < Math.floor(income/metalratio) + warManager.miscHandler.striders.size() + numFunnels + ((economyManager.fusions.size() + factories.size() - 1) * 3)
-                && (fv > workerValue * workerRatio || numWorkers == 0 || (economyManager.effectiveIncome > 15 && economyManager.metal/economyManager.maxStorage > 0.8 && economyManager.energy/economyManager.maxStorage > 0.5))
-                || (earlyWorker && numWorkers < 2)
+                && (fv > workerValue * workerRatio || numWorkers == 0 || (economyManager.effectiveIncome > 15 && economyManager.metal/economyManager.maxStorage > 0.8 && economyManager.energy/economyManager.maxStorage > 0.5 && ai.mergedAllies == 0))
+                || (earlyWorker && ai.mergedAllies < 4 && numWorkers < 2 + (2 * ai.mergedAllies) && !facType.equals("factoryplane") && !facType.equals("factorygunship"))
                 /*|| (bigMap && numWorkers < 3 && !facType.equals("factorytank"))*/) {
             return true;
-        }else if ((fac.raiderSpam >= 0 && numWorkers < 3 && !facType.equals("factorytank"))
-                || (fac.raiderSpam >= 0 && earlyWorker && facType.equals("factorytank") && numWorkers < 3)){
+        }else if ((fac.raiderSpam >= 0 && numWorkers < 3 * (1 + ai.mergedAllies) && !facType.equals("factorytank") && !facType.equals("factoryplane") && !facType.equals("factorygunship"))
+                || (fac.raiderSpam >= 0 && earlyWorker && facType.equals("factorytank") && numWorkers < 3 * (1 + ai.mergedAllies))){
             return true;
         }
         return false;
@@ -528,7 +576,7 @@ public class FactoryManager extends Module {
                 return "spherepole";
             }
             if ((!glaiveSpam && economyManager.effectiveIncome > 15 && numGlaives > 1 && Math.random() > 0.9)) {
-                fac.expensiveRaiderSpam -= (int) Math.min(4, Math.max(2, Math.floor(economyManager.effectiveIncome / 10))) - 1;
+                fac.expensiveRaiderSpam -= (int) Math.min(4, Math.max(2, Math.floor(economyManager.adjustedIncome / 10))) - 1;
                 return "spherepole";
             } else {
                 if (warManager.raiderHandler.soloRaiders.size() > 1) {
@@ -543,11 +591,11 @@ public class FactoryManager extends Module {
         }
 
         if (((enemyHasAir || enemyHasDrones) && warManager.AAs.size() < 3) ||
-                (enemyHasAir && Math.random() > 0.70 + (0.05 * ((float) factories.size()-1f)))){
+                (enemyHasAir && Math.random() > 0.70 + (0.05 * ((float) factories.size()-(1f + ai.mergedAllies))))){
             return "armjeth";
         }
 
-        if (!economyManager.fusions.isEmpty() && numSupports == 0 && warManager.squadHandler.squads.size() > 0 && Math.random() > 0.75){
+        if (!economyManager.fusions.isEmpty() && numErasers < 1 + (ai.mergedAllies/2) && warManager.squadHandler.squads.size() > 0 && Math.random() > 0.75){
             return "spherecloaker";
         }
 
@@ -557,7 +605,7 @@ public class FactoryManager extends Module {
 
         if (economyManager.effectiveIncome > 30 && Math.random() > 0.975){
             glaiveSpam = true;
-            fac.raiderSpam -= Math.min(12, Math.max(6, (int) Math.floor(economyManager.effectiveIncome/5f)));
+            fac.raiderSpam -= Math.min(12, Math.max(6, (int) Math.floor(economyManager.adjustedIncome/5f)));
         }
 
         double rand = Math.random();
@@ -632,7 +680,7 @@ public class FactoryManager extends Module {
             return "shieldfelon";
         }
 
-        if (economyManager.adjustedIncome > 45 && economyManager.energy > 100 && numSupports == 0 && Math.random() > 0.75){
+        if (economyManager.adjustedIncome > 45 && economyManager.energy > 100 && numAspis == 0 && Math.random() > 0.75){
             fac.raiderSpam--;
             return "core_spectre";
         }
@@ -675,24 +723,24 @@ public class FactoryManager extends Module {
         }
 
         if (((enemyHasAir || enemyHasDrones) && warManager.AAs.size() < 2) ||
-                (enemyHasAir && Math.random() > 0.80 + (0.05 * ((float) factories.size()-1f)))){
+                (enemyHasAir && Math.random() > 0.80 + (0.05 * ((float) factories.size()-(1f + ai.mergedAllies))))){
             return "amphaa";
         }
 
-        if (bigMap && economyManager.effectiveIncome < 25) {
+        if (bigMap && economyManager.adjustedIncome < 25) {
             fac.raiderSpam -= 3;
         }else{
             fac.raiderSpam -= 1;
         }
         double rand = Math.random();
         if (economyManager.adjustedIncome < 35) {
-            if (rand > 0.33) {
+            if (rand > 0.20) {
                 return "amphfloater";
             } else {
                 return "amphriot";
             }
         }else{
-            if (rand > 0.4) {
+            if (rand > 0.25) {
                 return "amphfloater";
             } else if (rand > 0.1) {
                 return "amphriot";
@@ -714,7 +762,7 @@ public class FactoryManager extends Module {
         }
 
         if (fac.raiderSpam < 0) {
-            if ((economyManager.effectiveIncome > 15 && Math.random() > 0.7) || numScouts == 0 || (bigMap && numScouts < 2)){
+            if ((economyManager.adjustedIncome > 15 && Math.random() > 0.7) || numScouts == 0 || (bigMap && numScouts < 2)){
                 return "corfav";
             }
             fac.raiderSpam++;
@@ -726,13 +774,13 @@ public class FactoryManager extends Module {
         }
 
         if (((enemyHasAir || enemyHasDrones) && warManager.AAs.size() < 3) ||
-                (enemyHasAir && Math.random() > 0.70 + (0.05 * ((float) factories.size()-1f)))){
+                (enemyHasAir && Math.random() > 0.70 + (0.05 * ((float) factories.size()-(1f + ai.mergedAllies))))){
             return "vehaa";
         }
 
         if (((!bigMap && economyManager.adjustedIncome > 30) || economyManager.adjustedIncome > 60)
-                && enemyHasHeavyPorc && warManager.enemyPorcValue > artyValue && Math.random() > 0.75){
-            if (Math.random() > 0.5) {
+                && warManager.enemyPorcValue > artyValue && Math.random() > 0.65){
+            if (enemyHasHeavyPorc && Math.random() > 0.9) {
                 return "armmerl";
             }else{
                 return "corgarp";
@@ -740,7 +788,7 @@ public class FactoryManager extends Module {
         }
 
         if (Math.random() > 0.85){
-            fac.raiderSpam -= Math.min(8f, Math.max(4f, Math.floor(economyManager.effectiveIncome / 4f))) + 1;
+            fac.raiderSpam -= Math.min(8f, Math.max(4f, Math.floor(economyManager.adjustedIncome / 4f))) + 1;
         }
 
         double rand = Math.random();
@@ -782,7 +830,7 @@ public class FactoryManager extends Module {
                 return "hoverassault";
             }
             if ((economyManager.effectiveIncome > 15 && numScouts > 1 && Math.random() > 0.85)) {
-                fac.expensiveRaiderSpam -= (int) Math.min(4, Math.max(2, Math.floor(economyManager.effectiveIncome / 10))) - 1;
+                fac.expensiveRaiderSpam -= (int) Math.min(6, Math.max(2, Math.floor(economyManager.adjustedIncome / 10))) - 1;
                 return "hoverassault";
             } else {
                 if (warManager.raiderHandler.soloRaiders.size() > 1) {
@@ -821,7 +869,7 @@ public class FactoryManager extends Module {
     }
 
     private String getTanks(Factory fac) {
-        if (needWorkers(fac)) {
+        if (needWorkers(fac) || (fac.raiderSpam >= 0 && numWorkers < 2)) {
             return "coracv";
         }
 
@@ -845,7 +893,7 @@ public class FactoryManager extends Module {
         }
 
         if (((enemyHasAir || enemyHasDrones) && warManager.AAs.size() < 3) ||
-                (enemyHasAir && Math.random() > 0.70 + (0.05 * ((float) factories.size()-1f)))){
+                (enemyHasAir && Math.random() > 0.70 + (0.05 * ((float) factories.size()-(1f + ai.mergedAllies))))){
             return "corsent";
         }
 
@@ -857,7 +905,7 @@ public class FactoryManager extends Module {
         fac.raiderSpam -= 2;
         double rand = Math.random();
         if (economyManager.adjustedIncome < 35) {
-            if (numBanishers > numReapers) {
+            if (numBanishers * 2 > numReapers) {
                 fac.raiderSpam--;
                 return "correap";
             } else {
@@ -865,7 +913,7 @@ public class FactoryManager extends Module {
             }
         }else{
             if (rand > 0.1) {
-                if (numBanishers > numReapers){
+                if (numBanishers * 3 > numReapers){
                     fac.raiderSpam--;
                     return "correap";
                 }else {
@@ -899,7 +947,7 @@ public class FactoryManager extends Module {
         }
 
         if (((enemyHasAir || enemyHasDrones) && warManager.AAs.size() < 3) ||
-                (enemyHasAir && Math.random() > 0.80 + (0.05 * ((float) factories.size()-1f)))){
+                (enemyHasAir && Math.random() > 0.80 + (0.05 * ((float) factories.size()-(1f + ai.mergedAllies))))){
             return "spideraa";
         }
 
@@ -932,9 +980,12 @@ public class FactoryManager extends Module {
 
     private String getGunship(Factory fac){
         if (fac.raiderSpam < 0){
-            if (Math.random() > 0.8 || economyManager.effectiveIncome < 15) {
+            /*if (Math.random() > 0.8 || economyManager.effectiveIncome < 15) {
                 fac.raiderSpam++;
                 return "armkam";
+            }*/
+            if (Math.random() > 0.5){
+                fac.raiderSpam++;
             }
             return "blastwing";
         }
@@ -944,15 +995,21 @@ public class FactoryManager extends Module {
         }
 
         if (((enemyHasAir || enemyHasDrones) && warManager.AAs.size() < 3) ||
-                (enemyHasAir && Math.random() > 0.70 + (0.05 * ((float) factories.size()-1f)))){
-            return "gunshipaa";
+                (enemyHasAir && Math.random() > 0.35)){
+            if (Math.random() > 0.5) {
+                return "gunshipaa";
+            }
+            return "gunshipsupport";
         }
 
         fac.raiderSpam--;
-        double rand = Math.random();
-        if (rand > 0.60){
+        if (economyManager.adjustedIncome < 30f){
             return "gunshipsupport";
-        }else if (rand > 0.01) {
+        }
+        double rand = Math.random();
+        if (rand > 0.4){
+            return "gunshipsupport";
+        }else if (rand > 0.075) {
             return "armbrawl";
         }else{
             return "blackdawn";
@@ -965,9 +1022,21 @@ public class FactoryManager extends Module {
             return "armca";
         }
 
-        if (numRavens <= economyManager.effectiveIncome/12 || economyManager.adjustedIncome < 35) {
-            return "corshad";
+        if (fac.raiderSpam < 0){
+            fac.raiderSpam++;
+            return "fighter";
         }
+
+        if (economyManager.adjustedIncome > 35) {
+            fac.raiderSpam--;
+        }
+        if (numRavens <= (economyManager.baseIncome/(12 * (1 + (0.5 * ai.mergedAllies)))) * 1.5f || economyManager.adjustedIncome < 35 || Math.random() > 0.35) {
+            if (Math.random() > 0.2) {
+                return "corshad";
+            }
+            return "corhurc2";
+        }
+        fac.raiderSpam -= 3;
         return "armcybr";
     }
 
@@ -981,7 +1050,7 @@ public class FactoryManager extends Module {
         }
 
         double rand = Math.random();
-        if (warManager.squadHandler.nextShieldSquad != null){
+        if (warManager.squadHandler.nextShieldSquad != null && (ai.mergedAllies == 0 || rand > 0.5)){
             return "funnelweb";
         }
 
