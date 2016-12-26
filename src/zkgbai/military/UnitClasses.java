@@ -7,42 +7,28 @@ import java.util.List;
  * Created by aeonios on 11/14/2015.
  */
 public class UnitClasses {
-    public List<String> smallRaiders;
-    public List<String> mediumRaiders;
-    public List<String> soloRaiders;
-    public List<String> assaults;
-    public List<String> arties;
-    public List<String> striders;
-    public List<String> airMobs;
-    public List<String> shieldMobs;
-    public List<String> mobSupports;
-    public List<String> loners;
-    public List<String> AAs;
-    public List<String> planes;
-    public List<String> bombers;
-    public List<String> sappers;
+    public List<String> smallRaiders = new ArrayList<String>();
+    public List<String> mediumRaiders = new ArrayList<String>();
+    public List<String> soloRaiders = new ArrayList<String>();
+    public List<String> assaults = new ArrayList<String>();
+    public List<String> arties = new ArrayList<String>();
+    public List<String> striders = new ArrayList<String>();
+    public List<String> airMobs = new ArrayList<String>();
+    public List<String> shieldMobs = new ArrayList<String>();
+    public List<String> mobSupports = new ArrayList<String>();
+    public List<String> loners = new ArrayList<String>();
+    public List<String> AAs = new ArrayList<String>();
+    public List<String> planes = new ArrayList<String>();
+    public List<String> bombers = new ArrayList<String>();
+    public List<String> sappers = new ArrayList<String>();
 
-    public List<String> noRetreat;
+    public List<String> noRetreat = new ArrayList<String>();
+    
+    public List<String> porcWeps = new ArrayList<String>();
 
     private static UnitClasses instance = null;
 
     private UnitClasses(){
-        this.smallRaiders = new ArrayList<String>();
-        this.mediumRaiders = new ArrayList<String>();
-        this.soloRaiders = new ArrayList<String>();
-        this.assaults = new ArrayList<String>();
-        this.arties = new ArrayList<String>();
-        this.striders = new ArrayList<String>();
-        this.airMobs = new ArrayList<String>();
-        this.shieldMobs = new ArrayList<String>();
-        this.mobSupports = new ArrayList<String>();
-        this.loners = new ArrayList<String>();
-        this.AAs = new ArrayList<String>();
-        this.planes = new ArrayList<String>();
-        this.bombers = new ArrayList<String>();
-        this.sappers = new ArrayList<String>();
-        this.noRetreat = new ArrayList<String>();
-
         // raiders
         smallRaiders.add("armpw");
         smallRaiders.add("corak");
@@ -53,10 +39,10 @@ public class UnitClasses {
         mediumRaiders.add("corgator");
         mediumRaiders.add("armkam");
         mediumRaiders.add("spherepole");
-
-        soloRaiders.add("hoverassault");
+        mediumRaiders.add("hoverassault");
+        mediumRaiders.add("panther");
+        
         soloRaiders.add("logkoda");
-        soloRaiders.add("panther");
         soloRaiders.add("armflea");
         soloRaiders.add("corfav");
         soloRaiders.add("corstorm");
@@ -71,7 +57,6 @@ public class UnitClasses {
         assaults.add("amphriot");
         assaults.add("corlevlr");
         assaults.add("corraid");
-        assaults.add("capturecar");
         assaults.add("nsaclash");
         assaults.add("hoverriot");
         assaults.add("spiderassault");
@@ -93,6 +78,7 @@ public class UnitClasses {
         shieldMobs.add("corthud");
         shieldMobs.add("shieldfelon");
         shieldMobs.add("funnelweb");
+        shieldMobs.add("capturecar");
 
         // mobSupport: things that increase the strength of mobs
         mobSupports.add("spherecloaker");
@@ -105,18 +91,20 @@ public class UnitClasses {
         striders.add("armorco");
 
         // loners; strider-like stuff that does better on its own than in mobs
-        loners.add("armsnipe");
-        loners.add("armham");
-        loners.add("amphassault");
         loners.add("cormist");
-        loners.add("corgarp");
-        loners.add("armmerl");
-        loners.add("armmanni");
-        loners.add("cormart");
         loners.add("corgol");
         loners.add("armcrabe");
-        loners.add("trem");
-        loners.add("armraven");
+        
+        // arties; stuff that has long range and can attack high threat areas without suiciding
+        arties.add("armsnipe");
+        arties.add("armham");
+        arties.add("amphassault");
+        arties.add("corgarp");
+        arties.add("armmerl");
+        arties.add("armmanni");
+        arties.add("cormart");
+        arties.add("trem");
+        arties.add("armraven");
 
         // Anti-air units
         AAs.add("armjeth");
@@ -160,6 +148,16 @@ public class UnitClasses {
         noRetreat.add("corshad");
         noRetreat.add("blastwing");
         noRetreat.add("fighter");
+        
+        // a list of porc weapon def names, for identifying when things get attacked by porc that's out of los
+        porcWeps.add("corllt_laser");
+        porcWeps.add("corrl_armrl_missile");
+        porcWeps.add("armpb_gauss");
+        porcWeps.add("armdeva_armdeva_weapon");
+        porcWeps.add("corhlt_laser");
+        porcWeps.add("cordoom_plasma");
+        porcWeps.add("armanni_ata");
+        porcWeps.add("corbhmth_plasma");
     }
 
     public static UnitClasses getInstance(){

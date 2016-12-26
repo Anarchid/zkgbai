@@ -16,6 +16,7 @@ public class Squad {
 	private Fighter leader;
 	private int index = 0;
 	public AIFloat3 target;
+	int firstRallyFrame = 0;
 	
 	public Squad(){
 		this.fighters = new ArrayList<Fighter>();
@@ -88,6 +89,12 @@ public class Squad {
 	}
 
 	public boolean isRallied(int frame){
+		if (firstRallyFrame == 0){
+			firstRallyFrame = frame;
+		}
+		if (frame - firstRallyFrame > 900){
+			return true;
+		}
 		boolean rallied = true;
 		for (Fighter f: fighters){
 			if (distance(target, f.getPos()) > 300 && distance(leader.getPos(), f.getPos()) > 300){

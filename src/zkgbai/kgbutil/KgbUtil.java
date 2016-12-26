@@ -32,6 +32,24 @@ public class KgbUtil {
         dir.z = start.z + (z * distance);
         return dir;
     }
+    
+    public static AIFloat3 getAngularPoint(AIFloat3 start, AIFloat3 dest, float radius){
+        AIFloat3 radir = new AIFloat3();
+        float x = dest.x - start.x;
+        float z = dest.z - start.z;
+        double angle = Math.atan2(z, x);
+        if (Math.random() > 0.5){
+            angle -= Math.random()*0.3*Math.PI;
+        }else{
+            angle += Math.random()*0.3*Math.PI;
+        }
+    
+        double vx = Math.cos(angle);
+        double vz = Math.sin(angle);
+        radir.x = (float) (start.x + radius*vx);
+        radir.z = (float) (start.z + radius*vz);
+        return radir;
+    }
 
     public static float distance(AIFloat3 v0, AIFloat3 v1){
         float dx = v0.x - v1.x;

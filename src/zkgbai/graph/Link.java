@@ -66,10 +66,15 @@ public class Link {
 		}
 
 		public boolean isOwned(){
-			if (v0.owned && v1.owned){
-				return true;
-			}
-			return false;
+			return (v0.owned && v1.owned) || ((v0.owned || v1.owned) && !v0.hostile && !v0.enemyShadowed && !v1.hostile && !v1.enemyShadowed);
+		}
+	
+		public boolean isAllyShadowed(){
+			return (v0.allyShadowed || v1.allyShadowed) && !v0.hostile && !v1.hostile;
+		}
+		
+		public boolean isHostile(){
+			return v0.hostile || v0.enemyShadowed || v1.hostile || v1.enemyShadowed;
 		}
 		
 		public void checkConnected() {

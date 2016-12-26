@@ -105,15 +105,10 @@ public class TerrainAnalyzer {
         if (ai.allies.size() > 2){
             debug(taMsg + "Allies detected, enabling air starts!");
             initialFacList.add("factorygunship");
-            initialFacList.add("factoryplane");
         }
 
         if (initialFacList.size() < 3 || (initialFacList.size() < ai.mergedAllies + 1)) {
-            debug(taMsg + "Terrain Analysis Failed! Enabling random factories.");
-            if (!initialFacList.contains("factorygunship")) {
-                initialFacList.add("factorygunship");
-                initialFacList.add("factoryplane");
-            }
+            debug(taMsg + "Terrain Analysis Failed (or team was too big)! Enabling random factories.");
             if (!initialFacList.contains("factorycloak")) {
                 initialFacList.add("factorycloak");
                 initialFacList.add("factoryshield");
@@ -127,6 +122,12 @@ public class TerrainAnalyzer {
             }
             if (!initialFacList.contains("factoryhover")) {
                 initialFacList.add("factoryhover");
+            }
+            if (initialFacList.size() < ai.mergedAllies + 1){
+                initialFacList.add("factoryplane");
+            }
+            if (initialFacList.size() < ai.mergedAllies + 1 && !initialFacList.contains("factoryspider")) {
+                initialFacList.add("factoryspider");
             }
         }
     }

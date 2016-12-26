@@ -117,7 +117,7 @@ public class BomberHandler {
     }
 
     private void assignBombers(){
-        AIFloat3 target = warManager.getAirTarget(graphManager.getAllyCenter(), true);
+        AIFloat3 target = warManager.getBomberTarget(graphManager.getAllyCenter(), true);
 
         List<Integer> swap = new ArrayList<Integer>();
         for (Fighter b:activeBombers.values()){

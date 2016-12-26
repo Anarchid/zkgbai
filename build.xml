@@ -20,36 +20,39 @@
   <target name="compile" depends="init"
         description="compile the source " >
     <!-- Compile the java code from ${src} into ${build} -->
-    <javac srcdir="${src}" destdir="${build}" debug="true">
-        <classpath>
-            <fileset dir="jlib">
-                <include name="*.jar"/>
-            </fileset>
-        </classpath>
-  	</javac>
-  </target>
+      <!-- use this line for debug compile -->
+     <javac srcdir="${src}" destdir="${build}" debug="true">
+      <!-- use this line for release compile -->
+       <!--<javac srcdir="${src}" destdir="${build}"> -->
+         <classpath>
+             <fileset dir="jlib">
+                 <include name="*.jar"/>
+             </fileset>
+         </classpath>
+       </javac>
+   </target>
 
-  <target name="dist" depends="compile" description="generate the distribution SkirmishAI.jar" >
-    <jar jarfile="${dist}/SkirmishAI.jar" basedir="${build}"/>
-    <mkdir dir="${dist}/jlib"/>
-  	<copy overwrite="true" todir="${dist}">
-  	    <fileset dir="${metadata}"/>
-  	</copy>
-  	<copy overwrite="true" todir="dist/jlib">
-  	    <fileset dir="${jlib}"/>
-  	</copy>
-  </target>
+   <target name="dist" depends="compile" description="generate the distribution SkirmishAI.jar" >
+     <jar jarfile="${dist}/SkirmishAI.jar" basedir="${build}"/>
+     <mkdir dir="${dist}/jlib"/>
+       <copy overwrite="true" todir="${dist}">
+           <fileset dir="${metadata}"/>
+       </copy>
+       <copy overwrite="true" todir="dist/jlib">
+           <fileset dir="${jlib}"/>
+       </copy>
+   </target>
 
-  <target name="install" depends="dist">
-    <mkdir dir="${installDir}" />
-    <copy overwrite="true" todir="${installDir}">
-      <fileset dir="${dist}/" />
-    </copy>
-  </target>
+   <target name="install" depends="dist">
+     <mkdir dir="${installDir}" />
+     <copy overwrite="true" todir="${installDir}">
+       <fileset dir="${dist}/" />
+     </copy>
+   </target>
 
-  <target name="clean"
-        description="clean up" >
-    <delete dir="${build}"/>
-    <delete dir="${dist}"/>
-  </target>
-</project>
+   <target name="clean"
+         description="clean up" >
+     <delete dir="${build}"/>
+     <delete dir="${dist}"/>
+   </target>
+ </project>

@@ -13,9 +13,10 @@ import static zkgbai.kgbutil.KgbUtil.*;
 
 public class Raider extends Fighter {
     private ScoutTask task;
-    private int lastTaskFrame;
+    public int lastTaskFrame;
     private AIFloat3 lastpos;
     public int index = 0;
+    public boolean assigned = false;
     public RaiderSquad squad;
 
     public Raider(Unit u, float metal) {

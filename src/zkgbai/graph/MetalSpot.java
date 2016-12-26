@@ -3,6 +3,7 @@ package zkgbai.graph;
 import java.util.ArrayList;
 
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.Unit;
 
 public class MetalSpot {
 	AIFloat3 position;
@@ -13,6 +14,7 @@ public class MetalSpot {
 	public boolean hostile = false;
 	public boolean enemyShadowed = false;
 	public boolean allyShadowed = false;
+	public Unit extractor = null;
 
 	int lastSeen = 0;
 	public ArrayList<Pylon> pylons;
@@ -66,9 +68,9 @@ public class MetalSpot {
 		if (enemyShadowed){
 			return true;
 		}
-
+		
 		for (Link l:links){
-			if (!l.isOwned()) {
+			if (l.isHostile()) {
 				return true;
 			}
 		}
@@ -79,13 +81,19 @@ public class MetalSpot {
 	public boolean isConnected(){
 		int numConnected = 0;
 		for (Link l:links){
-			if (l.connected) {
+			if (l.isOwned()){
+				if (l.v0.extractor == null || l.v1.extractor == null){
+					return false;
+				}
+				if (!l.connected && l.v0.extractor.getHealth() > 0 && l.v1.extractor.getHealth() > 0 && l.v0.extractor.getRulesParamFloat("gridNumber", 0f) != l.v1.extractor.getRulesParamFloat("gridNumber", 0f)){
+					return false;
+				}
 				numConnected++;
 			}
 		}
-		if (numConnected > 1){
-			return true;
+		if (numConnected == 0){
+			return false;
 		}
-		return false;
+		return true;
 	}
 }

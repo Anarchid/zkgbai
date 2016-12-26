@@ -4,6 +4,7 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.Unit;
+import com.springrts.ai.oo.clb.Weapon;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
@@ -32,16 +33,25 @@ public class MiscHandler {
     RetreatHandler retreatHandler;
     SquadHandler squadHandler;
 
-    java.util.Map<Integer, Fighter> supports;
-    java.util.Map<Integer, Unit> sappers;
-    java.util.Map<Integer, Unit> berthas;
-    java.util.Map<Integer, Unit> swifts;
-    java.util.Map<Integer, Unit> activeSwifts;
-    public java.util.Map<Integer, Fighter> loners;
-    public java.util.Map<Integer, Strider> striders;
+    java.util.Map<Integer, Fighter> supports = new HashMap<Integer, Fighter>();
+    java.util.Map<Integer, Unit> sappers = new HashMap<Integer, Unit>();
+    java.util.Map<Integer, Unit> berthas = new HashMap<Integer, Unit>();
+    java.util.Map<Integer, Unit> swifts = new HashMap<Integer, Unit>();
+    java.util.Map<Integer, Unit> activeSwifts = new HashMap<Integer, Unit>();
+    public java.util.Map<Integer, Fighter> loners = new HashMap<Integer, Fighter>();
+    public java.util.Map<Integer, Strider> striders = new HashMap<Integer, Strider>();
+    public java.util.Map<Integer, Fighter> arties = new HashMap<Integer, Fighter>();
 
     int frame = 0;
     Resource m;
+    
+    Unit nuke = null;
+    Unit zenith = null;
+    Unit derp = null;
+    
+    int lastNukeFrame = 0;
+
+    boolean scouted = false;
 
     static final int CMD_ONECLICK_WEAPON = 35000;
 
@@ -55,14 +65,6 @@ public class MiscHandler {
         this.squadHandler = warManager.squadHandler;
 
         this.m = callback.getResourceByName("Metal");
-
-        this.supports = new HashMap<Integer, Fighter>();
-        this.loners = new HashMap<Integer, Fighter>();
-        this.sappers = new HashMap<Integer, Unit>();
-        this.berthas = new HashMap<Integer, Unit>();
-        this.swifts = new HashMap<Integer, Unit>();
-        this.activeSwifts = new HashMap<Integer, Unit>();
-        this.striders = new HashMap<Integer, Strider>();
     }
 
     public void update(int frame) {
@@ -78,21 +80,65 @@ public class MiscHandler {
                 for (Strider st : striders.values()) {
                     Unit u = st.getUnit();
                     if (!retreatHandler.isRetreating(u)) {
-                        AIFloat3 target = warManager.getSoloTarget(st.getPos(), false);
+                        AIFloat3 target;
+                        if (u.getRulesParamFloat("disarmed", 0f) > 0 || warManager.getEffectiveThreat(st.getPos()) > 0){
+                            target = graphManager.getClosestHaven(u.getPos());
+                        }else {
+                            target = warManager.getTarget(u.getPos(), false);
+                        }
                         st.fightTo(target, frame);
                     }
                 }
             }
-
-            if (frame % 45 == 0) {
-                dgunStriders();
-            }
+    
+            dgunStriders();
         }
 
+        // assign berthas
         if (frame % 150 == 0){
             for (Unit b: berthas.values()){
                 AIFloat3 target = warManager.getBerthaTarget(b.getPos());
-                b.attackArea(target, 0f, (short) 0, frame+300);
+                if (target != null) {
+                    b.attackArea(target, 0f, (short) 0, frame + 300);
+                }else{
+                    b.stop((short) 0, frame+30);
+                }
+            }
+        }
+    
+        // assign superweapons
+        if (frame % 300 == 0){
+            if (nuke != null && !warManager.enemyHasAntiNuke && nuke.getStockpile() > 0 && frame - lastNukeFrame > 1800){
+                AIFloat3 target = warManager.getSuperWepTarget(nuke);
+                if (target != null){
+                    nuke.attackArea(target, 0f, (short) 0, frame + 300);
+                    lastNukeFrame = frame;
+                }
+            }
+        }
+        
+        if (frame % 450 == 0){
+            if (zenith != null){
+                int meteors = (int) zenith.getRulesParamFloat("meteorsControlled", 0f);
+                if (meteors > 150) {
+                    AIFloat3 target = warManager.getSuperWepTarget(zenith);
+                    if (target != null) {
+                        zenith.attackArea(target, 0f, (short) 0, frame + 300);
+                    }else{
+                        zenith.stop((short) 0, frame + 10);
+                    }
+                }else{
+                    zenith.stop((short) 0, frame + 10);
+                }
+            }
+    
+            if (derp != null && !derp.isBeingBuilt()){
+                AIFloat3 target = warManager.getSuperWepTarget(derp);
+                if (target != null){
+                    derp.attackArea(target, 0f, (short) 0, frame + 300);
+                }else{
+                    derp.stop((short) 0, frame+30);
+                }
             }
         }
 
@@ -100,8 +146,28 @@ public class MiscHandler {
             for (Fighter l:loners.values()){
                 Unit u = l.getUnit();
                 if (!retreatHandler.isRetreating(u)){
-                    AIFloat3 target = warManager.getSoloTarget(l.getPos(), true);
-                    l.fightTo(target, frame);
+                    AIFloat3 target;
+                    if ((u.getRulesParamFloat("disarmed", 0f) > 0 || warManager.getEffectiveThreat(l.getPos()) > 0) && !l.getUnit().getDef().getName().equals("armcrabe")){
+                        target = graphManager.getClosestHaven(u.getPos());
+                        l.moveTo(target, frame);
+                    }else {
+                        target = warManager.getTarget(u.getPos(), false);
+                        l.fightTo(target, frame);
+                    }
+                }
+            }
+    
+            for (Fighter a:arties.values()){
+                Unit u = a.getUnit();
+                if (!retreatHandler.isRetreating(u)){
+                    AIFloat3 target;
+                    if (u.getRulesParamFloat("disarmed", 0f) > 0 || (warManager.getEffectiveThreat(a.getPos()) > 0 && a.getUnit().getDef().getName().equals("amphassault"))){
+                        target = graphManager.getClosestHaven(u.getPos());
+                        a.moveTo(target, frame);
+                    }else {
+                        target = warManager.getArtyTarget(u.getPos(), false);
+                        a.fightTo(target, frame);
+                    }
                 }
             }
         }
@@ -109,6 +175,10 @@ public class MiscHandler {
 
     public void addLoner(Fighter f){
         loners.put(f.id, f);
+    }
+    
+    public void addArty(Fighter f){
+        arties.put(f.id, f);
     }
 
     public void addSupport(Fighter f){
@@ -125,17 +195,46 @@ public class MiscHandler {
 
     public void addBertha(Unit u){
         berthas.put(u.getUnitId(), u);
+        u.setFireState(0, (short) 0, frame + 10);
+    }
+    
+    public void addNuke(Unit u){
+        nuke = u;
+    }
+    
+    public void addZenith(Unit u){
+        zenith = u;
+        u.setFireState(0, (short) 0, frame + 10);
+    }
+    
+    public void addDRP(Unit u){
+        derp = u;
+        u.setFireState(0, (short) 0, frame + 10);
+        u.setTrajectory(1, (short) 0, frame + 10);
     }
 
     public void addSwift(Unit u){
         swifts.put(u.getUnitId(), u);
-        if (swifts.size() > 4){
+        if (swifts.size() > 4 || !scouted){
+            scouted = true;
             activeSwifts.putAll(swifts);
             swifts.clear();
         }
     }
 
     public void removeUnit(Unit unit){
+        if (nuke != null && nuke.getUnitId() == unit.getUnitId()){
+            nuke = null;
+        }
+    
+        if (zenith != null && zenith.getUnitId() == unit.getUnitId()){
+            zenith = null;
+        }
+    
+        if (derp != null && derp.getUnitId() == unit.getUnitId()){
+            derp = null;
+        }
+        
         if (loners.containsKey(unit.getUnitId())){
             loners.remove(unit.getUnitId());
         }
@@ -146,6 +245,10 @@ public class MiscHandler {
 
         if (striders.containsKey(unit.getUnitId())){
             striders.remove(unit.getUnitId());
+        }
+    
+        if (arties.containsKey(unit.getUnitId())){
+            arties.remove(unit.getUnitId());
         }
 
         if (sappers.containsKey(unit.getUnitId())){
@@ -182,6 +285,67 @@ public class MiscHandler {
         }
         for (Integer key:invalidFighters){
             supports.remove(key);
+        }
+    
+        for (Fighter f:striders.values()){
+            if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != ai.teamID){
+                invalidFighters.add(f.id);
+            }
+        }
+        for (Integer key:invalidFighters){
+            striders.remove(key);
+        }
+        invalidFighters.clear();
+    
+        for (Fighter f:arties.values()){
+            if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != ai.teamID){
+                invalidFighters.add(f.id);
+            }
+        }
+        for (Integer key:invalidFighters){
+            arties.remove(key);
+        }
+        invalidFighters.clear();
+    
+        for (Unit f:sappers.values()){
+            if (f.getHealth() <= 0 || f.getTeam() != ai.teamID){
+                invalidFighters.add(f.getUnitId());
+            }
+        }
+        for (Integer key:invalidFighters){
+            sappers.remove(key);
+        }
+        invalidFighters.clear();
+    
+        for (Unit f:swifts.values()){
+            if (f.getHealth() <= 0 || f.getTeam() != ai.teamID){
+                invalidFighters.add(f.getUnitId());
+            }
+        }
+        for (Integer key:invalidFighters){
+            swifts.remove(key);
+        }
+        invalidFighters.clear();
+    
+        for (Unit f:berthas.values()){
+            if (f.getHealth() <= 0 || f.getTeam() != ai.teamID){
+                invalidFighters.add(f.getUnitId());
+            }
+        }
+        for (Integer key:invalidFighters){
+            berthas.remove(key);
+        }
+    
+        if (nuke != null && (nuke.getHealth() <= 0 || nuke.getTeam() != ai.teamID)){
+            nuke = null;
+        }
+    
+        if (zenith != null && (zenith.getHealth() <= 0 || zenith.getTeam() != ai.teamID)){
+            zenith = null;
+        }
+    
+        if (derp != null && (derp.getHealth() <= 0 || derp.getTeam() != ai.teamID)){
+            derp = null;
         }
     }
 
@@ -291,10 +455,12 @@ public class MiscHandler {
             if (!defName.equals("dante") && !defName.equals("scorpion") && !defName.equals("armbanth")){
                 continue;
             }
-            Unit target = getDgunTarget(s);
-            if (target != null && frame > s.lastDgunFrame + s.dgunReload){
-                s.getUnit().dGun(target, (short) 0, frame + 3000);
-                s.lastDgunFrame = frame;
+            
+            if (s.isDgunReady(frame)) {
+                Unit target = getDgunTarget(s);
+                if (target != null) {
+                    s.getUnit().dGun(target, (short) 0, frame + 3000);
+                }
             }
         }
     }
@@ -308,12 +474,12 @@ public class MiscHandler {
         if (s.getUnit().getDef().getName().equals("dante")) {
             for (Unit e : enemies) {
                 float cost = e.getDef().getCost(m);
-                if (e.getMaxSpeed() > 0 && (!e.getDef().isAbleToFly() || e.getDef().getName().equals("corcrw")) && cost > 200) {
+                if (e.getMaxSpeed() > 0 && !e.getDef().isAbleToFly() && cost > 200f) {
                     if (cost > bestScore) {
                         bestScore = cost;
                         target = e;
                     }
-                } else if (e.getMaxSpeed() == 0 && !e.getDef().getName().equals("wolverine_mine")) {
+                } else if (e.getMaxSpeed() == 0 && !e.getDef().getName().equals("wolverine_mine") && !e.getDef().getName().equals("corrazor")) {
                     if (cost > bestScore) {
                         bestScore = cost;
                         target = e;
@@ -324,7 +490,7 @@ public class MiscHandler {
             // scorpion and bantha both have emp dguns, so they shouldn't shoot at unarmed crap.
             for (Unit e : enemies) {
                 float cost = e.getDef().getCost(m);
-                if (!e.getDef().isAbleToAttack()){
+                if (!e.getDef().isAbleToAttack() || e.getDef().getTooltip().contains("Anti-Air")){
                     continue;
                 }
                 if (e.getMaxSpeed() > 0 && (!e.getDef().isAbleToFly() || e.getDef().getName().equals("corcrw")) && cost > 200) {

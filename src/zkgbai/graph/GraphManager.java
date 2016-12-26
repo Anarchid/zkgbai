@@ -53,11 +53,16 @@ public class GraphManager extends Module {
 
 	float avgMexValue = 0;
 	boolean graphInitialized = false;
+	boolean bigMap;
+	
+	public float territoryFraction = 0;
+	public boolean eminentTerritory = false;
 
 	static AIFloat3 nullpos = new AIFloat3(0,0,0);
 	AIFloat3 allyCenter = nullpos;
 	AIFloat3 enemyCenter = nullpos;
 	AIFloat3 mapCenter;
+	AIFloat3 allyBase = new AIFloat3(0f, 0f, 0f);
 	AIFloat3 startPos = nullpos;
 	public boolean isWaterMap = false;
 	
@@ -103,6 +108,7 @@ public class GraphManager extends Module {
 		if(grpMexes.size() > 0){
 			initializeGraph(grpMexes);
 		}
+		this.bigMap = (callback.getMap().getHeight() + callback.getMap().getWidth() > 1536);
 	}
 
 	@Override
@@ -253,8 +259,6 @@ public class GraphManager extends Module {
 			return 0;
 		}
 
-		frontLineGraphics.clear();
-
 		for(MetalSpot ms:metalSpots){
 			if(losManager.isInLos(ms.getPos())){
 				ms.lastSeen = frame;
@@ -268,6 +272,7 @@ public class GraphManager extends Module {
 					if (u.getDef().getUnitDefId() == mexDefID){
 						setOwned(ms);
 						hasMex = true;
+						ms.extractor = u;
 					}
 				}
 
@@ -298,6 +303,7 @@ public class GraphManager extends Module {
 		}
 
 		// mark front line territory
+		frontLineGraphics.clear();
 		List<MetalSpot> frontLine = getFrontLineSpots();
 		for (MetalSpot ms: frontLine){
 			AIFloat3 pos = ms.getPos();
@@ -308,6 +314,10 @@ public class GraphManager extends Module {
 		}
 
 		calcCenters();
+		
+		territoryFraction = ((float) getOwnedSpots().size()/(float) getMetalSpots().size());
+		eminentTerritory = (((float) getNeutralSpots().size()/(float) getMetalSpots().size() < (bigMap ? 0.1f : 0.15f))
+								|| (territoryFraction > 0.45f));
 
 		return 0;
 	}
@@ -361,6 +371,7 @@ public class GraphManager extends Module {
 	private void setNeutral(MetalSpot ms){
 		if (ms.owned){
 			ms.allyShadowed = true;
+			ms.extractor = null;
 
 			// unpaint territory circles
 			AIFloat3 pos = ms.getPos();
@@ -395,8 +406,7 @@ public class GraphManager extends Module {
 			}
 		}
 
-		if ((!hasAdjacentHostile && frame - ms.lastSeen > 9001)
-				|| (!hasAdjacentHostile && ms.owned)){
+		if (!hasAdjacentHostile && (hasAdjacentOwned || ms.owned)){
 			ms.enemyShadowed = false;
 		}
 		if (!hasAdjacentOwned){
@@ -469,6 +479,18 @@ public class GraphManager extends Module {
 				setHostile(ms);
 				setNeutral(ms);
 			}
+		}
+	
+		// calculate the center starting pos, for placing superweapons and things.
+		List<MetalSpot> allySpots = getAllyTerritory();
+		if (!allySpots.isEmpty()) {
+			for (MetalSpot ms : allySpots) {
+				AIFloat3 pos = ms.getPos();
+				allyBase.x += pos.x;
+				allyBase.z += pos.z;
+			}
+			allyBase.x /= (float) allySpots.size();
+			allyBase.z /= (float) allySpots.size();
 		}
     }
     
@@ -607,7 +629,7 @@ public class GraphManager extends Module {
 	}
 
 	private void calcCenters(){
-		List<MetalSpot> spots = getAllyTerritory();
+		List<MetalSpot> spots = getOwnedSpots();
 		if (spots.size() > 0){
 			AIFloat3 position = new AIFloat3();
 			int count = spots.size();
@@ -626,7 +648,7 @@ public class GraphManager extends Module {
 			allyCenter = nullpos;
 		}
 
-		spots = getEnemyTerritory();
+		spots = getEnemySpots();
 		if (spots.size() > 0){
 			AIFloat3 position = new AIFloat3();
 			int count = spots.size();
@@ -649,6 +671,10 @@ public class GraphManager extends Module {
 	public AIFloat3 getAllyCenter(){
 		return allyCenter;
 	}
+	
+	public AIFloat3 getAllyBase(){
+		return allyBase;
+	}
 
 	public AIFloat3 getMapCenter(){
 		return mapCenter;
@@ -660,10 +686,10 @@ public class GraphManager extends Module {
 
 	public AIFloat3 getClosestHaven(AIFloat3 position){
 		UnitDef building = callback.getUnitDefByName("factorygunship");
-		AIFloat3 closest = position; // returns position as a fallback
+		AIFloat3 closest = null;
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
-			if (l.isOwned() && warManager.getThreat(l.getPos()) == 0){
+			if (l.v0.owned && l.v1.owned && warManager.getThreat(l.getPos()) == 0){
 				float dist = distance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
@@ -671,16 +697,18 @@ public class GraphManager extends Module {
 				}
 			}
 		}
-		closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		if (closest != null) {
+			closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		}
 		return closest;
 	}
 
 	public AIFloat3 getClosestAirHaven(AIFloat3 position){
 		UnitDef building = callback.getUnitDefByName("factorygunship");
-		AIFloat3 closest = position; // returns position as a fallback
+		AIFloat3 closest = null;
 		float distance = Float.MAX_VALUE;
 		for (Link l:links){
-			if (l.isOwned() && warManager.getAAThreat(l.getPos()) == 0){
+			if (l.v0.owned && l.v1.owned && warManager.getAAThreat(l.getPos()) == 0 && warManager.getThreat(l.getPos()) == 0){
 				float dist = distance(position, l.getPos());
 				if (dist < distance){
 					distance = dist;
@@ -688,7 +716,49 @@ public class GraphManager extends Module {
 				}
 			}
 		}
-		closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		
+		if (closest != null) {
+			closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		}
+		return closest;
+	}
+	
+	public AIFloat3 getClosestLeadingLink(AIFloat3 position){
+		UnitDef building = callback.getUnitDefByName("factorygunship");
+		AIFloat3 closest = null;
+		float fthreat = warManager.getFriendlyThreat(position);
+		float distance = Float.MAX_VALUE;
+		for (Link l:links){
+			if ((l.v0.allyShadowed || l.v1.allyShadowed) && !l.v0.hostile && !l.v1.hostile && warManager.getEffectiveThreat(l.getPos()) <= fthreat){
+				float dist = distance(position, l.getPos());
+				if (dist < distance){
+					distance = dist;
+					closest = l.getPos();
+				}
+			}
+		}
+		if (closest != null) {
+			closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		}
+		return closest;
+	}
+	
+	public AIFloat3 getClosestAirLeadingLink(AIFloat3 position){
+		UnitDef building = callback.getUnitDefByName("factorygunship");
+		AIFloat3 closest = null;
+		float distance = Float.MAX_VALUE;
+		for (Link l:links){
+			if ((l.v0.allyShadowed || l.v1.allyShadowed) && !l.v0.hostile && !l.v1.hostile && warManager.getAAThreat(l.getPos()) == 0){
+				float dist = distance(position, l.getPos());
+				if (dist < distance){
+					distance = dist;
+					closest = l.getPos();
+				}
+			}
+		}
+		if (closest != null) {
+			closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		}
 		return closest;
 	}
 
@@ -791,7 +861,7 @@ public class GraphManager extends Module {
 	}
 
 	public AIFloat3 getClosestPylonSpot(AIFloat3 position){
-		// First find the nearest mex with less than 2 connected links
+		// First find the nearest unconnected mex
 		MetalSpot best = null;
 		float distance = Float.MAX_VALUE;
 		for (MetalSpot ms:metalSpots){
@@ -808,7 +878,7 @@ public class GraphManager extends Module {
 		Link link = null;
 		distance = Float.MAX_VALUE;
 		for (Link l:best.links){
-			if (!l.connected && l.isOwned()){
+			if (!l.connected && l.isOwned() && l.v0.extractor.getHealth() > 0 && l.v1.extractor.getHealth() > 0 && l.v0.extractor.getRulesParamFloat("gridNumber", 0f) != l.v1.extractor.getRulesParamFloat("gridNumber", 0f)){
 				if (l.length < distance){
 					distance = l.length;
 					link = l;
@@ -820,35 +890,35 @@ public class GraphManager extends Module {
     
     public AIFloat3 getOverdriveSweetSpot(AIFloat3 position, UnitDef pylon){
 		float radius = 0.9f * pylonDefs.get(pylon.getName());
-
-		// First find the nearest mex with less than 2 connected links
-		MetalSpot best = null;
 		float distance = Float.MAX_VALUE;
-		for (MetalSpot ms:metalSpots){
-			if (!ms.isConnected() && ms.owned){
-				float dist = distance(position, ms.getPos());
-				if (dist < distance){
-					distance = dist;
-					best = ms;
-				}
-			}
-		}
-
-		if (best == null){
-			best = getClosestSpot(new AIFloat3(0, 0, 0));
-		}
-
-		// then find the shortest unconnected link
-		Link link = null;
-		distance = Float.MAX_VALUE;
-		for (Link l:best.links){
-			if (!l.connected && l.isOwned()){
-				if (l.length < distance){
-					distance = l.length;
-					link = l;
-				}
-			}
-		}
+	
+	    // First find the nearest unconnected mex
+	    MetalSpot best = null;
+	    for (MetalSpot ms:metalSpots){
+		    if (!ms.isConnected()){
+			    float dist = distance(position, ms.getPos());
+			    if (dist < distance){
+				    distance = dist;
+				    best = ms;
+			    }
+		    }
+	    }
+	
+	    if (best == null) {
+		    best = getClosestSpot(new AIFloat3(0, 0, 0));
+	    }
+	
+	    // then find the shortest unconnected link
+	    Link link = null;
+	    distance = Float.MAX_VALUE;
+	    for (Link l:best.links){
+		    if (!l.connected && l.isOwned() && (l.v0.extractor == null || l.v1.extractor == null || (l.v0.extractor.getHealth() > 0 && l.v1.extractor.getHealth() > 0 && l.v0.extractor.getRulesParamFloat("gridNumber", 0f) != l.v1.extractor.getRulesParamFloat("gridNumber", 0f)))){
+			    if (l.length < distance){
+				    distance = l.length;
+				    link = l;
+			    }
+		    }
+	    }
 
     	if(link != null){
     		Pylon p = link.getConnectionHead(position);

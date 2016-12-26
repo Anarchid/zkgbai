@@ -10,10 +10,13 @@ import java.io.StringWriter;
 
 import zkgbai.economy.EconomyManager;
 import zkgbai.economy.FactoryManager;
+import zkgbai.economy.tasks.ReclaimTask;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
+import zkgbai.kgbutil.Pathfinder;
 import zkgbai.los.LosManager;
 import zkgbai.military.MilitaryManager;
+import zkgbai.military.unitwrappers.Squad;
 
 import static zkgbai.kgbutil.KgbUtil.*;
 
@@ -30,11 +33,15 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int currentFrame = 0;
     //DebugView debugView;
     boolean debugActivated;
+    boolean rsgn = false;
 
 	private boolean slave = false;
 	private int mergeTarget = Integer.MAX_VALUE;
 	public int mergedAllies = 0;
 	public int unmergedAllies = 0;
+	public int mergedAllyID = 0;
+	
+	public boolean isFFA = false;
     
 	public LosManager losManager;
 	public GraphManager graphManager;
@@ -183,14 +190,57 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     
     @Override
     public int update(int frame) {
-		if (slave && frame % 30 == 0) {
-			// give away income from communism when merged with another AI instance.
-			Resource metal = callback.getResources().get(0);
-			Resource energy = callback.getResources().get(1);
-			callback.getEconomy().sendResource(metal, Math.min(10, callback.getEconomy().getCurrent(metal)) + callback.getEconomy().getIncome(metal), mergeTarget);
-			callback.getEconomy().sendResource(energy, Math.min(10, callback.getEconomy().getCurrent(energy)) + callback.getEconomy().getIncome(energy), mergeTarget);
-		
+		if (slave) {
+			if (frame % 30 == 0) {
+				// give away income from communism when merged with another AI instance.
+				Resource metal = callback.getResources().get(0);
+				Resource energy = callback.getResources().get(1);
+				callback.getEconomy().sendResource(metal, Math.min(10, callback.getEconomy().getCurrent(metal)) + callback.getEconomy().getIncome(metal), mergeTarget);
+				callback.getEconomy().sendResource(energy, Math.min(10, callback.getEconomy().getCurrent(energy)) + callback.getEconomy().getIncome(energy), mergeTarget);
+			}
 			return 0;
+		}
+		
+		if (frame == 0){
+			callback.getGame().sendTextMessage("/say <ZKGBAI> glhf!", 0);
+		}
+
+		if (frame % 1800 == 0){
+			Pathfinder.getInstance().updateSlopeMap();
+		}
+		
+		if (frame % 300 == 0){
+			List<MetalSpot> espots = graphManager.getEnemySpots();
+			List<MetalSpot> ospots = graphManager.getOwnedSpots();
+			if (((enemyAllyTeams.size() == 1 && espots.size() > 2 * ospots.size()) || (ospots.size() == 0 && facManager.factories.isEmpty())) && frame > 18000){
+				callback.getGame().sendTextMessage("/say <ZKGBAI> gg!", 0);
+				callback.getGame().sendTextMessage("/say <ZKGBAI resigned>", 0);
+				for (Unit u : callback.getFriendlyUnits()) {
+					u.selfDestruct((short) 0, Integer.MAX_VALUE);
+				}
+			}
+		}
+		
+		if (frame % 1350 == 0){
+			if (graphManager.territoryFraction > 0.6f && frame > 18000 && (!rsgn || Math.random() > 0.5) && !graphManager.getEnemySpots().isEmpty()){
+				rsgn = true;
+				double rand = Math.random();
+				if (rand > 0.75) {
+					callback.getGame().sendTextMessage("/say <ZKGBAI> Do you know what time it is?", 0);
+					callback.getGame().sendTextMessage("/say <ZKGBAI> It's the time to resign!", 0);
+				}else if (rand > 0.5){
+					if (enemyTeams.size() > 1) {
+						callback.getGame().sendTextMessage("/say <ZKGBAI> Resign lobsters!", 0);
+					}else {
+						callback.getGame().sendTextMessage("/say <ZKGBAI> Resign lobster!", 0);
+					}
+				}else if (rand > 0.25){
+					callback.getGame().sendTextMessage("/say <ZKGBAI> It's over, resign already.", 0);
+				}else{
+					callback.getGame().sendTextMessage("/say <ZKGBAI> Having trouble?", 0);
+					callback.getGame().sendTextMessage("/say <ZKGBAI> Type \"!resign\" for help.", 0);
+				}
+			}
 		}
 		
     	currentFrame = frame;
@@ -207,11 +257,11 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
     @Override
     public int message(int player, String message) {
-	    /*if (message.equals("kgbdebug")){
-			for (MetalSpot ms:graphManager.getEnemyTerritory()){
-				callback.getMap().getDrawer().addPoint(ms.getPos(), "enemy mex");
-			}
-		}*/
+	    if (!slave && message.equals("kgbdebug")){
+		    for (MetalSpot ms: graphManager.getFrontLineSpots()){
+		    	callback.getMap().getDrawer().addPoint(ms.getPos(), "Front Line");
+		    }
+		}
 
 		for (Module module : modules) {
 	    	try {
@@ -230,7 +280,6 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			List<Unit> l = new ArrayList();
 			l.add(unit);
 			callback.getEconomy().sendUnits(l, mergeTarget);
-			return 0;
 		}
 
 	    for (Module module : modules) {
@@ -478,13 +527,14 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	for(Team i:enemies){
     		int enemyTeam = i.getTeamId(); 
     		int allyTeam = callback.getGame().getTeamAllyTeam(enemyTeam);
-    		
-    		enemyTeams.add(enemyTeam);
-			if(allyTeam != this.allyTeamID){
-				if(!enemyAllyTeams.contains(allyTeam)){
-					enemyAllyTeams.add(allyTeam);
-				}
-			}
+    		if (!callback.getGame().getRulesParamString("allyteam_short_name_" + allyTeam, "").equals("Neutral")) {
+			    enemyTeams.add(enemyTeam);
+			    if (allyTeam != this.allyTeamID) {
+				    if (!enemyAllyTeams.contains(allyTeam)) {
+					    enemyAllyTeams.add(allyTeam);
+				    }
+			    }
+		    }
     	}
     }
 
@@ -646,6 +696,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 				}
 			}else if (isIngroup(tID)) {
 				mergedAllies++;
+				mergedAllyID = tID;
 			}else{
 				unmergedAllies++;
 			}

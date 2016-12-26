@@ -25,14 +25,18 @@ public class Factory extends Worker {
             boolean bigMap = (callback.getMap().getHeight() + callback.getMap().getWidth() > 1664);
             if (bigMap){
                 raiderSpam = -9;
-
-                if (u.getDef().getName().equals("factorytank")){
-                    raiderSpam = -6;
+            }
+    
+            if (u.getDef().getName().equals("factorytank")){
+                if (bigMap) {
+                    raiderSpam = -3;
+                }else{
+                    raiderSpam = -2;
                 }
             }
 
             if (u.getDef().getName().equals("factorygunship")){
-                raiderSpam = -4;
+                raiderSpam = -2;
             }
 
             if (u.getDef().getName().equals("factoryveh")) {
@@ -44,12 +48,10 @@ public class Factory extends Worker {
             }
 
             if (u.getDef().getName().equals("factoryhover")){
+                raiderSpam = -7;
                 if (bigMap) {
-                    raiderSpam = -7;
-                } else {
-                    raiderSpam = -6;
+                    expensiveRaiderSpam = -2;
                 }
-                expensiveRaiderSpam = -1;
             }
 
             if (u.getDef().getName().equals("factoryspider")){
@@ -61,7 +63,7 @@ public class Factory extends Worker {
             }
 
             if (u.getDef().getName().equals("factoryplane")){
-                raiderSpam = 0;
+                raiderSpam = -1;
             }
         }
     }

@@ -2,8 +2,12 @@ package zkgbai.economy;
 
 import com.springrts.ai.oo.AIFloat3;
 import zkgbai.economy.tasks.WorkerTask;
+import static zkgbai.kgbutil.KgbUtil.*;
 
 import com.springrts.ai.oo.clb.Unit;
+import zkgbai.kgbutil.Pathfinder;
+
+import java.util.Deque;
 
 public class Worker {
 	private Unit unit;
@@ -13,6 +17,8 @@ public class Worker {
 	public int chickenFrame;
 	AIFloat3 lastpos = null;
 	int lastTaskFrame = 0;
+	static Pathfinder pathfinder = null;
+	protected static final short OPTION_SHIFT_KEY = (1 << 5);
 	
 	Worker(Unit unit){
 		this.unit = unit;
@@ -21,6 +27,10 @@ public class Worker {
 		this.isChicken = false;
 		this.chickenFrame = 0;
 		this.lastpos = unit.getPos();
+		
+		if (pathfinder == null){
+			pathfinder = Pathfinder.getInstance();
+		}
 	}
 	
 	public void setTask(WorkerTask task, int frame){
@@ -66,24 +76,63 @@ public class Worker {
 		}
 		return unstuck;
 	}
-
-	protected float distance( AIFloat3 pos1,  AIFloat3 pos2){
-		float x1 = pos1.x;
-		float z1 = pos1.z;
-		float x2 = pos2.x;
-		float z2 = pos2.z;
-		return (float) Math.sqrt((x1-x2)*(x1-x2)+(z1-z2)*(z1-z2));
+	
+	public void moveTo(AIFloat3 pos, int frame){
+		Deque<AIFloat3> path = pathfinder.findPath(unit, getDirectionalPoint(pos, unit.getPos(), unit.getDef().getBuildDistance()), pathfinder.AVOID_ENEMIES);
+		unit.stop((short) 0, frame);
+		
+		unit.moveTo(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
+		if (path.size() > 2){
+			path.poll();
+			path.poll();
+		}
+		
+		if (path.isEmpty()) {
+			return; // pathing failed
+		} else {
+			unit.moveTo(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
+			
+			int pathSize = Math.min(5, path.size());
+			int i = 0;
+			while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
+				unit.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 3000);
+				i++;
+				// skip every two of three waypoints except the last, since they're not very far apart.
+				if (path.size() > 2) {
+					path.poll();
+					path.poll();
+				}
+			}
+		}
 	}
-
-	protected AIFloat3 getRadialPoint(AIFloat3 position, Float radius){
-		// returns a random point lying on a circle around the given position.
-		AIFloat3 pos = new AIFloat3();
-		double angle = Math.random()*2*Math.PI;
-		double vx = Math.cos(angle);
-		double vz = Math.sin(angle);
-		pos.x = (float) (position.x + radius*vx);
-		pos.z = (float) (position.z + radius*vz);
-		return pos;
+	
+	public void retreatTo(AIFloat3 pos, int frame){
+		Deque<AIFloat3> path = pathfinder.findPath(unit, pos, pathfinder.AVOID_ENEMIES);
+		unit.stop((short) 0, frame);
+		
+		unit.moveTo(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
+		if (path.size() > 2){
+			path.poll();
+			path.poll();
+		}
+		
+		if (path.isEmpty()) {
+			return; // pathing failed
+		} else {
+			unit.moveTo(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
+			
+			int pathSize = Math.min(5, path.size());
+			int i = 0;
+			while (!path.isEmpty()) {
+				unit.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 3000);
+				i++;
+				// skip every two of three waypoints except the last, since they're not very far apart.
+				if (path.size() > 2) {
+					path.poll();
+					path.poll();
+				}
+			}
+		}
 	}
 
 	@Override

@@ -27,10 +27,13 @@ public class Enemy {
 	public boolean isRaider = false;
 	boolean isFlamer = false;
 	public boolean isArty = false;
-	boolean isAA = false;
+	public boolean isAA = false;
+	public boolean isPorc = false;
 	boolean isSuperWep = false;
 	boolean isMinorCancer = false;
 	boolean isMajorCancer = false;
+	boolean isNanoSpam = false;
+	boolean isStrong = false;
 	float maxObservedSpeed = 0;
 	
 	Enemy(Unit unit, float cost){
@@ -44,6 +47,7 @@ public class Enemy {
 		if(def != null){
 			updateFromUnitDef(def, cost);
 			this.ud = def;
+			checkNano();
 		}else{
 			this.value = 50;
 			this.position = unit.getPos();
@@ -62,6 +66,14 @@ public class Enemy {
 	@Override
 	public int hashCode(){
 		return unitID;
+	}
+	
+	void checkNano(){
+		if (unit.isBeingBuilt() && unit.getHealth()/unit.getMaxHealth() < 0.25){
+			isNanoSpam = true;
+		}else{
+			isNanoSpam = false;
+		}
 	}
 	
 	void setIdentified(){
@@ -97,17 +109,21 @@ public class Enemy {
 		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
-			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("screamer") || u.getName().equals("corflak") || defName.equals("amphraider3"))
+			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("screamer") || u.getName().equals("corflak"))
 					&& !defName.equals("dante")){
 				// identify riots
 				this.isRiot = true;
+			}
+			
+			if (defName.equals("corhlt") || defName.equals("amphraider3")){
+				isStrong = true;
 			}
 
 			for (WeaponMount w:u.getWeaponMounts()){
 				WeaponDef wd = w.getWeaponDef();
 				if (wd.getCustomParams().containsKey("setunitsonfire")){
 					if (!u.getTooltip().contains("Arti")){
-						this.isRiot = true;
+						this.isStrong = true;
 					}
 					this.isFlamer = true;
 				}
@@ -132,6 +148,10 @@ public class Enemy {
 					|| ud.getName().equals("mahlazer")){
 				this.isSuperWep = true;
 			}
+			
+			if (isStatic && !isAA && getDanger() > 0f){
+				isPorc = true;
+			}
 		}		
 		this.speed = u.getSpeed()/30;
 	}
@@ -151,6 +171,10 @@ public class Enemy {
 			if (!ud.isAbleToAttack() || isSuperWep){
 				return 0;
 			}
+			
+			if (unit.getRulesParamFloat("comm_level", 0f) > 1) {
+				isStrong = true;
+			}
 
 			if (unit.getHealth() > 0) {
 				health = unit.getHealth();
@@ -159,17 +183,18 @@ public class Enemy {
 			}else{
 				health = ud.getHealth();
 			}
-			danger = (ud.getPower() + health)/10;
+			danger = (ud.getPower() + health)/10f;
 
 			if (isFlamer || ud.getName().equals("arm_venom") || ud.getName().equals("amphraider2")){
-				danger += 100;
+				danger += 100f;
 			}
-			if (isRiot){
-				danger *= 2;
-			}
-			if ((isArty && !ud.getName().equals("amphfloater"))
+			if (isRiot || isStrong){
+				danger *= 2f;
+			}else if ((isArty && !ud.getName().equals("amphfloater"))
 					|| ud.isBuilder()){
-				danger /= 3;
+				danger /= 3f;
+			}else if ((isStatic && isAA)){
+				danger *= 5f;
 			}
 		}
 		return danger;

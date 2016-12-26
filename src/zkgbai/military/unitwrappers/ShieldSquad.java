@@ -14,7 +14,8 @@ public class ShieldSquad extends Squad {
     static short OPTION_SHIFT_KEY = (1 << 5);
     public Fighter leader;
     private int leaderWeight;
-    boolean hasFunnel = false;
+    public boolean hasFunnel = false;
+    public float funnelValue = 0;
 
     public ShieldSquad(){
         super();
@@ -25,13 +26,17 @@ public class ShieldSquad extends Squad {
     @Override
     public void addUnit(Fighter f, int frame){
         f.squad = this;
-        metalValue = metalValue + f.metalValue;
+        if (!f.getUnit().getDef().getName().equals("funnelweb")) {
+            metalValue += f.metalValue;
+        }else{
+            funnelValue += f.metalValue;
+        }
 
         // for funnels
         if (getUnitWeight(f) == 1){
             hasFunnel = true;
             if (leader != null) {
-                leader.getUnit().setWantedMaxSpeed(1.3f, (short) 0, frame + 30);
+                leader.getUnit().setWantedMaxSpeed(1f, (short) 0, frame + 30);
             }
         }
 
@@ -41,7 +46,7 @@ public class ShieldSquad extends Squad {
             leaderWeight = getUnitWeight(f);
             f.fightTo(target, frame);
             if (hasFunnel){
-                f.getUnit().setWantedMaxSpeed(1.3f, (short) 0, frame+30);
+                f.getUnit().setWantedMaxSpeed(1f, (short) 0, frame+30);
             }
         }else if (getUnitWeight(f) > leaderWeight){
             f.getUnit().setMoveState(1, (short) 0, frame+300);
@@ -55,16 +60,21 @@ public class ShieldSquad extends Squad {
             }
             List<Float> params = new ArrayList<>();
             List<Float> drawParams = new ArrayList<>();
-            params.add((float)leader.id);
             drawParams.add((float)leader.id);
-            params.add(50f);
             for (Fighter fi: fighters){
+                params.add((float)leader.id);
+                if (fi.getUnit().getDef().getName().equals("capturecar")){
+                    params.add(175f);
+                }else {
+                    params.add(75f);
+                }
                 fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 3000);
                 fi.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, frame + 3000);
+                params.clear();
             }
 
             if (hasFunnel){
-                f.getUnit().setWantedMaxSpeed(1.3f, (short) 0, frame+30);
+                f.getUnit().setWantedMaxSpeed(1f, (short) 0, frame+30);
             }
         }else{
             f.getUnit().setMoveState(0, (short) 0, frame+300);
@@ -73,7 +83,11 @@ public class ShieldSquad extends Squad {
             List<Float> drawParams = new ArrayList<>();
             params.add((float)leader.id);
             drawParams.add((float)leader.id);
-            params.add(50f);
+            if (f.getUnit().getDef().getName().equals("capturecar")){
+                params.add(175f);
+            }else {
+                params.add(75f);
+            }
             f.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 3000);
             f.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, frame + 3000);
         }
@@ -82,7 +96,11 @@ public class ShieldSquad extends Squad {
     @Override
     public void removeUnit(Fighter f){
         if (leader != null && leader.equals(f)){
-            metalValue -= f.metalValue;
+            if (!f.getUnit().getDef().getName().equals("funnelweb")) {
+                metalValue -= f.metalValue;
+            }else{
+                funnelValue -= f.metalValue;
+            }
             leader = getNewLeader();
             if (leader == null){
                 leaderWeight = 0;
@@ -90,7 +108,7 @@ public class ShieldSquad extends Squad {
             }
 
             if (hasFunnel){
-                leader.getUnit().setWantedMaxSpeed(1.3f, (short) 0, Integer.MAX_VALUE);
+                leader.getUnit().setWantedMaxSpeed(1f, (short) 0, Integer.MAX_VALUE);
             }
             fighters.remove(leader);
             leaderWeight = getUnitWeight(leader);
@@ -98,12 +116,17 @@ public class ShieldSquad extends Squad {
             target = null;
             List<Float> params = new ArrayList<>();
             List<Float> drawParams = new ArrayList<>();
-            params.add((float)leader.id);
             drawParams.add((float)leader.id);
-            params.add(50f);
             for (Fighter fi:fighters){
+                params.add((float)leader.id);
+                if (fi.getUnit().getDef().getName().equals("capturecar")){
+                    params.add(175f);
+                }else {
+                    params.add(75f);
+                }
                 fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
                 fi.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
+                params.clear();
             }
         }else{
             super.removeUnit(f);
@@ -178,6 +201,7 @@ public class ShieldSquad extends Squad {
         String type = f.getUnit().getDef().getName();
         switch (type){
             case "funnelweb": return 1; // funnels skimrmish from too large a range for other units to do any damage
+            case "capturecar": return 2;
             case "cormak": return 2; // outlaws are too fast for other units to keep up with
             case "shieldarty": return 3;
             case "corthud": return 4;

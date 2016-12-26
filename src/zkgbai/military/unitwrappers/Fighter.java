@@ -66,7 +66,7 @@ public class Fighter {
     }
 
     public void moveTo(AIFloat3 pos, int frame){
-        Deque<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(pos, 100f), pathfinder.RAIDER_PATH);
+        Deque<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(pos, 100f), pathfinder.AVOID_ENEMIES);
         unit.stop((short) 0, frame);
 
         unit.moveTo(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.

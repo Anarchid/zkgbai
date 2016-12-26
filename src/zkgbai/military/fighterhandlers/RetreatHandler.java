@@ -9,9 +9,7 @@ import zkgbai.kgbutil.Pathfinder;
 import zkgbai.military.UnitClasses;
 import zkgbai.military.unitwrappers.Fighter;
 
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by haplo on 1/3/2016.
@@ -26,9 +24,9 @@ public class RetreatHandler {
 
     UnitClasses unitTypes = UnitClasses.getInstance();
 
-    List<Unit> cowardUnits;
-    List<Unit> retreatingUnits;
-    List<Unit> retreatedUnits;
+    Map<Integer, Unit> cowardUnits = new HashMap<>();
+    Map<Integer, Unit> retreatingUnits = new HashMap<>();
+    Map<Integer, Unit> retreatedUnits = new HashMap<>();
 
     int frame;
 
@@ -40,10 +38,6 @@ public class RetreatHandler {
         this.warManager = ai.warManager;
         this.graphManager = ai.graphManager;
         this.pathfinder = Pathfinder.getInstance();
-
-        this.cowardUnits = new ArrayList<Unit>();
-        this.retreatingUnits = new ArrayList<Unit>();
-        this.retreatedUnits = new ArrayList<Unit>();
     }
 
     public void init(){
@@ -52,16 +46,25 @@ public class RetreatHandler {
     }
 
     public void addCoward(Unit u){
-        cowardUnits.add(u);
+        cowardUnits.put(u.getUnitId(), u);
     }
 
     public boolean isCoward(Unit u){
-        return cowardUnits.contains(u);
+        return cowardUnits.containsKey(u.getUnitId());
     }
 
     public void checkUnit(Unit u){
-        if(cowardUnits.contains(u) && !retreatingUnits.contains(u) && (u.getHealth()/u.getMaxHealth() < 0.5 || (u.getDef().getTooltip().contains("Anti-Air") && u.getHealth()/u.getMaxHealth() < 0.95))){
-            retreatingUnits.add(u);
+        float hp = u.getHealth() / u.getMaxHealth();
+        if (cowardUnits.containsKey(u.getUnitId()) && !retreatingUnits.containsKey(u.getUnitId())
+                && (hp < 0.5f || (u.getDef().getTooltip().contains("Anti-Air") && hp < 0.95f)
+                        || (u.getDef().isAbleToFly() && hp < 0.65f)
+                        || (u.getDef().getTooltip().contains("Strider") && hp < 0.6f))) {
+            String defName = u.getDef().getName();
+            boolean onFire = u.getRulesParamFloat("on_fire", 0) > 0;
+            if (onFire && unitTypes.smallRaiders.contains(defName)){
+                return;
+            }
+            retreatingUnits.put(u.getUnitId(), u);
             squadHandler.removeFromSquad(u);
             raiderHandler.removeFromSquad(u);
         }
@@ -69,13 +72,13 @@ public class RetreatHandler {
 
     public void update(int frame){
         this.frame = frame;
-        if (frame % 6 == 0) {
+        if (frame % 15 == 0) {
             retreatCowards();
         }
     }
 
     public boolean isRetreating(Unit u){
-        if (retreatingUnits.contains(u)){
+        if (retreatingUnits.containsKey(u.getUnitId())){
             return true;
         }
         return false;
@@ -90,13 +93,13 @@ public class RetreatHandler {
     private void retreatCowards(){
         boolean retreated = false;
         List<Unit> healedUnits = new ArrayList<Unit>();
-        for (Unit u: retreatingUnits){
+        for (Unit u: retreatingUnits.values()){
             if (u.getHealth() == u.getMaxHealth() || u.getHealth() <= 0 ){
                 healedUnits.add(u);
                 continue;
             }
 
-            if(!retreatedUnits.contains(u)) {
+            if(!retreatedUnits.containsKey(u.getUnitId()) || warManager.getThreat(u.getPos()) > 0) {
                 // don't retreat scythes unless they're cloaked
                 if (u.getDef().getName().equals("spherepole")){
                     if (!u.isCloaked() && warManager.getEffectiveThreat(u.getPos()) <= 0){
@@ -152,16 +155,21 @@ public class RetreatHandler {
                     }
                 }
 
-                retreatedUnits.add(u);
+                retreatedUnits.put(u.getUnitId(), u);
                 retreated = true;
-                break;
             }
         }
         if (!retreated){
             retreatedUnits.clear();
         }
-
-        retreatingUnits.removeAll(healedUnits);
-        retreatedUnits.removeAll(healedUnits);
+        
+        for (Unit u: healedUnits){
+            if (retreatingUnits.containsKey(u.getUnitId())) {
+                retreatingUnits.remove(u.getUnitId());
+            }
+            if (retreatedUnits.containsKey(u.getUnitId())) {
+                retreatedUnits.remove(u.getUnitId());
+            }
+        }
     }
 }

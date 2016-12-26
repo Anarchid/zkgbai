@@ -15,6 +15,7 @@ public class RaiderSquad {
     public char status;
     public Raider leader;
     private int index = 0;
+    int firstRallyFrame = 0;
 
     public RaiderSquad(){
         this.raiders = new ArrayList<Raider>();
@@ -64,10 +65,16 @@ public class RaiderSquad {
     }
 
     public boolean isRallied(int frame){
+        if (firstRallyFrame == 0){
+            firstRallyFrame = frame;
+        }
+        if (frame - firstRallyFrame > 900){
+            return true;
+        }
         AIFloat3 pos = getPos();
         boolean rallied = true;
         for (Raider r: raiders){
-            if (distance(pos, r.getPos()) > 300){
+            if (distance(pos, r.getPos()) > 200){
                 rallied = false;
                 r.sneak(pos, frame);
             }
