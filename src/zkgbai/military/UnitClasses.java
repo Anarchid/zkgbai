@@ -30,124 +30,124 @@ public class UnitClasses {
 
     private UnitClasses(){
         // raiders
-        smallRaiders.add("armpw");
-        smallRaiders.add("corak");
-        smallRaiders.add("amphraider3");
-        smallRaiders.add("amphraider2");
-        smallRaiders.add("corsh");
+        smallRaiders.add("cloakraid");
+        smallRaiders.add("shieldraid");
+        smallRaiders.add("amphraid");
+        smallRaiders.add("amphimpulse");
+        smallRaiders.add("hoverraid");
 
-        mediumRaiders.add("corgator");
-        mediumRaiders.add("armkam");
-        mediumRaiders.add("spherepole");
+        mediumRaiders.add("vehraid");
+        mediumRaiders.add("gunshipraid");
+        mediumRaiders.add("cloakheavyraid");
         mediumRaiders.add("hoverassault");
-        mediumRaiders.add("panther");
+        mediumRaiders.add("tankheavyraid");
         
-        soloRaiders.add("logkoda");
-        soloRaiders.add("armflea");
-        soloRaiders.add("corfav");
-        soloRaiders.add("corstorm");
-        soloRaiders.add("corclog");
-        soloRaiders.add("blastwing");
+        soloRaiders.add("tankraid");
+        soloRaiders.add("spiderscout");
+        soloRaiders.add("vehscout");
+        soloRaiders.add("shieldskirm");
+        soloRaiders.add("shieldscout");
+        soloRaiders.add("gunshipbomb");
 
         // assaults; stuff that attacks in mobs
-        assaults.add("armzeus");
-        assaults.add("armwar");
-        assaults.add("armrock");
+        assaults.add("cloakassault");
+        assaults.add("cloakriot");
+        assaults.add("cloakskirm");
         assaults.add("amphfloater");
         assaults.add("amphriot");
-        assaults.add("corlevlr");
-        assaults.add("corraid");
-        assaults.add("nsaclash");
+        assaults.add("vehriot");
+        assaults.add("vehassault");
+        assaults.add("hoverskirm");
         assaults.add("hoverriot");
         assaults.add("spiderassault");
-        assaults.add("armsptk");
-        assaults.add("arm_venom");
+        assaults.add("spiderskirm");
+        assaults.add("spideremp");
         assaults.add("spiderriot");
-        assaults.add("tawf114");
-        assaults.add("correap");
+        assaults.add("tankriot");
+        assaults.add("tankassault");
 
 
         // Air mobs
-        airMobs.add("gunshipsupport");
-        airMobs.add("armbrawl");
-        airMobs.add("blackdawn");
+        airMobs.add("gunshipskirm");
+        airMobs.add("gunshipheavyskirm");
+        airMobs.add("gunshipassault");
 
         // Shield mobs
-        shieldMobs.add("cormak");
+        shieldMobs.add("shieldriot");
         shieldMobs.add("shieldarty");
-        shieldMobs.add("corthud");
+        shieldMobs.add("shieldassault");
         shieldMobs.add("shieldfelon");
-        shieldMobs.add("funnelweb");
-        shieldMobs.add("capturecar");
+        shieldMobs.add("striderfunnelweb");
+        shieldMobs.add("vehcapture");
 
         // mobSupport: things that increase the strength of mobs
-        mobSupports.add("spherecloaker");
-        mobSupports.add("core_spectre");
+        mobSupports.add("cloakjammer");
+        mobSupports.add("shieldshield");
 
         // striders; stuff that can dgun
-        striders.add("dante");
-        striders.add("scorpion");
-        striders.add("armbanth");
-        striders.add("armorco");
+        striders.add("striderdante");
+        striders.add("striderscorpion");
+        striders.add("striderbantha");
+        striders.add("striderdetriment");
 
         // loners; strider-like stuff that does better on its own than in mobs
-        loners.add("cormist");
-        loners.add("corgol");
-        loners.add("armcrabe");
+        loners.add("vehsupport");
+        loners.add("tankheavyassault");
+        loners.add("spidercrabe");
         
         // arties; stuff that has long range and can attack high threat areas without suiciding
-        arties.add("armsnipe");
-        arties.add("armham");
+        arties.add("cloaksnipe");
+        arties.add("cloakarty");
         arties.add("amphassault");
-        arties.add("corgarp");
-        arties.add("armmerl");
-        arties.add("armmanni");
-        arties.add("cormart");
-        arties.add("trem");
-        arties.add("armraven");
+        arties.add("veharty");
+        arties.add("vehheavyarty");
+        arties.add("hoverarty");
+        arties.add("tankarty");
+        arties.add("tankheavyarty");
+        arties.add("striderarty");
 
         // Anti-air units
-        AAs.add("armjeth");
+        AAs.add("cloakaa");
         AAs.add("gunshipaa");
         AAs.add("amphaa");
         AAs.add("hoveraa");
-        AAs.add("armaak");
-        //AAs.add("corvamp");
-        //AAs.add("fighter");
-        AAs.add("corcrash");
+        AAs.add("jumpaa");
+        //AAs.add("planeheavyfighter");
+        //AAs.add("planefighter");
+        AAs.add("shieldaa");
         AAs.add("shipaa");
         AAs.add("spideraa");
-        AAs.add("corsent");
+        AAs.add("tankaa");
         AAs.add("vehaa");
 
         // Planes
-        planes.add("fighter");
+        planes.add("planefighter");
         planes.add("bomberdive");
-        planes.add("armstiletto_laser");
-        planes.add("corvamp");
-        planes.add("corshad");
-        planes.add("corhurc2");
-        planes.add("armcybr");
-        planes.add("corawac");
+        planes.add("bomberdisarm");
+        planes.add("planeheavyfighter");
+        planes.add("bomberprec");
+        planes.add("bomberriot");
+        planes.add("bomberheavy");
+        planes.add("planescout");
 
         // Bombers
         bombers.add("bomberdive");
-        bombers.add("corshad");
-        bombers.add("armcybr");
-        bombers.add("corhurc2");
-        bombers.add("armstiletto_laser");
+        bombers.add("bomberprec");
+        bombers.add("bomberheavy");
+        bombers.add("bomberriot");
+        bombers.add("bomberdisarm");
 
         // Sappers
-        sappers.add("armtick");
-        sappers.add("corroach");
-        sappers.add("corsktl");
+        sappers.add("cloakbomb");
+        sappers.add("shieldbomb");
+        sappers.add("jumpbomb");
 
         // Things that should not retreat
-        noRetreat.add("armcrabe");
-        noRetreat.add("core_spectre");
-        noRetreat.add("corshad");
-        noRetreat.add("blastwing");
-        noRetreat.add("fighter");
+        noRetreat.add("spidercrabe");
+        noRetreat.add("shieldshield");
+        noRetreat.add("bomberprec");
+        noRetreat.add("gunshipbomb");
+        noRetreat.add("planefighter");
         
         // a list of porc weapon def names, for identifying when things get attacked by porc that's out of los
         porcWeps.add("corllt_laser");

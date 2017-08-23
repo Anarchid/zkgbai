@@ -101,14 +101,14 @@ public class RetreatHandler {
 
             if(!retreatedUnits.containsKey(u.getUnitId()) || warManager.getThreat(u.getPos()) > 0) {
                 // don't retreat scythes unless they're cloaked
-                if (u.getDef().getName().equals("spherepole")){
+                if (u.getDef().getName().equals("cloakheavyraid")){
                     if (!u.isCloaked() && warManager.getEffectiveThreat(u.getPos()) <= 0){
                         continue;
                     }
                 }
 
                 AIFloat3 position;
-                if (!unitTypes.bombers.contains(u.getDef().getName()) && !u.getDef().getName().equals("fighter") && !u.getDef().getName().equals("corvamp")) {
+                if (!unitTypes.bombers.contains(u.getDef().getName()) && !u.getDef().getName().equals("planefighter") && !u.getDef().getName().equals("planeheavyfighter")) {
                     if (u.getDef().isAbleToFly()){
                         position = graphManager.getClosestAirHaven(u.getPos());
                     }else {

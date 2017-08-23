@@ -337,7 +337,7 @@ public class EconomyManager extends Module {
 			
 			if (!warManager.enemyHasAntiNuke) {
 				for (Unit u : superWeps){
-					if (u.getDef().getName().equals("corsilo") && !u.isBeingBuilt() && u.getStockpileQueued() < 2){
+					if (u.getDef().getName().equals("staticnuke") && !u.isBeingBuilt() && u.getStockpileQueued() < 2){
 						u.stockpile((short) 0, frame + 300);
 					}
 				}
@@ -404,7 +404,7 @@ public class EconomyManager extends Module {
     	UnitDef def = unit.getDef();
     	String defName = def.getName();
 
-		if(defName.equals("cormex")){
+		if(defName.equals("staticmex")){
 			mexes.add(unit);
 			if (defendedFac && ai.mergedAllies > 0 && mexes.size() > 1 + ai.mergedAllies){
 				if (graphManager.isFrontLine(unit.getPos())) {
@@ -422,23 +422,23 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if(defName.equals("armsolar")){
+		if(defName.equals("energysolar")){
 			solars.add(unit);
 		}
 
-		if(defName.equals("armwin")){
+		if(defName.equals("energywind")){
 			windgens.add(unit);
 		}
 
-    	if(defName.equals("corrad")){
+    	if(defName.equals("staticradar")){
     		radars.add(unit);
     	}
 
-		if(defName.equals("armmstor")){
+		if(defName.equals("staticstorage")){
 			storages.add(unit);
 		}
 
-		if (defName.equals("cafus") || defName.equals("corsilo") || defName.equals("zenith") || defName.equals("raveparty")){
+		if (defName.equals("energysingu") || defName.equals("staticnuke") || defName.equals("zenith") || defName.equals("raveparty")){
 			defendSingu(unit.getPos());
 			for (Nanotower n : nanos.values()) {
 				if (n.target.getUnitId() == unit.getUnitId()) {
@@ -458,11 +458,11 @@ public class EconomyManager extends Module {
 			nanoTasks.removeAll(unneeded);
 		}
 		
-		if (defName.equals("corsilo") || defName.equals("zenith") || defName.equals("raveparty")){
+		if (defName.equals("staticnuke") || defName.equals("zenith") || defName.equals("raveparty")){
 			hasSuperWep = true;
 		}
 
-    	if (unit.getMaxSpeed() > 0 && def.getBuildOptions().size() > 0 && !defName.equals("armcsa")/*ignore athena*/) {
+    	if (unit.getMaxSpeed() > 0 && def.getBuildOptions().size() > 0 && !defName.equals("athena")/*ignore athena*/) {
 			Worker w = new Worker(unit);
 			workers.add(w);
 			assignWorkers(w);
@@ -579,12 +579,12 @@ public class EconomyManager extends Module {
 		screamers.remove(unit);
 		
 		String defName = unit.getDef().getName();
-		if (defName.equals("corsilo") || defName.equals("zenith") || defName.equals("raveparty")) {
+		if (defName.equals("staticnuke") || defName.equals("zenith") || defName.equals("raveparty")) {
 			hasSuperWep = false;
 		}
 
 		// fortify mexes if they die
-		if (defName.equals("cormex") && (effectiveIncome > 25f || ai.mergedAllies > 1)){
+		if (defName.equals("staticmex") && (effectiveIncome > 25f || ai.mergedAllies > 1)){
 			fortifyMex(unit.getPos());
 		}
 
@@ -649,7 +649,7 @@ public class EconomyManager extends Module {
 		    		}
 		    	}
 			}
-    	}else if (builder != null && !unit.isBeingBuilt() && !defName.equals("armcsa")){
+    	}else if (builder != null && !unit.isBeingBuilt() && !defName.equals("athena")){
 			// instant factory plops only call unitcreated, not unitfinished.
 			for (Worker w : workers){
 				if (w.id == builder.getUnitId()){
@@ -661,7 +661,7 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if (defName.equals("cormex") && defendedFac && ai.mergedAllies == 0){
+		if (defName.equals("staticmex") && defendedFac && ai.mergedAllies == 0){
 			if (graphManager.isFrontLine(unit.getPos())){
 				fortifyMex(unit.getPos());
 			}else {
@@ -673,40 +673,40 @@ public class EconomyManager extends Module {
 			fortifyMex(unit.getPos());
 		}
 	
-		if (defName.equals("armestor")){
+		if (defName.equals("energypylon")){
 			defendMex(unit.getPos());
 		}
 
-		if(defName.equals("corrl") || defName.equals("corllt") || defName.equals("corhlt") || defName.equals("armpb") || defName.equals("armartic") || defName.equals("armdeva")){
+		if(defName.equals("turretmissile") || defName.equals("turretlaser") || defName.equals("turretheavylaser") || defName.equals("turretgauss") || defName.equals("turretemp") || defName.equals("turretriot")){
 			porcs.add(unit);
 		}
 
-		if (defName.equals("corrazor") || defName.equals("corflak") || defName.equals("armcir")){
+		if (defName.equals("turretaalaser") || defName.equals("turretaaflak") || defName.equals("turretaafar")){
 			AAs.add(unit);
 		}
 
-		if (defName.equals("armasp")){
+		if (defName.equals("staticrearm")){
 			airpads.add(unit);
 		}
 
-		if (defName.equals("armnanotc")){
+		if (defName.equals("staticcon")){
 			Nanotower nt = new Nanotower(unit, ctTarget);
 			nanos.put(unit.getUnitId(), nt);
 		}
 
-		if(defName.equals("armestor")){
+		if(defName.equals("energypylon")){
 			pylons.add(unit);
 		}
 	
-		if (defName.equals("armfus") || defName.equals("cafus") || defName.equals("armbrtha") || defName.equals("screamer")){
+		if (defName.equals("energyfusion") || defName.equals("energysingu") || defName.equals("staticheavyarty") || defName.equals("turretaaheavy")){
 			fortifyMex(unit.getPos());
 		}
 
-		if (defName.equals("armfus") || defName.equals("cafus")){
+		if (defName.equals("energyfusion") || defName.equals("energysingu")){
 			fusions.add(unit);
 			if (!screamer && fusions.size() > 4){
 				screamer = true;
-				UnitDef screamer = callback.getUnitDefByName("screamer");
+				UnitDef screamer = callback.getUnitDefByName("turretaaheavy");
 				AIFloat3 pos = graphManager.getClosestFrontLineSpot(graphManager.getAllyCenter()).getPos();
 				pos = getDirectionalPoint(graphManager.getAllyCenter(), graphManager.getEnemyCenter(), 0.5f * distance(graphManager.getAllyCenter(), pos));
 				pos = callback.getMap().findClosestBuildSite(screamer, pos, 600, 3, 0);
@@ -717,12 +717,12 @@ public class EconomyManager extends Module {
 			}
 		}
 
-		if ((defName.equals("dante") || defName.equals("scorpion")) && warManager.miscHandler.striders.isEmpty()){
+		if ((defName.equals("striderdante") || defName.equals("striderscorpion")) && warManager.miscHandler.striders.isEmpty()){
 			RepairTask rt = new RepairTask(unit);
 			repairTasks.add(rt);
 		}
 
-		if (defName.equals("funnelweb") && facManager.numFunnels == 0){
+		if (defName.equals("striderfunnelweb") && facManager.numFunnels == 0){
 			RepairTask rt = new RepairTask(unit);
 			repairTasks.add(rt);
 		}
@@ -731,13 +731,13 @@ public class EconomyManager extends Module {
 			havePlanes = true;
 		}
 
-		if(defName.equals("screamer")){
+		if(defName.equals("turretaaheavy")){
 			screamers.add(unit);
 		}
 
-		if (defName.equals("armbrtha") || defName.equals("corsilo") || defName.equals("zenith") || defName.equals("raveparty")){
+		if (defName.equals("staticheavyarty") || defName.equals("staticnuke") || defName.equals("zenith") || defName.equals("raveparty")){
 			superWeps.add(unit);
-			if (defName.equals("corsilo")){
+			if (defName.equals("staticnuke")){
 				ArrayList<Float> params = new ArrayList<>();
 				params.add(2f);
 				unit.executeCustomCommand(CMD_MISC_PRIORITY, params, (short) 0, frame + 60);
@@ -745,7 +745,7 @@ public class EconomyManager extends Module {
 		}
 
 		// if I ever find a use for athena...
-		if (defName.equals("armcsa")){
+		if (defName.equals("athena")){
 			createNanoTurretTask(unit);
 		}
 
@@ -780,41 +780,41 @@ public class EconomyManager extends Module {
 			}
 
 			String defName = unit.getDef().getName();
-			if(defName.equals("corrl") || defName.equals("corllt") || defName.equals("corhlt") || defName.equals("armartic")){
+			if(defName.equals("turretmissile") || defName.equals("turretlaser") || defName.equals("turretheavylaser") || defName.equals("turretemp")){
 				porcs.add(unit);
 			}
 
-			if (defName.equals("corrazor")){
+			if (defName.equals("turretaalaser")){
 				AAs.add(unit);
 			}
 
-			if (defName.equals("armnanotc")){
+			if (defName.equals("staticcon")){
 				unit.selfDestruct((short) 0, frame+30);
 			}
 
-			if(defName.equals("cormex")){
+			if(defName.equals("staticmex")){
 				mexes.add(unit);
 			}
 
-			if(defName.equals("armsolar")){
+			if(defName.equals("energysolar")){
 				solars.add(unit);
 			}
 
-			if(defName.equals("armestor")){
+			if(defName.equals("energypylon")){
 				pylons.add(unit);
 			}
 
-			if (defName.equals("armfus")){
+			if (defName.equals("energyfusion")){
 				fusions.add(unit);
 			}
 
-			if (defName.equals("cafus")){
+			if (defName.equals("energysingu")){
 				fusions.add(unit);
 			}
 		}
 
 		String defName = unit.getDef().getName();
-		if(defName.equals("corrl") || defName.equals("corllt") || defName.equals("corhlt") || defName.equals("armartic")){
+		if(defName.equals("turretmissile") || defName.equals("turretlaser") || defName.equals("turretheavylaser") || defName.equals("turretemp")){
 			porcs.add(unit);
 		}
 
@@ -832,12 +832,12 @@ public class EconomyManager extends Module {
 		}
 		
 		// porc over enemy mexes
-		if (e.getDef().getName().equals("cormex") && graphManager.isAllyTerritory(e.getPos())){
+		if (e.getDef().getName().equals("staticmex") && graphManager.isAllyTerritory(e.getPos())){
 			fortifyMex(e.getPos());
 		}
 
 		// check for enemy air
-		if (e.getDef().isAbleToFly() && !e.getDef().getName().equals("attackdrone") && !e.getDef().getName().equals("battledrone") && !e.getDef().getName().equals("carrydrone")){
+		if (e.getDef().isAbleToFly() && !e.getDef().getName().equals("dronelight") && !e.getDef().getName().equals("droneheavyslow") && !e.getDef().getName().equals("dronecarry")){
 			enemyHasAir = true;
 		}
 		return 0;
@@ -854,7 +854,7 @@ public class EconomyManager extends Module {
 		}
 		
 		// porc over enemy mexes
-		if (e.getDef().getName().equals("cormex") && graphManager.isAllyTerritory(e.getPos())){
+		if (e.getDef().getName().equals("staticmex") && graphManager.isAllyTerritory(e.getPos())){
 			fortifyMex(e.getPos());
 		}
 		return 0;
@@ -936,8 +936,8 @@ public class EconomyManager extends Module {
 			cost = costOfJob(worker, task);
 			if (task instanceof ConstructionTask){
 				ConstructionTask ctask = (ConstructionTask) task;
-				if ((ctask.buildType.getName().equals("cormex") && ctask.target != null && ctask.target.getHealth()/ctask.target.getMaxHealth() > 0.35f)
-				|| (ctask.buildType.getName().equals("armwin") || ctask.buildType.getName().equals("armsolar") && ctask.target != null)
+				if ((ctask.buildType.getName().equals("staticmex") && ctask.target != null && ctask.target.getHealth()/ctask.target.getMaxHealth() > 0.35f)
+				|| (ctask.buildType.getName().equals("energywind") || ctask.buildType.getName().equals("energysolar") && ctask.target != null)
 					&& warManager.getEffectiveThreat(ctask.getPos()) <= 0){
 					cost -= 1000f;
 				}
@@ -1006,7 +1006,7 @@ public class EconomyManager extends Module {
 				// don't assign units to facplop tasks if they don't have a plop!
 				return Float.MAX_VALUE;
 			}
-			if (ctask.buildType.getName().contains("factory") || ctask.buildType.getName().contains("hub") || ctask.buildType.getName().equals("armcsa")){
+			if (ctask.buildType.getName().contains("factory") || ctask.buildType.getName().contains("hub") || ctask.buildType.getName().equals("athena")){
 				// factory plops and emergency facs get maximum priority
 				if (facManager.factories.size() == 0) {
 					return -1000;
@@ -1024,7 +1024,7 @@ public class EconomyManager extends Module {
 					return (dist/2) - (Math.min(3000f, ctask.buildType.getCost(m))/costMod);
 				}
 				return ((dist/2) - Math.min(3000f, ctask.buildType.getCost(m))) + (500 * costMod);
-			}else if (ctask.buildType.getName().equals("cormex")){
+			}else if (ctask.buildType.getName().equals("staticmex")){
 				// for mexes
 				return ((float) (dist/Math.log(dist)) - 100) + (600 * (costMod - 1));
 			}else if (ctask.buildType.isAbleToAttack()){
@@ -1033,16 +1033,16 @@ public class EconomyManager extends Module {
 					return dist+300;
 				}
 				return dist - 400 + Math.max(0, (1500 * (costMod - 2)));
-			}else if (ctask.buildType.getName().equals("armnanotc") || ctask.buildType.getName().equals("armmstor") || ctask.buildType.getName().equals("armasp")) {
+			}else if (ctask.buildType.getName().equals("staticcon") || ctask.buildType.getName().equals("staticstorage") || ctask.buildType.getName().equals("staticrearm")) {
 				// for nanotowers, airpads and storages
 				return dist - 1000 + (500 * (costMod - 2));
-			}else if (ctask.buildType.getName().equals("armestor")) {
+			}else if (ctask.buildType.getName().equals("energypylon")) {
 				// for pylons
 				return dist - 500 + (500 * (costMod - 1));
-			}else if (ctask.buildType.getName().equals("corrad")){
+			}else if (ctask.buildType.getName().equals("staticradar")){
 				// for radar
 				return dist - 300 + (1500 * (costMod - 1));
-			}else if (ctask.buildType.getName().equals("armsolar") || ctask.buildType.getName().equals("armwin")){
+			}else if (ctask.buildType.getName().equals("energysolar") || ctask.buildType.getName().equals("energywind")){
 				// for small energy
 				if (energy < 50 || effectiveIncomeMetal > effectiveIncomeEnergy - 2.5f) {
 					return ((dist / (float) Math.log(dist)) - 200) + (1000 * (costMod - 1));
@@ -1087,7 +1087,7 @@ public class EconomyManager extends Module {
 						return dist;
 					}
 
-					if (rptask.isShieldMob && worker.getUnit().getDef().getName().equals("cornecro")){
+					if (rptask.isShieldMob && worker.getUnit().getDef().getName().equals("shieldcon")){
 						return dist + (100 * (costMod - 1)) - 250 - rptask.target.getMaxHealth() / (5 * costMod);
 					}
 
@@ -1100,7 +1100,7 @@ public class EconomyManager extends Module {
 					}
 
 					return dist + (100 * (costMod - 1)) - 250 - rptask.target.getMaxHealth() / (5 * costMod);
-				}else if (rptask.target.getDef().isAbleToAttack() && !rptask.target.getDef().isBuilder() && !rptask.target.getDef().getName().equals("corrazor")){
+				}else if (rptask.target.getDef().isAbleToAttack() && !rptask.target.getDef().isBuilder() && !rptask.target.getDef().getName().equals("turretaalaser")){
 					// for static defenses
 					return dist + (100 * (costMod - 1)) - (rptask.target.getMaxHealth() * 2) / costMod;
 				}else{
@@ -1472,7 +1472,7 @@ public class EconomyManager extends Module {
 		// do we need a protector?
 		if (!antiNuke && (warManager.enemyHasNuke || gotNuked)){
 			antiNuke = true;
-			UnitDef protector = callback.getUnitDefByName("armamd");
+			UnitDef protector = callback.getUnitDefByName("staticantinuke");
 			AIFloat3 pos = callback.getMap().findClosestBuildSite(protector, graphManager.getAllyCenter(), 600, 3, 0);
 			ConstructionTask ct = new ConstructionTask(protector, pos, 0);
 			if (buildCheck(ct) && !constructionTasks.contains(ct)) {
@@ -1498,7 +1498,7 @@ public class EconomyManager extends Module {
 	}
     
     void createRadarTask(Worker worker){
-    	UnitDef radar = callback.getUnitDefByName("corrad");
+    	UnitDef radar = callback.getUnitDefByName("staticradar");
     	AIFloat3 position = worker.getUnit().getPos();
     	
     	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
@@ -1529,9 +1529,9 @@ public class EconomyManager extends Module {
 		UnitDef aa;
 
 		if (!graphManager.eminentTerritory || frame < 18000 || adjustedIncome < 30f){
-			aa = callback.getUnitDefByName("corrazor");
+			aa = callback.getUnitDefByName("turretaalaser");
 		}else{
-			aa = callback.getUnitDefByName("armcir");
+			aa = callback.getUnitDefByName("turretaafar");
 		}
 
 		position = callback.getMap().findClosestBuildSite(aa,position,600f, 3, 0);
@@ -1555,7 +1555,7 @@ public class EconomyManager extends Module {
 	}
 
 	void createBerthaTask(){
-		UnitDef bertha = callback.getUnitDefByName("armbrtha");
+		UnitDef bertha = callback.getUnitDefByName("staticheavyarty");
 		AIFloat3 position = null;
 		
 		boolean good = false;
@@ -1602,7 +1602,7 @@ public class EconomyManager extends Module {
 	void createSuperWepTask(){
 		UnitDef death;
 		if (sWep == 1) {
-			death = callback.getUnitDefByName("corsilo");
+			death = callback.getUnitDefByName("staticnuke");
 		}else if (sWep == 2){
 			death = callback.getUnitDefByName("zenith");
 		}else{
@@ -1795,11 +1795,11 @@ public class EconomyManager extends Module {
     }
 
 	void defendSingu(AIFloat3 position){
-		UnitDef llt = callback.getUnitDefByName("corllt");
-		UnitDef defender = callback.getUnitDefByName("corrl");
-		UnitDef hlt = callback.getUnitDefByName("corhlt");
-		UnitDef cobra = callback.getUnitDefByName("corflak");
-		UnitDef shield = callback.getUnitDefByName("corjamt");
+		UnitDef llt = callback.getUnitDefByName("turretlaser");
+		UnitDef defender = callback.getUnitDefByName("turretmissile");
+		UnitDef hlt = callback.getUnitDefByName("turretheavylaser");
+		UnitDef cobra = callback.getUnitDefByName("turretaaflak");
+		UnitDef shield = callback.getUnitDefByName("staticshield");
 		AIFloat3 pos;
 		Boolean good = false;
 		ConstructionTask ct;
@@ -1884,10 +1884,10 @@ public class EconomyManager extends Module {
 	}
 
 	void defendLink(AIFloat3 position){
-		UnitDef hlt = Math.random() > 0.5 ? callback.getUnitDefByName("corhlt") : callback.getUnitDefByName("armpb");
-		UnitDef razor = callback.getUnitDefByName("corrazor");
-		UnitDef llt = callback.getUnitDefByName("corllt");
-		UnitDef defender = callback.getUnitDefByName("corrl");
+		UnitDef hlt = Math.random() > 0.5 ? callback.getUnitDefByName("turretheavylaser") : callback.getUnitDefByName("turretgauss");
+		UnitDef razor = callback.getUnitDefByName("turretaalaser");
+		UnitDef llt = callback.getUnitDefByName("turretlaser");
+		UnitDef defender = callback.getUnitDefByName("turretmissile");
 
 		// don't spam redundant porc
 		for(Unit u:porcs){
@@ -1951,8 +1951,8 @@ public class EconomyManager extends Module {
 	}
 
 	void fortifyMex(AIFloat3 position){
-		UnitDef llt = callback.getUnitDefByName("corllt");
-		UnitDef defender = callback.getUnitDefByName("corrl");
+		UnitDef llt = callback.getUnitDefByName("turretlaser");
+		UnitDef defender = callback.getUnitDefByName("turretmissile");
 		ConstructionTask ct;
 		AIFloat3 pos;
 		AIFloat3 dpos;
@@ -1999,7 +1999,7 @@ public class EconomyManager extends Module {
 			}
 
 			if (Math.random() < graphManager.territoryFraction){
-				UnitDef porc = Math.random() > 0.5 ? callback.getUnitDefByName("corhlt") : callback.getUnitDefByName("armpb");
+				UnitDef porc = Math.random() > 0.5 ? callback.getUnitDefByName("turretheavylaser") : callback.getUnitDefByName("turretgauss");
 				pos = getRadialPoint(position, 150f);
 				pos = callback.getMap().findClosestBuildSite(porc, pos, 600f, 3, 0);
 
@@ -2011,7 +2011,7 @@ public class EconomyManager extends Module {
 			}
 			
 			if (enemyHasAir && Math.random() < graphManager.territoryFraction * graphManager.territoryFraction){
-				UnitDef razor = callback.getUnitDefByName("corrazor");
+				UnitDef razor = callback.getUnitDefByName("turretaalaser");
 				pos = getRadialPoint(position, 150f);
 				pos = callback.getMap().findClosestBuildSite(razor, pos, 600f, 3, 0);
 				
@@ -2043,8 +2043,8 @@ public class EconomyManager extends Module {
 	}
 
 	void defendMex(AIFloat3 position){
-		UnitDef llt = callback.getUnitDefByName("corllt");
-		UnitDef defender = callback.getUnitDefByName("corrl");
+		UnitDef llt = callback.getUnitDefByName("turretlaser");
+		UnitDef defender = callback.getUnitDefByName("turretmissile");
 		AIFloat3 pos = position;
 
 
@@ -2095,8 +2095,8 @@ public class EconomyManager extends Module {
 	}
 
 	void defendFac(AIFloat3 position){
-		UnitDef llt = callback.getUnitDefByName("corllt");
-		UnitDef defender = callback.getUnitDefByName("corrl");
+		UnitDef llt = callback.getUnitDefByName("turretlaser");
+		UnitDef defender = callback.getUnitDefByName("turretmissile");
 		AIFloat3 pos = new AIFloat3(0,0,0);
 
 		if (ai.mergedAllies == 0) {
@@ -2151,15 +2151,15 @@ public class EconomyManager extends Module {
 		UnitDef porc;
 		double rand = Math.random();
 		if (rand > 0.3) {
-			porc = callback.getUnitDefByName("corrl");
+			porc = callback.getUnitDefByName("turretmissile");
 		}else if (rand > 0.2 * graphManager.territoryFraction){
-			porc = callback.getUnitDefByName("corllt");
+			porc = callback.getUnitDefByName("turretlaser");
 		}else {
-			porc = Math.random() > 0.5 ? callback.getUnitDefByName("corhlt") : callback.getUnitDefByName("armpb");
+			porc = Math.random() > 0.5 ? callback.getUnitDefByName("turretheavylaser") : callback.getUnitDefByName("turretgauss");
 		}
 		
 		if (enemyHasAir && Math.random() > 0.95){
-			porc = callback.getUnitDefByName("corrazor");
+			porc = callback.getUnitDefByName("turretaalaser");
 		}
 		Enemy e = warManager.getClosestEnemyPorc(position);
 		if (e == null){
@@ -2215,7 +2215,7 @@ public class EconomyManager extends Module {
 	}
 
     void captureMexes(){
-    	UnitDef mex = callback.getUnitDefByName("cormex");
+    	UnitDef mex = callback.getUnitDefByName("staticmex");
 		List<MetalSpot> metalSpots = graphManager.getNeutralSpots();
 
 		for ( MetalSpot ms: metalSpots){
@@ -2276,8 +2276,8 @@ public class EconomyManager extends Module {
 	}
     
     void createEnergyTask(Worker worker){
-    	UnitDef solar = callback.getUnitDefByName("armsolar");
-		UnitDef windgen = callback.getUnitDefByName("armwin");
+    	UnitDef solar = callback.getUnitDefByName("energysolar");
+		UnitDef windgen = callback.getUnitDefByName("energywind");
     	AIFloat3 position = worker.getPos();
 
 		ConstructionTask ct;
@@ -2374,8 +2374,8 @@ public class EconomyManager extends Module {
     }
 
 	void createFusionTask(Worker worker){
-		UnitDef fusion = callback.getUnitDefByName("armfus");
-		UnitDef singu = callback.getUnitDefByName("cafus");
+		UnitDef fusion = callback.getUnitDefByName("energyfusion");
+		UnitDef singu = callback.getUnitDefByName("energysingu");
 		if (facManager.factories.isEmpty()) return;
 		AIFloat3 position;
 		ConstructionTask ct;
@@ -2444,7 +2444,7 @@ public class EconomyManager extends Module {
 
 	void createGridTask(AIFloat3 position){
 		ConstructionTask ct;
-		UnitDef pylon = callback.getUnitDefByName("armestor");
+		UnitDef pylon = callback.getUnitDefByName("energypylon");
 		
 		float fdist = Float.MAX_VALUE;
 		AIFloat3 best = null;
@@ -2497,7 +2497,7 @@ public class EconomyManager extends Module {
 	}
     
     void createNanoTurretTask(Unit target){
-		UnitDef nano = callback.getUnitDefByName("armnanotc");
+		UnitDef nano = callback.getUnitDefByName("staticcon");
     	AIFloat3 position = null;
 		float buildDist = target.getDef().getName().equals("striderhub") ? 350 : 400f;
 
@@ -2534,7 +2534,7 @@ public class EconomyManager extends Module {
     }
 
 	void createStorageTask(Unit target){
-		UnitDef stor = callback.getUnitDefByName("armmstor");
+		UnitDef stor = callback.getUnitDefByName("staticstorage");
 		AIFloat3 position = null;
 		final float buildDist = 400f;
 
@@ -2556,7 +2556,7 @@ public class EconomyManager extends Module {
 
 	void createAirPadTask(Unit target){
 		if (target.getDef().getName().equals("striderhub")) return;
-		UnitDef airpad = callback.getUnitDefByName("armasp");
+		UnitDef airpad = callback.getUnitDefByName("staticrearm");
 		AIFloat3 position = null;
 		final float buildDist = 400f;
 
@@ -2602,7 +2602,7 @@ public class EconomyManager extends Module {
 		
 		// treat bigger superweps as regular factories so that they can get bp without eating mobile builders.
 		for (Unit f: superWeps){
-			if ((f.getDef().getName().equals("corsilo") || f.getDef().getName().equals("zenith") || f.getDef().getName().equals("raveparty")) && f.isBeingBuilt() && (f.getHealth()/f.getMaxHealth()) < 0.9) {
+			if ((f.getDef().getName().equals("staticnuke") || f.getDef().getName().equals("zenith") || f.getDef().getName().equals("raveparty")) && f.isBeingBuilt() && (f.getHealth()/f.getMaxHealth()) < 0.9) {
 				float numCT = -0.25f;
 				for (Nanotower n : nanos.values()) {
 					if (n.target.getUnitId() == f.getUnitId()) {

@@ -111,7 +111,7 @@ public class SquadHandler {
     public void addAirMob(Fighter f){
         fighters.put(f.id, f);
         
-        if (f.getUnit().getDef().getName().equals("armbrawl")){
+        if (f.getUnit().getDef().getName().equals("gunshipheavyskirm")){
             // create a new squad if there isn't one
             if (nextBrawlerSquad == null) {
                 nextBrawlerSquad = new Squad();

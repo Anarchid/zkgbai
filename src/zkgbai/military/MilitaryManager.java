@@ -90,7 +90,7 @@ public class MilitaryManager extends Module {
 
 		this.AAs = new HashMap<Integer, Raider>();
 
-		this.nano = callback.getUnitDefByName("armnanotc").getUnitDefId();
+		this.nano = callback.getUnitDefByName("staticcon").getUnitDefId();
 		this.unitTypes = UnitClasses.getInstance();
 		this.m = callback.getResourceByName("Metal");
 		
@@ -136,7 +136,7 @@ public class MilitaryManager extends Module {
 	private void paintValueMap(String wepName){
 		valueGraphics.clear();
 		int r, rr;
-		if (wepName.equals("corsilo")) {
+		if (wepName.equals("staticnuke")) {
 			r = 28; // general superwep kill radius
 			rr = 40;
 		}else{
@@ -145,7 +145,7 @@ public class MilitaryManager extends Module {
 		}
 		for(Enemy t:targets.values()){
 			AIFloat3 position = t.position;
-			if (position != null && t.identified && t.ud != null && !t.isNanoSpam && !t.ud.isAbleToFly() && !t.ud.getName().equals("corrazor") && !t.ud.getName().equals("armpb")){
+			if (position != null && t.identified && t.ud != null && !t.isNanoSpam && !t.ud.isAbleToFly() && !t.ud.getName().equals("turretaalaser") && !t.ud.getName().equals("turretgauss")){
 				int x = (int) (position.x / 32);
 				int y = (int) (position.z / 32);
 				int value = (int) Math.min(t.ud.getCost(m)/10f, 750f);
@@ -793,7 +793,7 @@ public class MilitaryManager extends Module {
 
 		// for berthas the more expensive the target the better
 		for (Enemy e : targets.values()) {
-			if (!e.identified || e.position == null || e.position.equals(nullpos) || e.isNanoSpam || distance(e.position, origin) > 6200 || e.ud.isAbleToFly() || (e.ud.getName().equals("armamd") && !hasNuke)
+			if (!e.identified || e.position == null || e.position.equals(nullpos) || e.isNanoSpam || distance(e.position, origin) > 6200 || e.ud.isAbleToFly() || (e.ud.getName().equals("staticantinuke") && !hasNuke)
 				|| (e.ud.getSpeed() > 0 && e.ud.getBuildSpeed() > 8f)){
 				// berthas can't target things outside their range, and are not good vs air.
 				// we also ignore antinukes because kgb doesn't build nukes anyway.
@@ -1096,7 +1096,7 @@ public class MilitaryManager extends Module {
 			if (e.isMajorCancer){
 				tmpcost /= 4;
 				tmpcost -= 1000;
-			}else if (e.isMinorCancer || (e.isAA && !e.ud.getName().equals("corrazor"))){
+			}else if (e.isMinorCancer || (e.isAA && !e.ud.getName().equals("turretaalaser"))){
 				tmpcost /= 2;
 				tmpcost -= 500;
 			}
@@ -1203,18 +1203,18 @@ public class MilitaryManager extends Module {
 		for (Enemy t: targets.values()){
 			if (t.identified){
 				String defName = t.ud.getName();
-				if (defName.equals("corhlt") || defName.equals("armpb") || defName.equals("armdeva") || defName.equals("armcrabe")
-				|| defName.equals("corrl") || defName.equals("corllt") || defName.equals("amphassault")) {
+				if (defName.equals("turretheavylaser") || defName.equals("turretgauss") || defName.equals("turretriot") || defName.equals("spidercrabe")
+				|| defName.equals("turretmissile") || defName.equals("turretlaser") || defName.equals("amphassault")) {
 					enemyPorcValue += t.ud.getCost(m);
-				}else if (defName.equals("armanni") || defName.equals("cordoom") || defName.equals("corjamt")){
+				}else if (defName.equals("turretantiheavy") || defName.equals("turretheavy") || defName.equals("staticshield")){
 					enemyPorcValue += 1.5 * t.ud.getCost(m);
-				}else if (defName.equals("cormist")) {
+				}else if (defName.equals("vehsupport")) {
 					slasherSpam++;
 				}else if (t.isRaider){
 					slasherSpam--;
-				}else if (defName.equals("armamd")){
+				}else if (defName.equals("staticantinuke")){
 					enemyHasAntiNuke = true;
-				}else if (defName.equals("corsilo")){
+				}else if (defName.equals("staticnuke")){
 					enemyHasNuke = true;
 				}
 			}
@@ -1395,7 +1395,7 @@ public class MilitaryManager extends Module {
     public int enemyDestroyed(Unit unit, Unit attacker) {
         if(targets.containsKey(unit.getUnitId())){
 			Enemy e = targets.get(unit.getUnitId());
-			if (e.identified && e.ud != null && (e.ud.getName().equals("cafus") || e.ud.getName().equals("amgeo")) && !e.isNanoSpam){
+			if (e.identified && e.ud != null && (e.ud.getName().equals("energysingu") || e.ud.getName().equals("energyheavygeo")) && !e.isNanoSpam){
 				callback.getGame().sendTextMessage("/say <ZKGBAI> SHINY!", 0);
 			}
 
@@ -1424,7 +1424,7 @@ public class MilitaryManager extends Module {
 		String defName = unit.getDef().getName();
 
 		// enable snipers and penetrators to shoot radar dots
-		if (defName.equals("armsnipe") || defName.equals("armmanni")){
+		if (defName.equals("cloaksnipe") || defName.equals("hoverarty")){
 			ArrayList<Float> params = new ArrayList<>();
 			params.add((float) 0);
 			unit.executeCustomCommand(CMD_DONT_FIRE_AT_RADAR, params, (short) 0, frame+60);
@@ -1432,14 +1432,14 @@ public class MilitaryManager extends Module {
 		}
 
 		// disable air strafe for brawlers
-		if (defName.equals("armbrawl")){
+		if (defName.equals("gunshipheavyskirm")){
 			ArrayList<Float> params = new ArrayList<>();
 			params.add((float) 0);
 			unit.executeCustomCommand(CMD_AIR_STRAFE, params, (short) 0, frame+30);
 		}
 
 		// set blastwings to land when idle
-		if (defName.equals("blastwing")){
+		if (defName.equals("gunshipbomb")){
 			unit.setIdleMode(1, (short) 0, frame+30);
 		}
 
@@ -1448,16 +1448,16 @@ public class MilitaryManager extends Module {
 		}
 
 		// Activate outlaws
-		if (defName.equals("cormak")){
+		if (defName.equals("shieldriot")){
 			unit.setOn(true, (short) 0, frame+300);
 		}
 
-		if (defName.equals("fighter")){
+		if (defName.equals("planefighter")){
 			unit.setMoveState(0, (short) 0, frame + 10);
 			miscHandler.addSwift(unit);
 		}
 
-		if (defName.equals("corvamp")){
+		if (defName.equals("planeheavyfighter")){
 			unit.setMoveState(2, (short) 0, frame + 10);
 			Raider f = new Raider(unit, unit.getDef().getCost(m));
 			hawks.put(f.id, f);
@@ -1498,7 +1498,7 @@ public class MilitaryManager extends Module {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			miscHandler.addSupport(f);
     	}else if(unitTypes.loners.contains(defName)) {
-			if (defName.equals("cormist") || defName.equals("armcrabe")) {
+			if (defName.equals("vehsupport") || defName.equals("spidercrabe")) {
 				unit.setMoveState(0, (short) 0, frame + 10);
 				ArrayList<Float> params = new ArrayList<>();
 				params.add((float) 1);
@@ -1509,7 +1509,7 @@ public class MilitaryManager extends Module {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			miscHandler.addLoner(f);
 		}else if (unitTypes.arties.contains(defName)){
-			if (defName.equals("armmerl") || defName.equals("cormart") || defName.equals("armraven") || defName.equals("trem")){
+			if (defName.equals("vehheavyarty") || defName.equals("tankarty") || defName.equals("striderarty") || defName.equals("tankheavyarty")){
 				unit.setMoveState(0, (short) 0, frame + 10);
 				ArrayList<Float> params = new ArrayList<>();
 				params.add((float) 1);
@@ -1540,7 +1540,7 @@ public class MilitaryManager extends Module {
 			unit.setFireState(2, (short) 0, frame + 10);
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			bomberHandler.addBomber(f);
-		}else if (defName.equals("armbrtha")) {
+		}else if (defName.equals("staticheavyarty")) {
 			miscHandler.addBertha(unit);
 		}
     	
@@ -1555,7 +1555,7 @@ public class MilitaryManager extends Module {
 	@Override
 	public int unitCreated(Unit unit, Unit builder){
 		String defName = unit.getDef().getName();
-		if (defName.equals("corsilo")){
+		if (defName.equals("staticnuke")){
 			hasNuke = true;
 			miscHandler.addNuke(unit);
 		}
@@ -1569,7 +1569,7 @@ public class MilitaryManager extends Module {
 		}
 
 		// Paint ally threat for porc
-		if (unit.getMaxSpeed() == 0 && unit.getDef().isAbleToAttack() && !unit.getDef().getName().equals("armbrtha")){
+		if (unit.getMaxSpeed() == 0 && unit.getDef().isAbleToAttack() && !unit.getDef().getName().equals("staticheavyarty")){
 			int power = (int) ((unit.getPower() + unit.getMaxHealth())/10);
 			float radius = unit.getMaxRange();
 			AIFloat3 pos = unit.getPos();
@@ -1593,7 +1593,7 @@ public class MilitaryManager extends Module {
 		bomberHandler.removeUnit(unit);
 		miscHandler.removeUnit(unit);
 	
-		if (unit.getDef().getName().equals("corsilo")){
+		if (unit.getDef().getName().equals("staticnuke")){
 			hasNuke = false;
 		}
 
@@ -1617,7 +1617,7 @@ public class MilitaryManager extends Module {
 			lastDefenseFrame = frame;
 			DefenseTarget dt = null;
 			
-			float udmg = (unit.getDef().getName().equals("cormex") && graphManager.isFrontLine(unit.getPos())) ? 1500f : unit.getMaxHealth();
+			float udmg = (unit.getDef().getName().equals("staticmex") && graphManager.isFrontLine(unit.getPos())) ? 1500f : unit.getMaxHealth();
 			if (attacker != null){
 				if (attacker.getPos() != null && attacker.getDef() != null && !attacker.getDef().isAbleToFly()) {
 					dt = new DefenseTarget(attacker.getPos(), udmg + attacker.getMaxHealth(), frame);
@@ -1640,7 +1640,7 @@ public class MilitaryManager extends Module {
 		}
 
 		// Unpaint ally threat for porc
-		if (unit.getMaxSpeed() == 0 && unit.getDef().isAbleToAttack() && !unit.getDef().getName().equals("armbrtha")){
+		if (unit.getMaxSpeed() == 0 && unit.getDef().isAbleToAttack() && !unit.getDef().getName().equals("staticheavyarty")){
 			int power = (int) ((unit.getPower() + unit.getMaxHealth())/10);
 			float radius = unit.getMaxRange();
 			AIFloat3 pos = unit.getPos();
@@ -1693,7 +1693,7 @@ public class MilitaryManager extends Module {
 		
 			// don't create defense targets vs air units.
 			if (dt != null) {
-				if (weaponDef != null && weaponDef.getName().startsWith("armbrawl")) {
+				if (weaponDef != null && weaponDef.getName().startsWith("gunshipheavyskirm")) {
 					airDefenseTargets.add(dt);
 				} else {
 					defenseTargets.add(dt);
