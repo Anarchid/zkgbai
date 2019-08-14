@@ -320,12 +320,19 @@ public class MilitaryManager extends Module {
 		for(TargetMarker tm:deadMarkers){
 			targetMarkers.remove(tm);
 		}
-
-		try {
-			thread.join();
-		}catch (Exception e){
-			ai.printException(e);
-			System.exit(-1);
+		
+		boolean ok = false;
+		while (!ok) {
+			try {
+				thread.join();
+				ok = true;
+			} catch (InterruptedException e) {
+				// ignore, JVM is just being a dolt
+			} catch (Exception e) {
+				// something more brutal happened
+				ai.printException(e);
+				System.exit(-1);
+			}
 		}
 	}
 	
