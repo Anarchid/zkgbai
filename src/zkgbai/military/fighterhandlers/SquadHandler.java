@@ -186,15 +186,25 @@ public class SquadHandler {
     private void updateSquads(){
         // set the rally point for the next forming squad for defense
         if (nextSquad != null && !nextSquad.isDead() && squadCounter == 0) {
-            if (warManager.getEffectiveThreat(nextSquad.getPos()) > 0 || warManager.getEffectiveThreat(nextSquad.target) > 0) {
+            if (warManager.getEffectiveThreat(nextSquad.getPos()) > 0 || warManager.getEffectiveThreat(nextSquad.target) > 0 || warManager.getPorcThreat(nextSquad.getPos()) > 0) {
                 nextSquad.retreatTo(graphManager.getClosestHaven(nextSquad.getPos()), frame);
             }else {
                 nextSquad.setTarget(warManager.getRallyPoint(nextSquad.getPos()), frame);
             }
         }else if (nextAirSquad != null && !nextAirSquad.isDead() && squadCounter == 1) {
-            nextAirSquad.setTarget(warManager.getAirRallyPoint(nextAirSquad.getPos()), frame);
-        }else if (nextBrawlerSquad != null && squadCounter == 2) {
-            nextBrawlerSquad.setTarget(warManager.getAirRallyPoint(nextBrawlerSquad.getPos()), frame);
+            AIFloat3 target = warManager.getAirRallyPoint(nextAirSquad.getPos());
+            if (distance(nextAirSquad.getPos(), target) > 1800f){
+                nextAirSquad.retreatTo(target, frame);
+            }else {
+                nextAirSquad.setTarget(target, frame);
+            }
+        }else if (nextBrawlerSquad != null && !nextBrawlerSquad.isDead() && squadCounter == 2) {
+            AIFloat3 target = warManager.getAirRallyPoint(nextBrawlerSquad.getPos());
+            if (distance(nextBrawlerSquad.getPos(), target) > 1800f){
+                nextBrawlerSquad.retreatTo(target, frame);
+            }else {
+                nextBrawlerSquad.setTarget(target, frame);
+            }
         }else if (nextShieldSquad != null && !nextShieldSquad.isDead() && squadCounter == 3) {
             // shields only get one squad into which it dumps all of its mobs.
             if (nextShieldSquad.getHealth() < 0.85
@@ -207,7 +217,7 @@ public class SquadHandler {
                 if (!target.equals(nextShieldSquad.target)) {
                     nextShieldSquad.setTarget(target, frame);
                 }
-            }else if (warManager.getEffectiveThreat(nextShieldSquad.getPos()) > 0f){
+            }else if (warManager.getEffectiveThreat(nextShieldSquad.getPos()) > 0f || warManager.getPorcThreat(nextShieldSquad.getPos()) > 0f){
                 nextShieldSquad.retreatTo(graphManager.getClosestHaven(nextShieldSquad.getAvgPos()), frame);
             } else {
                 nextShieldSquad.setTarget(warManager.getRallyPoint(nextShieldSquad.getPos()), frame);
@@ -263,7 +273,11 @@ public class SquadHandler {
                 //if (!target.equals(s.target)) {
                     assigned = true;
                     s.assigned = true;
-                    s.setTarget(target, frame);
+                    if (s.isAirSquad && distance(target, s.getPos()) > 1800f){
+                        s.retreatTo(target, frame);
+                    }else {
+                        s.setTarget(target, frame);
+                    }
                     break;
                 //}
             }

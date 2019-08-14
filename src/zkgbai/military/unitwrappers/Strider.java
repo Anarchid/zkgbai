@@ -33,14 +33,13 @@ public class Strider extends Fighter {
         AIFloat3 target;
         if (unit.getDef().getName().equals("scorpion")) {
             target = getDirectionalPoint(pos, getPos(), 250f);
-        }else if (unit.getDef().getName().equals("armbanth") || unit.getDef().getName().equals("armorco")){
+        }else if (unit.getDef().getName().equals("armbanth") || unit.getDef().getName().equals("armorco")) {
             target = getDirectionalPoint(pos, getPos(), 350f);
         }else{ // dante
-            target = getDirectionalPoint(pos, unit.getPos(), 50f);
+            target = getDirectionalPoint(pos, getPos(), 50f);
         }
     
         Deque<AIFloat3> path = pathfinder.findPath(unit, target, pathfinder.ASSAULT_PATH);
-        unit.stop((short) 0, frame);
         unit.moveTo(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
         if (path.size() > 2){
             path.poll();

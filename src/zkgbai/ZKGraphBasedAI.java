@@ -10,6 +10,7 @@ import java.io.StringWriter;
 
 import zkgbai.economy.EconomyManager;
 import zkgbai.economy.FactoryManager;
+import zkgbai.economy.Worker;
 import zkgbai.economy.tasks.ReclaimTask;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
@@ -75,10 +76,14 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         this.teamID = callback.getGame().getMyTeam();
         this.allyTeamID = callback.getGame().getMyAllyTeam();
 		this.allies = new ArrayList<Integer>();
-
-        identifyEnemyTeams();
-		identifyAllyTeams();
-		checkTeamsMerging();
+		
+		try {
+			identifyEnemyTeams();
+			identifyAllyTeams();
+			checkTeamsMerging();
+		}catch (Throwable e){
+			printException(e);
+		}
 
 		try{
 			graphManager = new GraphManager(this);
@@ -145,9 +150,13 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		} catch (Throwable e){
 			printException(e);
 		}
-
-		selectRandomCommander();
-		chooseStartPos();
+		
+		try {
+			selectRandomCommander();
+			chooseStartPos();
+		}catch (Throwable e){
+			printException(e);
+		}
         
         return 0;
     }
@@ -160,17 +169,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	}
 
 	private void selectRandomCommander(){
-		List<UnitDef> unitdefs = callback.getUnitDefs();
-		List<String> commanderNames = new ArrayList<String>();
-		
-		for(UnitDef ud:unitdefs){
-			if(ud.getHumanName().contains("Engineer Trainer")){
-				commanderNames.add(ud.getName());
-			}
-		}
-		
-		int index = (int) Math.floor(Math.random() * commanderNames.size());
-		String name = commanderNames.get(index);
+		String name = "dyntrainer_support_base";
 		callback.getLua().callRules("ai_commander:"+name, -1);
 		debug("Selected Commander: " + callback.getUnitDefByName(name).getHumanName() + ".");
 	}
@@ -191,13 +190,13 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int update(int frame) {
 		if (slave) {
-			if (frame % 30 == 0) {
+			/*if (frame % 30 == 0) {
 				// give away income from communism when merged with another AI instance.
 				Resource metal = callback.getResources().get(0);
 				Resource energy = callback.getResources().get(1);
-				callback.getEconomy().sendResource(metal, Math.min(10, callback.getEconomy().getCurrent(metal)) + callback.getEconomy().getIncome(metal), mergeTarget);
-				callback.getEconomy().sendResource(energy, Math.min(10, callback.getEconomy().getCurrent(energy)) + callback.getEconomy().getIncome(energy), mergeTarget);
-			}
+				callback.getEconomy().sendResource(metal, callback.getEconomy().getIncome(metal), mergeTarget);
+				callback.getEconomy().sendResource(energy, callback.getEconomy().getIncome(energy), mergeTarget);
+			}*/
 			return 0;
 		}
 		
@@ -212,10 +211,11 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		if (frame % 300 == 0){
 			List<MetalSpot> espots = graphManager.getEnemySpots();
 			List<MetalSpot> ospots = graphManager.getOwnedSpots();
-			if (((enemyAllyTeams.size() == 1 && espots.size() > 2 * ospots.size()) || (ospots.size() == 0 && facManager.factories.isEmpty())) && frame > 18000){
+			if ((((enemyAllyTeams.size() == 1 && espots.size() > 2 * ospots.size() && (facManager.factories.isEmpty() || allies.size() > 1)) || (ospots.size() == 0 && facManager.factories.isEmpty())) && frame > 18000)
+				|| (ecoManager.workers.isEmpty() && facManager.factories.isEmpty())){
 				callback.getGame().sendTextMessage("/say <ZKGBAI> gg!", 0);
 				callback.getGame().sendTextMessage("/say <ZKGBAI resigned>", 0);
-				for (Unit u : callback.getFriendlyUnits()) {
+				for (Unit u : callback.getTeamUnits()) {
 					u.selfDestruct((short) 0, Integer.MAX_VALUE);
 				}
 			}
@@ -227,7 +227,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 				double rand = Math.random();
 				if (rand > 0.75) {
 					callback.getGame().sendTextMessage("/say <ZKGBAI> Do you know what time it is?", 0);
-					callback.getGame().sendTextMessage("/say <ZKGBAI> It's the time to resign!", 0);
+					callback.getGame().sendTextMessage("/say <ZKGBAI> It's time to resign!", 0);
 				}else if (rand > 0.5){
 					if (enemyTeams.size() > 1) {
 						callback.getGame().sendTextMessage("/say <ZKGBAI> Resign lobsters!", 0);
@@ -258,8 +258,12 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-		    for (MetalSpot ms: graphManager.getFrontLineSpots()){
-		    	callback.getMap().getDrawer().addPoint(ms.getPos(), "Front Line");
+		    for (Worker w:ecoManager.workers){
+		    	if (w.getTask() != null){
+		    		callback.getMap().getDrawer().addPoint(w.getPos(), w.getTask().toString());
+			    }else{
+				    callback.getMap().getDrawer().addPoint(w.getPos(), "(no task)");
+			    }
 		    }
 		}
 
@@ -589,6 +593,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
 	private void chooseStartPos(){
 		List<MetalSpot> spots = graphManager.getAllyTerritory();
+		List<MetalSpot> allspots = graphManager.getMetalSpots();
 		int priorityStarts = 0;
 
 		for (int allyid: allies){
@@ -602,17 +607,23 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 				MetalSpot best = null;
 				float dist = Float.MAX_VALUE;
 				for (MetalSpot ms : spots) {
-					float distmod = 1f;
-					for (MetalSpot m : graphManager.getMetalSpots()) {
-						if (m != ms) {
-							float msdist = distance(m.getPos(), ms.getPos());
-							if (msdist < 400) {
-								distmod++;
-							}
+					float tmpdist = distance(ms.getPos(), graphManager.getMapCenter());
+					
+					float tmpcost = Float.MAX_VALUE;
+					for (MetalSpot m: allspots){
+						if (ms.equals(m)){
+							continue;
+						}
+						float dst = distance(m.getPos(), ms.getPos());
+						if (dst < tmpcost){
+							tmpcost = dst;
 						}
 					}
-
-					float tmpdist = distance(ms.getPos(), graphManager.getMapCenter()) / distmod;
+					
+					if (tmpcost != Float.MAX_VALUE) {
+						tmpdist += tmpcost;
+					}
+					
 					if (tmpdist < dist) {
 						best = ms;
 						dist = tmpdist;
@@ -626,11 +637,42 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 				AIFloat3 startPos;
 				List<AIFloat3> cachedPositions = new ArrayList<>();
 				AIFloat3 mapCenter = graphManager.getMapCenter();
-
+				
 				MetalSpot best = null;
-				float distance = 0;
+				float distance = Float.MAX_VALUE;
+				
+				if (allies.size() > 1){
+					for (MetalSpot ms : spots) {
+						float tmpdist = distance(ms.getPos(), graphManager.getMapCenter());
+						
+						float tmpcost = Float.MAX_VALUE;
+						for (MetalSpot m: allspots){
+							if (ms.equals(m)){
+								continue;
+							}
+							float dst = distance(m.getPos(), ms.getPos());
+							if (dst < tmpcost){
+								tmpcost = dst;
+							}
+						}
+						
+						if (tmpcost != Float.MAX_VALUE) {
+							tmpdist += tmpcost;
+						}
+						
+						if (tmpdist < distance) {
+							best = ms;
+							distance = tmpdist;
+						}
+					}
+					cachedPositions.add(best.getPos());
+				}
+				
+				distance = 0;
+				
 				for (MetalSpot ms: spots){
 					float tmpdist = distance(ms.getPos(), mapCenter);
+					
 					if (tmpdist > distance){
 						distance = tmpdist;
 						best = ms;
@@ -705,9 +747,38 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
 	private boolean isIngroup(int tId) {
 		String[] script = callback.getGame().getSetupScript().split("\n");
+		
+		boolean parse = false;
+		boolean rightID = false;
+		boolean rightAI = false;
+		int depth = 0;
+		
 		for (int line = 0; line < script.length; line++) {
-			if (script[line].startsWith("team=" + tId) && (script[line - 1].startsWith("shortname=ZKGBAI") || script[line - 2].startsWith("shortname=ZKGBAI"))) {
-				return true;
+			if (script[line].contains("{")){
+				depth++;
+			}
+			
+			if (script[line].contains("}")){
+				depth--;
+				if (parse && depth == 1){
+					parse = false;
+					rightID = false;
+					rightAI = false;
+				}
+			}
+			
+			if (parse){
+				if (script[line].startsWith("team=" + tId)){
+					rightID = true;
+				}
+				if (script[line].startsWith("shortname=ZKGBAI")){
+					rightAI = true;
+				}
+				if (rightID && rightAI){
+					return true;
+				}
+			}else if (script[line].contains("[ai")){
+				parse = true;
 			}
 		}
 		return false;

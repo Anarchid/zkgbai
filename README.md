@@ -18,8 +18,6 @@ Alternatively, you can import the Eclipse .project file.
 
 Installing
 ==========
-This AI requires version 103.0 of the Spring Engine.
-
 To install the AI, put the files from created `/dist/` directory to `$SpringData/AI/Skirmish/ZKGBAI/dist`.
 
 An example location on linux would be `/home/user/.spring/AI/Skirmish/ZKGBAI/dist`

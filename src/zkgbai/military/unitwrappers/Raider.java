@@ -47,8 +47,6 @@ public class Raider extends Fighter {
 
     public void raid(AIFloat3 target, int frame) {
         Deque<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(target, 50f), pathfinder.RAIDER_PATH);
-        unit.stop((short) 0, frame);
-        unit.setMoveState(1, (short) 0, frame + 30); // set to maneuver
         unit.fight(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
         if (path.size() > 2){
             path.poll();
@@ -78,8 +76,6 @@ public class Raider extends Fighter {
 
     public void sneak(AIFloat3 target, int frame) {
         Deque<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(target, 50f), pathfinder.RAIDER_PATH);
-        unit.stop((short) 0, frame);
-        unit.setMoveState(2, (short) 0, frame + 10); // set to maneuver
         lastTaskFrame = frame;
         lastpos = unit.getPos();
 
@@ -122,7 +118,6 @@ public class Raider extends Fighter {
 
     @Override
     public void fightTo(AIFloat3 pos, int frame) {
-        unit.setMoveState(2, (short) 0, frame + 10);
         lastTaskFrame = frame;
         lastpos = unit.getPos();
         super.fightTo(pos, frame);

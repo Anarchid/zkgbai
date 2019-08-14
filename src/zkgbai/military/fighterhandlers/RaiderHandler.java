@@ -340,7 +340,7 @@ public class RaiderHandler {
             
             // assign rally points for new squads
             if (nextGlaiveSquad != null && !nextGlaiveSquad.raiders.isEmpty()){
-                boolean overThreat = (warManager.getEffectiveThreat(nextGlaiveSquad.getPos()) > 0);
+                boolean overThreat = (warManager.getEffectiveThreat(nextGlaiveSquad.getPos()) > 0 || warManager.getPorcThreat(nextGlaiveSquad.getPos()) > 0);
                 if (!overThreat) {
                     nextGlaiveSquad.raid(warManager.getRaiderRally(nextGlaiveSquad.getPos()), frame);
                 }else{
@@ -349,7 +349,7 @@ public class RaiderHandler {
             }
     
             if (nextBanditSquad != null && !nextBanditSquad.raiders.isEmpty()){
-                boolean overThreat = (warManager.getEffectiveThreat(nextBanditSquad.getPos()) > 0);
+                boolean overThreat = (warManager.getEffectiveThreat(nextBanditSquad.getPos()) > 0 || warManager.getPorcThreat(nextBanditSquad.getPos()) > 0);
                 if (!overThreat) {
                     nextBanditSquad.raid(warManager.getRaiderRally(nextBanditSquad.getPos()), frame);
                 }else{
@@ -358,7 +358,7 @@ public class RaiderHandler {
             }
     
             if (nextAmphSquad != null && !nextAmphSquad.raiders.isEmpty()){
-                boolean overThreat = (warManager.getEffectiveThreat(nextAmphSquad.getPos()) > 0);
+                boolean overThreat = (warManager.getEffectiveThreat(nextAmphSquad.getPos()) > 0 || warManager.getPorcThreat(nextAmphSquad.getPos()) > 0);
                 if (!overThreat) {
                     nextAmphSquad.raid(warManager.getRaiderRally(nextAmphSquad.getPos()), frame);
                 }else{
@@ -367,7 +367,7 @@ public class RaiderHandler {
             }
     
             if (nextDaggerSquad != null && !nextDaggerSquad.raiders.isEmpty()){
-                boolean overThreat = (warManager.getEffectiveThreat(nextDaggerSquad.getPos()) > 0);
+                boolean overThreat = (warManager.getEffectiveThreat(nextDaggerSquad.getPos()) > 0 || warManager.getPorcThreat(nextDaggerSquad.getPos()) > 0);
                 if (!overThreat) {
                     nextDaggerSquad.raid(warManager.getRaiderRally(nextDaggerSquad.getPos()), frame);
                 }else{
@@ -376,7 +376,7 @@ public class RaiderHandler {
             }
             
             if (nextScorcherSquad != null && !nextScorcherSquad.raiders.isEmpty()){
-                boolean overThreat = (warManager.getEffectiveThreat(nextScorcherSquad.getPos()) > 0);
+                boolean overThreat = (warManager.getEffectiveThreat(nextScorcherSquad.getPos()) > 0 || warManager.getPorcThreat(nextScorcherSquad.getPos()) > 0);
                 if (!overThreat) {
                     nextScorcherSquad.raid(warManager.getRaiderRally(nextScorcherSquad.getPos()), frame);
                 }else{
@@ -385,7 +385,7 @@ public class RaiderHandler {
             }
             
             if (nextHalberdSquad != null && !nextHalberdSquad.raiders.isEmpty()){
-                boolean overThreat = (warManager.getEffectiveThreat(nextHalberdSquad.getPos()) > 0);
+                boolean overThreat = (warManager.getEffectiveThreat(nextHalberdSquad.getPos()) > 0 || warManager.getPorcThreat(nextHalberdSquad.getPos()) > 0);
                 if (!overThreat) {
                     nextHalberdSquad.raid(warManager.getRaiderRally(nextHalberdSquad.getPos()), frame);
                 }else{
@@ -394,7 +394,7 @@ public class RaiderHandler {
             }
             
             if (nextScytheSquad != null && !nextScytheSquad.raiders.isEmpty()){
-                boolean overThreat = (warManager.getEffectiveThreat(nextScytheSquad.getPos()) > 0);
+                boolean overThreat = (warManager.getEffectiveThreat(nextScytheSquad.getPos()) > 0 || warManager.getPorcThreat(nextScytheSquad.getPos()) > 0);
                 if (!overThreat) {
                     nextScytheSquad.raid(warManager.getRaiderRally(nextScytheSquad.getPos()), frame);
                 }else{
@@ -403,7 +403,7 @@ public class RaiderHandler {
             }
     
             if (nextPantherSquad != null && !nextPantherSquad.raiders.isEmpty()){
-                boolean overThreat = (warManager.getEffectiveThreat(nextPantherSquad.getPos()) > 0);
+                boolean overThreat = (warManager.getEffectiveThreat(nextPantherSquad.getPos()) > 0 || warManager.getPorcThreat(nextPantherSquad.getPos()) > 0);
                 if (!overThreat) {
                     nextPantherSquad.raid(warManager.getRaiderRally(nextPantherSquad.getPos()), frame);
                 }else{

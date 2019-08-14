@@ -28,6 +28,7 @@ public class Enemy {
 	boolean isFlamer = false;
 	public boolean isArty = false;
 	public boolean isAA = false;
+	public boolean isFlexAA = false;
 	public boolean isPorc = false;
 	boolean isSuperWep = false;
 	boolean isMinorCancer = false;
@@ -141,6 +142,10 @@ public class Enemy {
 
 			if (u.getTooltip().contains("Anti-Air")){
 				this.isAA = true;
+			}
+			
+			if (ud.getName().equals("gunshipsupport") || ud.getName().equals("armbrawl") || ud.getName().equals("corcrw") || ud.getName().equals("slowmort")){
+				isFlexAA = true;
 			}
 
 			if (ud.getName().equals("armbrtha") || ud.getName().equals("corsilo") || ud.getName().equals("tacnuke")

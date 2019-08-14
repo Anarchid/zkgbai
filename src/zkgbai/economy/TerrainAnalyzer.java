@@ -107,7 +107,7 @@ public class TerrainAnalyzer {
             initialFacList.add("factorygunship");
         }
 
-        if (initialFacList.size() < 3 || (initialFacList.size() < ai.mergedAllies + 1)) {
+        if (initialFacList.size() < 3 || initialFacList.size() < ai.mergedAllies + 1) {
             debug(taMsg + "Terrain Analysis Failed (or team was too big)! Enabling random factories.");
             if (!initialFacList.contains("factorycloak")) {
                 initialFacList.add("factorycloak");
