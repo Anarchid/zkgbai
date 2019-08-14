@@ -92,6 +92,10 @@ public class Pathfinder extends Object {
         AIFloat3 start = u.getPos();
         Deque<AIFloat3> result = new ArrayDeque<AIFloat3>();
         
+        if (start == null){
+            return result;
+        }
+        
         // bounds check, needed because unit positions can sometimes be nonsensical for various reasons.
         if (start.x < 0 || start.x > mwidth || start.z < 0 || start.z > mheight || target.x < 0 || target.x > mwidth || target.z < 0 || target.z > mheight){
             result.add(target);
