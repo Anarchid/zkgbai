@@ -36,10 +36,10 @@ public class TerrainAnalyzer {
         this.initialFacList = new ArrayList<String>();
         this.path = callback.getPathing();
 
-        vehPath = callback.getUnitDefByName("corned").getMoveData().getPathType();
-        botPath = callback.getUnitDefByName("armrectr").getMoveData().getPathType();
-        spiderPath = callback.getUnitDefByName("arm_spider").getMoveData().getPathType();
-        hoverPath = callback.getUnitDefByName("corch").getMoveData().getPathType();
+        vehPath = callback.getUnitDefByName("vehcon").getMoveData().getPathType();
+        botPath = callback.getUnitDefByName("cloakcon").getMoveData().getPathType();
+        spiderPath = callback.getUnitDefByName("spidercon").getMoveData().getPathType();
+        hoverPath = callback.getUnitDefByName("hovercon").getMoveData().getPathType();
         amphPath = callback.getUnitDefByName("amphcon").getMoveData().getPathType();
         boatPath = callback.getUnitDefByName("shipcon").getMoveData().getPathType();
 

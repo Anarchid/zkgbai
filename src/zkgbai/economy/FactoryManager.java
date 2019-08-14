@@ -195,53 +195,53 @@ public class FactoryManager extends Module {
             }
         }
 
-        if (def.isBuilder() && def.getSpeed() > 0 && !defName.equals("armcsa")){
+        if (def.isBuilder() && def.getSpeed() > 0 && !defName.equals("athena")){
             numWorkers++;
             mobileBP += def.getBuildSpeed();
             if (def.getBuildSpeed() < 8f) {
                 workerValue += unit.getDef().getCost(m);
             }
         }else if (def.getSpeed() > 0 && !unitTypes.AAs.contains(defName)){
-            fighterValue += Math.min(unit.getDef().getCost(m), defName.equals("correap") ? 500f: 350f);
+            fighterValue += Math.min(unit.getDef().getCost(m), defName.equals("tankassault") ? 500f: 350f);
         }else if (unitTypes.AAs.contains(defName)){
             numAAs++;
             AAvalue += unit.getDef().getCost(m);
         }
 
-        if (defName.equals("armfus") || defName.equals("cafus")){
+        if (defName.equals("energyfusion") || defName.equals("energysingu")){
             fighterValue += 250f;
         }
 
-        if(defName.equals("cormart") || defName.equals("armham") || defName.equals("armmerl") || defName.equals("trem") || defName.equals("armmanni") || defName.equals("armcrabe") || defName.equals("armsnipe")){
+        if(defName.equals("tankarty") || defName.equals("cloakarty") || defName.equals("vehheavyarty") || defName.equals("tankheavyarty") || defName.equals("hoverarty") || defName.equals("spidercrabe") || defName.equals("cloaksnipe")){
             artyValue += def.getCost(m);
         }
     
-        if(defName.equals("corgarp")){
+        if(defName.equals("veharty")){
             artyValue += def.getCost(m)/2f;
         }
 
-        if(defName.equals("hoverassault") || defName.equals("armzeus") || defName.equals("corraid")
-                || defName.equals("amphfloater") || defName.equals("corthud") || defName.equals("correap")){
+        if(defName.equals("hoverassault") || defName.equals("cloakassault") || defName.equals("vehassault")
+                || defName.equals("amphfloater") || defName.equals("shieldassault") || defName.equals("tankassault")){
             assaultValue += def.getCost(m);
         }
 
-        if(defName.equals("armwar")){
+        if(defName.equals("cloakriot")){
             numWarriors++;
         }
 
-        if(defName.equals("armzeus")){
+        if(defName.equals("cloakassault")){
             numZeus++;
         }
 
-        if(defName.equals("armrock")){
+        if(defName.equals("cloakskirm")){
             numRockos++;
         }
 
-        if(defName.equals("armpw")){
+        if(defName.equals("cloakraid")){
             numGlaives++;
         }
 
-        if (defName.equals("spherepole")){
+        if (defName.equals("cloakheavyraid")){
             numScythes++;
         }
 
@@ -249,11 +249,11 @@ public class FactoryManager extends Module {
             numFelons++;
         }
 
-        if (defName.equals("corthud")){
+        if (defName.equals("shieldassault")){
             numThugs++;
         }
 
-        if (defName.equals("cormak")){
+        if (defName.equals("shieldriot")){
             numLaws++;
         }
 
@@ -261,15 +261,15 @@ public class FactoryManager extends Module {
             numRackets++;
         }
 
-        if (defName.equals("funnelweb")){
+        if (defName.equals("striderfunnelweb")){
             numFunnels++;
         }
     
-        if (defName.equals("capturecar")){
+        if (defName.equals("vehcapture")){
             numDomis++;
         }
 
-        if (defName.equals("arm_venom")){
+        if (defName.equals("spideremp")){
             numVenoms++;
         }
 
@@ -277,7 +277,7 @@ public class FactoryManager extends Module {
             numRedbacks++;
         }
 
-        if (defName.equals("armsptk")){
+        if (defName.equals("spiderskirm")){
             numRecluses++;
         }
 
@@ -289,56 +289,56 @@ public class FactoryManager extends Module {
             numMaces++;
         }
 
-        if (defName.equals("nsaclash")){
+        if (defName.equals("hoverskirm")){
             numScalpels++;
         }
 
-        if (defName.equals("correap")){
+        if (defName.equals("tankassault")){
             numReapers++;
         }
 
-        if (defName.equals("tawf114")){
+        if (defName.equals("tankriot")){
             numBanishers++;
         }
 
-        if (defName.equals("corfav") || defName.equals("corsh")){
+        if (defName.equals("vehscout") || defName.equals("hoverraid")){
             numScouts++;
         }
         
-        if (defName.equals("logkoda")){
+        if (defName.equals("tankraid")){
             numKodachis++;
         }
 
-        if (defName.equals("corraid")){
+        if (defName.equals("vehassault")){
             numRavagers++;
         }
 
-        if (defName.equals("corlevlr")){
+        if (defName.equals("vehriot")){
             numLevelers++;
         }
 
-        if (defName.equals("corshad") || defName.equals("corhurc2")){
+        if (defName.equals("bomberprec") || defName.equals("bomberriot")){
             numRavens++;
         }
 
-        if (defName.equals("armspy")){
+        if (defName.equals("spiderantiheavy")){
             numInfis++;
         }
 
-        if (defName.equals("armcomdgun")){
+        if (defName.equals("striderantiheavy")){
             numUltis++;
         }
 
-        if (defName.equals("spherecloaker")){
+        if (defName.equals("cloakjammer")){
             numErasers++;
         }
 
-        if (defName.equals("core_spectre")){
+        if (defName.equals("shieldshield")){
             numAspis++;
         }
 
-        if (defName.equals("dante") || defName.equals("scorpion") || defName.equals("armraven") || defName.equals("funnelweb")
-                || defName.equals("armbanth") || defName.equals("armorco") || defName.equals("armcomdgun")){
+        if (defName.equals("striderdante") || defName.equals("striderscorpion") || defName.equals("striderarty") || defName.equals("striderfunnelweb")
+                || defName.equals("striderbantha") || defName.equals("striderdetriment") || defName.equals("striderantiheavy")){
             striderTarget = unit;
             numStriders++;
         }
@@ -375,46 +375,46 @@ public class FactoryManager extends Module {
                 workerValue -= unit.getDef().getCost(m);
             }
         }else if (def.getSpeed() > 0 && !unitTypes.AAs.contains(defName) /*&& !unitTypes.striders.contains(defName)*/){
-            fighterValue -= Math.min(unit.getDef().getCost(m), defName.equals("correap") ? 500f: 350f);
+            fighterValue -= Math.min(unit.getDef().getCost(m), defName.equals("tankassault") ? 500f: 350f);
         }else if (unitTypes.AAs.contains(defName)){
             numAAs--;
             AAvalue -= unit.getDef().getCost(m);
         }
 
-        if (defName.equals("armfus") || defName.equals("cafus")){
+        if (defName.equals("energyfusion") || defName.equals("energysingu")){
             fighterValue -= 250f;
         }
 
-        if(defName.equals("cormart") || defName.equals("armham") || defName.equals("armmerl") || defName.equals("trem") || defName.equals("armmanni") || defName.equals("armcrabe") || defName.equals("armsnipe")){
+        if(defName.equals("tankarty") || defName.equals("cloakarty") || defName.equals("vehheavyarty") || defName.equals("tankheavyarty") || defName.equals("hoverarty") || defName.equals("spidercrabe") || defName.equals("cloaksnipe")){
             artyValue -= def.getCost(m);
         }
     
-        if(defName.equals("corgarp")){
+        if(defName.equals("veharty")){
             artyValue -= def.getCost(m)/2f;
         }
 
-        if(defName.equals("hoverassault") || defName.equals("armzeus") || defName.equals("corraid")
-                || defName.equals("amphfloater") || defName.equals("corthud") || defName.equals("correap")){
+        if(defName.equals("hoverassault") || defName.equals("cloakassault") || defName.equals("vehassault")
+                || defName.equals("amphfloater") || defName.equals("shieldassault") || defName.equals("tankassault")){
             assaultValue -= def.getCost(m);
         }
 
-        if (defName.equals("spherecloaker")){
+        if (defName.equals("cloakjammer")){
             numErasers--;
         }
 
-        if (defName.equals("core_spectre")){
+        if (defName.equals("shieldshield")){
             numAspis--;
         }
 
-        if(defName.equals("armwar")){
+        if(defName.equals("cloakriot")){
             numWarriors--;
         }
 
-        if(defName.equals("armzeus")){
+        if(defName.equals("cloakassault")){
             numZeus--;
         }
 
-        if(defName.equals("armrock")){
+        if(defName.equals("cloakskirm")){
             numRockos--;
         }
 
@@ -422,11 +422,11 @@ public class FactoryManager extends Module {
             numFelons--;
         }
 
-        if (defName.equals("corthud")){
+        if (defName.equals("shieldassault")){
             numThugs--;
         }
 
-        if (defName.equals("cormak")){
+        if (defName.equals("shieldriot")){
             numLaws--;
         }
 
@@ -434,15 +434,15 @@ public class FactoryManager extends Module {
             numRackets--;
         }
 
-        if (defName.equals("funnelweb")){
+        if (defName.equals("striderfunnelweb")){
             numFunnels--;
         }
     
-        if (defName.equals("capturecar")){
+        if (defName.equals("vehcapture")){
             numDomis--;
         }
 
-        if (defName.equals("arm_venom")){
+        if (defName.equals("spideremp")){
             numVenoms--;
         }
 
@@ -450,7 +450,7 @@ public class FactoryManager extends Module {
             numRedbacks--;
         }
 
-        if (defName.equals("armsptk")){
+        if (defName.equals("spiderskirm")){
             numRecluses--;
         }
 
@@ -462,48 +462,48 @@ public class FactoryManager extends Module {
             numMaces--;
         }
 
-        if (defName.equals("nsaclash")){
+        if (defName.equals("hoverskirm")){
             numScalpels--;
         }
 
-        if (defName.equals("corfav") || defName.equals("corsh")){
+        if (defName.equals("vehscout") || defName.equals("hoverraid")){
             numScouts--;
         }
         
-        if (defName.equals("logkoda")){
+        if (defName.equals("tankraid")){
             numKodachis--;
         }
 
-        if (defName.equals("correap")){
+        if (defName.equals("tankassault")){
             numReapers--;
         }
 
-        if (defName.equals("tawf114")){
+        if (defName.equals("tankriot")){
             numBanishers--;
         }
 
-        if (defName.equals("corraid")){
+        if (defName.equals("vehassault")){
             numRavagers--;
         }
 
-        if (defName.equals("corlevlr")){
+        if (defName.equals("vehriot")){
             numLevelers--;
         }
 
-        if (defName.equals("corshad") || defName.equals("corhurc2")){
+        if (defName.equals("bomberprec") || defName.equals("bomberriot")){
             numRavens--;
         }
 
-        if (defName.equals("armspy")){
+        if (defName.equals("spiderantiheavy")){
             numInfis--;
         }
 
-        if (defName.equals("armcomdgun")){
+        if (defName.equals("striderantiheavy")){
             numUltis--;
         }
     
-        if (defName.equals("dante") || defName.equals("scorpion") || defName.equals("armraven") || defName.equals("funnelweb")
-                || defName.equals("armbanth") || defName.equals("armorco") || defName.equals("armcomdgun")){
+        if (defName.equals("striderdante") || defName.equals("striderscorpion") || defName.equals("striderarty") || defName.equals("striderfunnelweb")
+                || defName.equals("striderbantha") || defName.equals("striderdetriment") || defName.equals("striderantiheavy")){
             numStriders--;
         }
 
@@ -535,7 +535,7 @@ public class FactoryManager extends Module {
 
     @Override
     public int unitIdle(Unit unit) {
-        if (factories.containsKey(unit.getUnitId()) && !unit.getDef().getName().equals("striderhub") && !unit.getDef().getName().equals("armcsa")){
+        if (factories.containsKey(unit.getUnitId()) && !unit.getDef().getName().equals("striderhub") && !unit.getDef().getName().equals("athena")){
             Factory fac = factories.get(unit.getUnitId());
             assignFactoryTask(fac);
         }
@@ -545,9 +545,9 @@ public class FactoryManager extends Module {
 
     @Override
     public int enemyEnterLOS(Unit unit){
-        if (unit.getDef().isAbleToFly() && !unit.getDef().getName().equals("attackdrone") && !unit.getDef().getName().equals("battledrone") && !unit.getDef().getName().equals("carrydrone")){
+        if (unit.getDef().isAbleToFly() && !unit.getDef().getName().equals("dronelight") && !unit.getDef().getName().equals("droneheavyslow") && !unit.getDef().getName().equals("dronecarry")){
             enemyHasAir = true;
-        }else if (unit.getDef().getName().equals("attackdrone") || unit.getDef().getName().equals("battledrone") || unit.getDef().getName().equals("carrydrone")){
+        }else if (unit.getDef().getName().equals("dronelight") || unit.getDef().getName().equals("droneheavyslow") || unit.getDef().getName().equals("dronecarry")){
             enemyHasDrones = true;
         }
 
@@ -555,7 +555,7 @@ public class FactoryManager extends Module {
             enemyHasAmphs = true;
         }
 
-        if (unit.getDef().getName().equals("corhlt") || unit.getDef().getName().equals("armdeva") || unit.getDef().getName().equals("armpb") || unit.getDef().getName().equals("cordoom") || unit.getDef().getName().equals("armanni") || unit.getDef().getName().equals("armcrabe")){
+        if (unit.getDef().getName().equals("turretheavylaser") || unit.getDef().getName().equals("turretriot") || unit.getDef().getName().equals("turretgauss") || unit.getDef().getName().equals("turretheavy") || unit.getDef().getName().equals("turretantiheavy") || unit.getDef().getName().equals("spidercrabe")){
             enemyHasHeavyPorc = true;
         }
         return 0;
@@ -651,31 +651,31 @@ public class FactoryManager extends Module {
 
     private String getCloaky(Factory fac) {
         if (needWorkers(fac)) {
-            return "armrectr";
+            return "cloakcon";
         }
 
         if (warManager.slasherSpam * 280 > assaultValue){
-            return "armzeus";
+            return "cloakassault";
         }
 
         if (fac.raiderSpam < 0) {
             if (fac.expensiveRaiderSpam < 0){
                 fac.expensiveRaiderSpam++;
-                return "spherepole";
+                return "cloakheavyraid";
             }
             if ((!glaiveSpam && economyManager.adjustedIncome > 15 && numGlaives > 1 && Math.random() > 0.9)) {
                 fac.expensiveRaiderSpam -= (int) Math.min(4, Math.max(2, Math.floor(economyManager.adjustedIncome / 10))) - 1;
-                return "spherepole";
+                return "cloakheavyraid";
             } else {
                 if (warManager.raiderHandler.soloRaiders.size() > 1 + (ai.mergedAllies * (1f - graphManager.territoryFraction))) {
                     fac.raiderSpam++;
                 }
-                return "armpw";
+                return "cloakraid";
             }
         }
     
         if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 4 || Math.random() > 0.5))){
-            return "armjeth";
+            return "cloakaa";
         }
 
         if (glaiveSpam){
@@ -683,19 +683,19 @@ public class FactoryManager extends Module {
         }
 
         if (!economyManager.fusions.isEmpty() && !economyManager.fusions.get(0).isBeingBuilt() && numErasers == 0 && warManager.squadHandler.squads.size() > 0 && Math.random() > 0.75){
-            return "spherecloaker";
+            return "cloakjammer";
         }
 
         if (economyManager.adjustedIncome > 15 && Math.random() > 0.9){
-            return "armtick";
+            return "cloakbomb";
         }
     
         if (graphManager.eminentTerritory && warManager.enemyPorcValue > artyValue && Math.random() > 0.5){
             if (!economyManager.fusions.isEmpty() && !economyManager.fusions.get(0).isBeingBuilt() && Math.random() > 0.85) {
                 fac.raiderSpam -= 3;
-                return "armsnipe";
+                return "cloaksnipe";
             }
-            return "armham";
+            return "cloakarty";
         }
 
         if (economyManager.adjustedIncome > 30 && Math.random() > 0.975){
@@ -709,45 +709,45 @@ public class FactoryManager extends Module {
                 if (bigMap && economyManager.adjustedIncome < 30) {
                     fac.raiderSpam--;
                 }
-                return "armrock";
+                return "cloakskirm";
             } else if (rand > 0.6) {
                 if (economyManager.adjustedIncome < 30) {
                     fac.raiderSpam -= 3;
                 }else{
                     fac.raiderSpam -= 2;
                 }
-                return "armzeus";
+                return "cloakassault";
             } else {
                 if (economyManager.adjustedIncome < 30) {
                     fac.raiderSpam -= 2;
                 }else{
                     fac.raiderSpam -= 1;
                 }
-                return "armwar";
+                return "cloakriot";
             }
         } else {
             if (numRockos < 2 * (numWarriors + numZeus)) {
-                return "armrock";
+                return "cloakskirm";
             } else if (rand > 0.6) {
                 fac.raiderSpam -= 2;
-                return "armzeus";
+                return "cloakassault";
             } else if (rand > 0.2) {
                 fac.raiderSpam -= 1;
-                return "armwar";
+                return "cloakriot";
             } else {
                 fac.raiderSpam -= 3;
-                return "armsnipe";
+                return "cloaksnipe";
             }
         }
     }
 
     private String getShields(Factory fac) {
         if (needWorkers(fac)) {
-            return "cornecro";
+            return "shieldcon";
         }
 
         if (warManager.slasherSpam * 140 > assaultValue && warManager.slasherSpam * 140 > warManager.enemyPorcValue){
-            return "corthud";
+            return "shieldassault";
         }
 
         if (fac.raiderSpam < 0){
@@ -756,15 +756,15 @@ public class FactoryManager extends Module {
                 if (warManager.raiderHandler.soloRaiders.size() > 1 + (ai.mergedAllies * (1f - graphManager.territoryFraction))) {
                     fac.raiderSpam++;
                 }
-                return "corak";
+                return "shieldraid";
             }else{
                 fac.raiderSpam++;
-                return "corstorm";
+                return "shieldskirm";
             }
         }
     
         if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 6 || Math.random() > 0.5))){
-            return "corcrash";
+            return "shieldaa";
         }
 
         fac.raiderSpam--;
@@ -776,11 +776,11 @@ public class FactoryManager extends Module {
 
         if (economyManager.adjustedIncome > 45 && economyManager.energy > 100 && numAspis < numFelons && Math.random() > 0.5){
             fac.raiderSpam--;
-            return "core_spectre";
+            return "shieldshield";
         }
 
         if (economyManager.adjustedIncome > 20 && Math.random() > 0.9){
-            return "corroach";
+            return "shieldbomb";
         }
 
         if (economyManager.adjustedIncome > 20 && numLaws > 0 && numThugs > 1 && numRackets * 3 < numThugs + numLaws) {
@@ -788,9 +788,9 @@ public class FactoryManager extends Module {
             return "shieldarty";
         }else{
             if (numLaws == 0 || numThugs > numLaws * 2) {
-                return "cormak";
+                return "shieldriot";
             }else {
-                return "corthud";
+                return "shieldassault";
             }
         }
     }
@@ -809,10 +809,10 @@ public class FactoryManager extends Module {
                 if (warManager.raiderHandler.soloRaiders.size() > 1 + (ai.mergedAllies * (1f - graphManager.territoryFraction))) {
                     fac.raiderSpam++;
                 }
-                return "amphraider3";
+                return "amphraid";
             }else{
                 fac.raiderSpam++;
-                return "amphraider2";
+                return "amphimpulse";
             }
         }
     
@@ -845,32 +845,32 @@ public class FactoryManager extends Module {
 
     private String getLV(Factory fac) {
         if ((earlyWorker || numAspis > 0) && needWorkers(fac)) {
-            return "corned";
+            return "vehcon";
         }
 
         if (warManager.slasherSpam * 140 > assaultValue && warManager.slasherSpam * 140 > warManager.enemyPorcValue){
-            return "corraid";
+            return "vehassault";
         }
     
         if (graphManager.eminentTerritory
                 && warManager.enemyPorcValue > artyValue && Math.random() > 0.85){
             if (enemyHasHeavyPorc && Math.random() > 0.9) {
-                return "armmerl";
+                return "vehheavyarty";
             }else{
-                return "corgarp";
+                return "veharty";
             }
         }
     
         if ((numAspis > 0 || (warManager.squadHandler.nextShieldSquad != null && warManager.squadHandler.nextShieldSquad.hasFunnel)) && numDomis < 8 && Math.random() > 0.5){
-            return "capturecar";
+            return "vehcapture";
         }
 
         if (fac.raiderSpam < 0) {
             if ((economyManager.adjustedIncome > 15 && Math.random() > 0.7) || numScouts == 0 || (bigMap && numScouts < 2)){
-                return "corfav";
+                return "vehscout";
             }
             fac.raiderSpam++;
-            return "corgator";
+            return "vehraid";
         }
     
         if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 4 || Math.random() > 0.5))){
@@ -878,7 +878,7 @@ public class FactoryManager extends Module {
         }
 
         if (needWorkers(fac)) {
-            return "corned";
+            return "vehcon";
         }
 
         if (Math.random() > 0.85){
@@ -889,21 +889,21 @@ public class FactoryManager extends Module {
         if (economyManager.adjustedIncome < 35) {
             if (rand > 0.1) {
                 if (numRavagers > numLevelers * 3 || numLevelers == 0) {
-                    return "corlevlr";
+                    return "vehriot";
                 }
-                return "corraid";
+                return "vehassault";
             } else {
                 //fac.raiderSpam++;
-                return "cormist";
+                return "vehsupport";
             }
         }else{
             if (rand > 0.35) {
                 if (numRavagers > numLevelers * 3 || numLevelers == 0) {
-                    return "corlevlr";
+                    return "vehriot";
                 }
-                return "corraid";
+                return "vehassault";
             } else {
-                return "corgarp";
+                return "veharty";
             }
         }
 
@@ -911,7 +911,7 @@ public class FactoryManager extends Module {
 
     private String getHovers(Factory fac) {
         if (needWorkers(fac)) {
-            return "corch";
+            return "hovercon";
         }
 
         if (warManager.slasherSpam * 140 > assaultValue && warManager.slasherSpam * 140 > warManager.enemyPorcValue){
@@ -922,7 +922,7 @@ public class FactoryManager extends Module {
             if (warManager.raiderHandler.soloRaiders.size() > 1 + (ai.mergedAllies * (1f - graphManager.territoryFraction))) {
                 fac.raiderSpam++;
             }
-            return "corsh";
+            return "hoverraid";
         }
     
         if (fac.expensiveRaiderSpam < 0){
@@ -936,7 +936,7 @@ public class FactoryManager extends Module {
 
         if (graphManager.eminentTerritory
                 && warManager.enemyPorcValue > artyValue && Math.random() > 0.75){
-            return "armmanni";
+            return "hoverarty";
         }
     
         if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 3 || Math.random() > 0.5))) {
@@ -949,87 +949,87 @@ public class FactoryManager extends Module {
         }
         
         if (graphManager.eminentTerritory && Math.random() > 0.95){
-            return "armmanni";
+            return "hoverarty";
         }
-        return "nsaclash";
+        return "hoverskirm";
     }
 
     private String getTanks(Factory fac) {
         if (needWorkers(fac) || (fac.raiderSpam >= 0 && numWorkers < 2)) {
-            return "coracv";
+            return "tankcon";
         }
 
         if (warManager.slasherSpam * 140 > warManager.enemyPorcValue || warManager.slasherSpam * 560 > assaultValue){
             fac.raiderSpam--;
-            return "correap";
+            return "tankassault";
         }
     
         if ((graphManager.eminentTerritory)
                 && enemyHasHeavyPorc && warManager.enemyPorcValue > artyValue && Math.random() > 0.75){
-            return "cormart";
+            return "tankarty";
         }
     
         if (fac.expensiveRaiderSpam < 0){
             fac.expensiveRaiderSpam++;
-            return "panther";
+            return "tankheavyraid";
         }
         if (fac.raiderSpam < 0) {
             if ((economyManager.adjustedIncome > 15 && Math.random() > 0.9)) {
                 fac.expensiveRaiderSpam -= (int) Math.min(8, Math.max(2, Math.floor(economyManager.adjustedIncome / (bigMap ? 2.5f : 5f)))) + 1;
-                return "panther";
+                return "tankheavyraid";
             }else {
                 fac.raiderSpam++;
                 if (economyManager.adjustedIncome < 20f || numKodachis < (bigMap ? 3 : 2)) {
-                    return "logkoda";
+                    return "tankraid";
                 }else{
-                    return "panther";
+                    return "tankheavyraid";
                 }
             }
         }
     
         if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 2 || Math.random() > 0.5))){
-            return "corsent";
+            return "tankaa";
         }
         
         double rand = Math.random();
         if (economyManager.adjustedIncome < 30) {
             if (bigMap || rand > 0.5) {
                 fac.expensiveRaiderSpam -= (int) Math.min(8, Math.max(2, Math.floor(economyManager.adjustedIncome / (bigMap ? 2.5f : 5f)))) + 1;
-                return "panther";
+                return "tankheavyraid";
             }
     
             fac.raiderSpam--;
             if (numBanishers * 2 > numReapers){
                 fac.raiderSpam--;
-                return "correap";
+                return "tankassault";
             }else {
-                return "tawf114";
+                return "tankriot";
             }
         }else{
             fac.raiderSpam--;
             if (rand > 0.1) {
                 if (numBanishers * 3 > numReapers){
-                    return "correap";
+                    return "tankassault";
                 }else {
-                    return "tawf114";
+                    return "tankriot";
                 }
             }else {
                 fac.raiderSpam -= 2;
-                return "corgol";
+                return "tankheavyassault";
             }
         }
     }
 
     private String getSpiders(Factory fac) {
         if (needWorkers(fac)) {
-            return "arm_spider";
+            return "spidercon";
         }
 
         if (warManager.slasherSpam * 140 > assaultValue){
             if (Math.random() > 0.5) {
                 return "spiderassault";
             }else{
-                return "armsptk";
+                return "spiderskirm";
             }
         }
 
@@ -1037,7 +1037,7 @@ public class FactoryManager extends Module {
             if (Math.random() > 0.5) {
                 fac.raiderSpam++;
             }
-            return "armflea";
+            return "spiderscout";
         }
 
         if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 4 || Math.random() > 0.5))){
@@ -1047,7 +1047,7 @@ public class FactoryManager extends Module {
         if (((!bigMap && economyManager.adjustedIncome > 30) || economyManager.adjustedIncome > 60)
                 && warManager.enemyPorcValue > artyValue && Math.random() > 0.75){
             fac.raiderSpam -= 4;
-            return "armcrabe";
+            return "spidercrabe";
         }
 
         fac.raiderSpam -= 2;
@@ -1056,7 +1056,7 @@ public class FactoryManager extends Module {
         }
 
         if (numRecluses < (numVenoms + numRedbacks)){
-            return "armsptk";
+            return "spiderskirm";
         }
 
         if (numHermits < (numVenoms + numRedbacks)){
@@ -1065,9 +1065,9 @@ public class FactoryManager extends Module {
 
         double rand = Math.random();
         if (rand > 0.9 || numVenoms == 0) {
-            return "arm_venom";
+            return "spideremp";
         } else{
-            return "armsptk";
+            return "spiderskirm";
         }
     }
 
@@ -1075,17 +1075,17 @@ public class FactoryManager extends Module {
         if (fac.raiderSpam < 0){
             /*if (Math.random() > 0.8 || economyManager.adjustedIncome < 15) {
                 fac.raiderSpam++;
-                return "armkam";
+                return "gunshipraid";
             }*/
             if (Math.random() > 0.5){
                 fac.raiderSpam++;
             }
-            return "blastwing";
+            return "gunshipbomb";
         }
         
         if (fac.expensiveRaiderSpam < 0){
             fac.expensiveRaiderSpam++;
-            return "armbrawl";
+            return "gunshipheavyskirm";
         }
 
         if(needWorkers(fac)) {
@@ -1103,33 +1103,33 @@ public class FactoryManager extends Module {
         if (graphManager.eminentTerritory && Math.random() > 0.95 - Math.max(0.1, 0.2 * graphManager.territoryFraction)){
             fac.raiderSpam -= 3;
             fac.expensiveRaiderSpam -= 6;
-            return "corcrw";
+            return "gunshipkrow";
         }
         
         if (!graphManager.eminentTerritory){
-            return "gunshipsupport";
+            return "gunshipskirm";
         }
         
         if (Math.random() > 0.90){
-            return "blackdawn";
+            return "gunshipassault";
         }
-        return "gunshipsupport";
+        return "gunshipskirm";
     }
 
     private String getPlanes(Factory fac){
         // note: planes do not have raiders and lichos are best AA.
         if(needWorkers(fac)) {
-            return "armca";
+            return "planecon";
         }
 
         if (fac.raiderSpam < 0){
             fac.raiderSpam++;
-            return "fighter";
+            return "planefighter";
         }
         
         /*if (((enemyHasAir || enemyHasDrones) && warManager.AAs.size() < 3 + Math.ceil(ai.mergedAllies/2f)) ||
                 (enemyHasAir && fighterValue > AAvalue * (3f + (3f * graphManager.territoryFraction * graphManager.territoryFraction)) && Math.random() > 0.5)){
-            return "corvamp";
+            return "planeheavyfighter";
         }*/
     
         if (graphManager.eminentTerritory) {
@@ -1138,36 +1138,36 @@ public class FactoryManager extends Module {
         
         if (numRavens <= (economyManager.baseIncome/(12 * (1 + (0.5 * ai.mergedAllies)))) + 1 || economyManager.adjustedIncome < 35) {
             if (Math.random() > 0.2) {
-                return "corshad";
+                return "bomberprec";
             }
-            return "corhurc2";
+            return "bomberriot";
         }
         fac.raiderSpam -= 3;
-        return "armcybr";
+        return "bomberheavy";
     }
 
     private String getStrider(){
         if (economyManager.adjustedIncome > 60 && warManager.miscHandler.striders.size() > 1 && Math.random() > 0.5){
             if (Math.random() > 0.25 || warManager.miscHandler.striders.size() < 5) {
-                return "armbanth";
+                return "striderbantha";
             }else{
-                return "armorco";
+                return "striderdetriment";
             }
         }
         
         if (numUltis < 1 + warManager.enemyHeavyFactor && !economyManager.fusions.isEmpty() && !economyManager.fusions.get(0).isBeingBuilt() && ((numStriders > 0 && Math.random() > 0.5) || warManager.enemyHasTrollCom)){
-            return "armcomdgun";
+            return "striderantiheavy";
         }
 
         double rand = Math.random();
         if (warManager.squadHandler.nextShieldSquad != null && (ai.mergedAllies == 0 || rand > 0.5)){
-            return "funnelweb";
+            return "striderfunnelweb";
         }
 
         if(rand > 0.75){
-            return  "scorpion";
+            return  "striderscorpion";
         }else{
-            return "dante";
+            return "striderdante";
         }
     }
 }

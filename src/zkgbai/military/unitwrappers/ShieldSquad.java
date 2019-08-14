@@ -26,7 +26,7 @@ public class ShieldSquad extends Squad {
     @Override
     public void addUnit(Fighter f, int frame){
         f.squad = this;
-        if (!f.getUnit().getDef().getName().equals("funnelweb")) {
+        if (!f.getUnit().getDef().getName().equals("striderfunnelweb")) {
             metalValue += f.metalValue;
         }else{
             funnelValue += f.metalValue;
@@ -63,7 +63,7 @@ public class ShieldSquad extends Squad {
             drawParams.add((float)leader.id);
             for (Fighter fi: fighters){
                 params.add((float)leader.id);
-                if (fi.getUnit().getDef().getName().equals("capturecar")){
+                if (fi.getUnit().getDef().getName().equals("vehcapture")){
                     params.add(175f);
                 }else {
                     params.add(75f);
@@ -83,7 +83,7 @@ public class ShieldSquad extends Squad {
             List<Float> drawParams = new ArrayList<>();
             params.add((float)leader.id);
             drawParams.add((float)leader.id);
-            if (f.getUnit().getDef().getName().equals("capturecar")){
+            if (f.getUnit().getDef().getName().equals("vehcapture")){
                 params.add(175f);
             }else {
                 params.add(75f);
@@ -96,7 +96,7 @@ public class ShieldSquad extends Squad {
     @Override
     public void removeUnit(Fighter f){
         if (leader != null && leader.equals(f)){
-            if (!f.getUnit().getDef().getName().equals("funnelweb")) {
+            if (!f.getUnit().getDef().getName().equals("striderfunnelweb")) {
                 metalValue -= f.metalValue;
             }else{
                 funnelValue -= f.metalValue;
@@ -119,7 +119,7 @@ public class ShieldSquad extends Squad {
             drawParams.add((float)leader.id);
             for (Fighter fi:fighters){
                 params.add((float)leader.id);
-                if (fi.getUnit().getDef().getName().equals("capturecar")){
+                if (fi.getUnit().getDef().getName().equals("vehcapture")){
                     params.add(175f);
                 }else {
                     params.add(75f);
@@ -200,11 +200,11 @@ public class ShieldSquad extends Squad {
     int getUnitWeight(Fighter f){
         String type = f.getUnit().getDef().getName();
         switch (type){
-            case "funnelweb": return 1; // funnels skimrmish from too large a range for other units to do any damage
-            case "capturecar": return 2;
-            case "cormak": return 2; // outlaws are too fast for other units to keep up with
+            case "striderfunnelweb": return 1; // funnels skimrmish from too large a range for other units to do any damage
+            case "vehcapture": return 2;
+            case "shieldriot": return 2; // outlaws are too fast for other units to keep up with
             case "shieldarty": return 3;
-            case "corthud": return 4;
+            case "shieldassault": return 4;
             case "shieldfelon": return 5;
         }
         return 0;

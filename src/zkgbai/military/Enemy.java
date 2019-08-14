@@ -97,26 +97,26 @@ public class Enemy {
 
 		String defName = ud.getName();
 
-		if (defName.equals("corgarp") || defName.equals("armsnipe") || defName.equals("armmanni")
-				|| defName.equals("amphfloater") || defName.equals("armsptk")){
+		if (defName.equals("veharty") || defName.equals("cloaksnipe") || defName.equals("hoverarty")
+				|| defName.equals("amphfloater") || defName.equals("spiderskirm")){
 			this.isMinorCancer = true;
 		}
 
-		if (defName.equals("dante") || defName.equals("scorpion") || defName.equals("funnelweb") || defName.equals("armbanth") || defName.equals("armorco")
-				|| defName.equals("amphassault") || defName.equals("armraven") || defName.equals("armcrabe") || defName.equals("corgol") || defName.equals("correap")
-				|| defName.equals("shieldfelon") || u.getName().equals("capturecar") || u.getName().contains("com")){
+		if (defName.equals("striderdante") || defName.equals("striderscorpion") || defName.equals("striderfunnelweb") || defName.equals("striderbantha") || defName.equals("striderdetriment")
+				|| defName.equals("amphassault") || defName.equals("striderarty") || defName.equals("spidercrabe") || defName.equals("tankheavyassault") || defName.equals("tankassault")
+				|| defName.equals("shieldfelon") || u.getName().equals("vehcapture") || u.getName().contains("com")){
 			this.isMajorCancer = true;
 		}
 		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
-			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("screamer") || u.getName().equals("corflak"))
-					&& !defName.equals("dante")){
+			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("turretaaheavy") || u.getName().equals("turretaaflak"))
+					&& !defName.equals("striderdante")){
 				// identify riots
 				this.isRiot = true;
 			}
 			
-			if (defName.equals("corhlt") || defName.equals("amphraider3")){
+			if (defName.equals("turretheavylaser") || defName.equals("amphraid")){
 				isStrong = true;
 			}
 
@@ -135,7 +135,7 @@ public class Enemy {
 				this.isRaider = true;
 			}
 
-			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("cormist")) || u.isBuilder() && !u.getTooltip().contains("Riot")){
+			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("vehsupport")) || u.isBuilder() && !u.getTooltip().contains("Riot")){
 				// identify arty/skirms
 				this.isArty = true;
 			}
@@ -144,11 +144,11 @@ public class Enemy {
 				this.isAA = true;
 			}
 			
-			if (ud.getName().equals("gunshipsupport") || ud.getName().equals("armbrawl") || ud.getName().equals("corcrw") || ud.getName().equals("slowmort")){
+			if (ud.getName().equals("gunshipskirm") || ud.getName().equals("gunshipheavyskirm") || ud.getName().equals("gunshipkrow") || ud.getName().equals("jumpskirm")){
 				isFlexAA = true;
 			}
 
-			if (ud.getName().equals("armbrtha") || ud.getName().equals("corsilo") || ud.getName().equals("tacnuke")
+			if (ud.getName().equals("staticheavyarty") || ud.getName().equals("staticnuke") || ud.getName().equals("tacnuke")
 					|| ud.getName().equals("napalmmissile") || ud.getName().equals("raveparty") || ud.getName().equals("zenith")
 					|| ud.getName().equals("mahlazer")){
 				this.isSuperWep = true;
@@ -190,7 +190,7 @@ public class Enemy {
 			}
 			danger = (ud.getPower() + health)/10f;
 
-			if (isFlamer || ud.getName().equals("arm_venom") || ud.getName().equals("amphraider2")){
+			if (isFlamer || ud.getName().equals("spideremp") || ud.getName().equals("amphimpulse")){
 				danger += 100f;
 			}
 			if (isRiot || isStrong){

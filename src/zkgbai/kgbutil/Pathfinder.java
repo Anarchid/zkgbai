@@ -108,9 +108,9 @@ public class Pathfinder extends Object {
         if (u.getDef().getMoveData() != null) {
             maxSlope = u.getDef().getMoveData().getMaxSlope();
             flyer = false;
-            if (maxSlope == callback.getUnitDefByName("arm_spider").getMoveData().getMaxSlope()){
+            if (maxSlope == callback.getUnitDefByName("spidercon").getMoveData().getMaxSlope()){
                 // use special pathing for spiders, since they favor hills.
-                if (u.getDef().getName().equals("armflea") || u.getDef().getName().equals("armspy")){
+                if (u.getDef().getName().equals("spiderscout") || u.getDef().getName().equals("spiderantiheavy")){
                     costs = SPIDER_RAIDER_PATH;
                 }else {
                     costs = SPIDER_PATH;

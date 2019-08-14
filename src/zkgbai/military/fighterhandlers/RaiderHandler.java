@@ -75,7 +75,7 @@ public class RaiderHandler {
         
         String defName = r.getUnit().getDef().getName();
         // glaive, bandit, duck/archer, dagger
-        if (defName.equals("armpw")) {
+        if (defName.equals("cloakraid")) {
             if (nextGlaiveSquad == null) {
                 nextGlaiveSquad = new RaiderSquad();
                 nextGlaiveSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
@@ -87,7 +87,7 @@ public class RaiderHandler {
                 nextGlaiveSquad.status = 'r';
                 nextGlaiveSquad = null;
             }
-        }else if (defName.equals("corak")) {
+        }else if (defName.equals("shieldraid")) {
             if (nextBanditSquad == null) {
                 nextBanditSquad = new RaiderSquad();
                 nextBanditSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
@@ -99,7 +99,7 @@ public class RaiderHandler {
                 nextBanditSquad.status = 'r';
                 nextBanditSquad = null;
             }
-        }else if (defName.equals("amphraider2") || defName.equals("amphraider3")) {
+        }else if (defName.equals("amphimpulse") || defName.equals("amphraid")) {
             if (nextAmphSquad == null) {
                 nextAmphSquad = new RaiderSquad();
                 nextAmphSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
@@ -111,7 +111,7 @@ public class RaiderHandler {
                 nextAmphSquad.status = 'r';
                 nextAmphSquad = null;
             }
-        }else if (defName.equals("corsh")) {
+        }else if (defName.equals("hoverraid")) {
             if (nextDaggerSquad == null) {
                 nextDaggerSquad = new RaiderSquad();
                 nextDaggerSquad.raid(warManager.getRaiderRally(r.getPos()), frame);
@@ -131,7 +131,7 @@ public class RaiderHandler {
         
         String defName = r.getUnit().getDef().getName();
         
-        if (defName.equals("corgator")){
+        if (defName.equals("vehraid")){
             //for scorchers
             if (nextScorcherSquad == null){
                 nextScorcherSquad = new RaiderSquad();
@@ -158,7 +158,7 @@ public class RaiderHandler {
                 nextHalberdSquad.status = 'r';
                 nextHalberdSquad = null;
             }
-        }else if (defName.equals("spherepole")) {
+        }else if (defName.equals("cloakheavyraid")) {
             // for scythes
             if (nextScytheSquad == null) {
                 nextScytheSquad = new RaiderSquad();
@@ -171,7 +171,7 @@ public class RaiderHandler {
                 nextScytheSquad.status = 'r';
                 nextScytheSquad = null;
             }
-        }else if (defName.equals("panther")) {
+        }else if (defName.equals("tankheavyraid")) {
             // for panthers
             if (nextPantherSquad == null) {
                 nextPantherSquad = new RaiderSquad();
@@ -416,7 +416,7 @@ public class RaiderHandler {
         for (Raider r: soloRaiders){
             boolean overThreat = (warManager.getEffectiveThreat(r.getPos()) > 0);
             if (retreatHandler.isRetreating(r.getUnit()) || r.getUnit().getHealth() <= 0
-                        || (r.getUnit().getDef().getName().equals("spherepole") && !r.getUnit().isCloaked() && !overThreat)){
+                        || (r.getUnit().getDef().getName().equals("cloakheavyraid") && !r.getUnit().isCloaked() && !overThreat)){
                 continue;
             }
             
@@ -441,7 +441,7 @@ public class RaiderHandler {
             }
             
             for (Enemy e: warManager.getTargets()){
-                if (r.getUnit().getDef().getName().equals("blastwing")){
+                if (r.getUnit().getDef().getName().equals("gunshipbomb")){
                     break;
                 }
                 if (warManager.getEffectiveThreat(e.position) > warManager.getFriendlyThreat(r.getPos()) || e.isRiot){
@@ -543,7 +543,7 @@ public class RaiderHandler {
                     }
                     
                     float tmpcost = distance(rs.getPos(), e.position);
-                    if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("corrazor"))){
+                    if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
                         tmpcost += 1000;
                     }
                     if (e.isWorker){
@@ -597,7 +597,7 @@ public class RaiderHandler {
             Raider r = smallRaiders.get(h.getUnitId());
             if (h.getHealth() / h.getMaxHealth() < 0.8 && attacker != null && attacker.getMaxSpeed() > 0 && warManager.getEffectiveThreat(h.getPos()) <= 0) {
                 float movdist = -100;
-                if (r.getUnit().getDef().getName().equals("corsh")) {
+                if (r.getUnit().getDef().getName().equals("hoverraid")) {
                     movdist = -450;
                 }
                 float x = movdist * dir.x;

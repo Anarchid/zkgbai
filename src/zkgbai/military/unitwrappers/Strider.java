@@ -31,9 +31,9 @@ public class Strider extends Fighter {
     @Override
     public void fightTo(AIFloat3 pos, int frame){
         AIFloat3 target;
-        if (unit.getDef().getName().equals("scorpion")) {
+        if (unit.getDef().getName().equals("striderscorpion")) {
             target = getDirectionalPoint(pos, getPos(), 250f);
-        }else if (unit.getDef().getName().equals("armbanth") || unit.getDef().getName().equals("armorco")) {
+        }else if (unit.getDef().getName().equals("striderbantha") || unit.getDef().getName().equals("striderdetriment")) {
             target = getDirectionalPoint(pos, getPos(), 350f);
         }else{ // dante
             target = getDirectionalPoint(pos, getPos(), 50f);

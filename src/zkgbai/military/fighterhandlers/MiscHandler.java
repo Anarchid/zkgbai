@@ -158,7 +158,7 @@ public class MiscHandler {
                     Unit u = l.getUnit();
                     if (!retreatHandler.isRetreating(u)){
                         AIFloat3 target;
-                        if ((u.getRulesParamFloat("disarmed", 0f) > 0 || warManager.getEffectiveThreat(l.getPos()) > 0) && !l.getUnit().getDef().getName().equals("armcrabe")){
+                        if ((u.getRulesParamFloat("disarmed", 0f) > 0 || warManager.getEffectiveThreat(l.getPos()) > 0) && !l.getUnit().getDef().getName().equals("spidercrabe")){
                             target = graphManager.getClosestHaven(u.getPos());
                             l.moveTo(target, frame);
                         }else {
@@ -445,13 +445,13 @@ public class MiscHandler {
 
                 if (s.squad == null) {
 
-                    if (s.getUnit().getDef().getName().equals("spherecloaker") && !squadHandler.squads.isEmpty()) {
+                    if (s.getUnit().getDef().getName().equals("cloakjammer") && !squadHandler.squads.isEmpty()) {
                         int rand = (int) (Math.random() * (squadHandler.squads.size() - 1));
                         Squad randomSquad = squadHandler.squads.get(rand);
                         if (!randomSquad.isAirSquad) {
                             s.squad = randomSquad;
                         }
-                    }else if (s.getUnit().getDef().getName().equals("core_spectre") && squadHandler.nextShieldSquad != null && squadHandler.nextShieldSquad.getPos() != null) {
+                    }else if (s.getUnit().getDef().getName().equals("shieldshield") && squadHandler.nextShieldSquad != null && squadHandler.nextShieldSquad.getPos() != null) {
                         s.squad = squadHandler.nextShieldSquad;
                     }
 
@@ -487,7 +487,7 @@ public class MiscHandler {
             }
 
             MetalSpot ms = null;
-            if (s.getDef().getName().equals("blastwing")){
+            if (s.getDef().getName().equals("gunshipbomb")){
                 ms = graphManager.getClosestEnemySpot(s.getPos());
                 if (ms != null) {
                     s.fight(ms.getPos(), (short) 0, frame + 300);
@@ -535,7 +535,7 @@ public class MiscHandler {
     private void dgunStriders(){
         for (Strider s:striders.values()){
             String defName = s.getUnit().getDef().getName();
-            if (!defName.equals("dante") && !defName.equals("scorpion") && !defName.equals("armbanth")){
+            if (!defName.equals("striderdante") && !defName.equals("striderscorpion") && !defName.equals("striderbantha")){
                 continue;
             }
             
@@ -554,7 +554,7 @@ public class MiscHandler {
         Unit target = null;
         float bestScore = 0;
 
-        if (s.getUnit().getDef().getName().equals("dante")) {
+        if (s.getUnit().getDef().getName().equals("striderdante")) {
             for (Unit e : enemies) {
                 float cost = e.getDef().getCost(m);
                 if (e.getMaxSpeed() > 0 && !e.getDef().isAbleToFly() && cost > 200f) {
@@ -562,7 +562,7 @@ public class MiscHandler {
                         bestScore = cost;
                         target = e;
                     }
-                } else if (e.getMaxSpeed() == 0 && !e.getDef().getName().equals("wolverine_mine") && !e.getDef().getName().equals("corrazor")) {
+                } else if (e.getMaxSpeed() == 0 && !e.getDef().getName().equals("wolverine_mine") && !e.getDef().getName().equals("turretaalaser")) {
                     if (cost > bestScore) {
                         bestScore = cost;
                         target = e;
@@ -576,7 +576,7 @@ public class MiscHandler {
                 if (!e.getDef().isAbleToAttack() || e.getDef().getTooltip().contains("Anti-Air")){
                     continue;
                 }
-                if (e.getMaxSpeed() > 0 && (!e.getDef().isAbleToFly() || e.getDef().getName().equals("corcrw")) && cost > 200) {
+                if (e.getMaxSpeed() > 0 && (!e.getDef().isAbleToFly() || e.getDef().getName().equals("gunshipkrow")) && cost > 200) {
                     if (cost > bestScore) {
                         bestScore = cost;
                         target = e;

@@ -77,7 +77,7 @@ public class GraphManager extends Module {
 
 		this.metalSpots = new ArrayList<MetalSpot>();
 		this.links = new ArrayList<Link>();
-		this.mexDef = ai.getCallback().getUnitDefByName("cormex");
+		this.mexDef = ai.getCallback().getUnitDefByName("staticmex");
 		this.mexDefID = mexDef.getUnitDefId();
 		this.m = callback.getResourceByName("Metal");
 		this.e = callback.getResourceByName("Energy");
@@ -89,11 +89,11 @@ public class GraphManager extends Module {
 		
 		// hardwired for now because of segfaults upon segfaults
 		pylonDefs = new java.util.HashMap<String, Integer>();
-		pylonDefs.put("armwin", 60);
-		pylonDefs.put("armsolar", 100);
-		pylonDefs.put("armestor", 500);
-		pylonDefs.put("armfus", 150);
-		pylonDefs.put("cafus", 150);
+		pylonDefs.put("energywind", 60);
+		pylonDefs.put("energysolar", 100);
+		pylonDefs.put("energypylon", 500);
+		pylonDefs.put("energyfusion", 150);
+		pylonDefs.put("energysingu", 150);
 		
 		final int width = callback.getMap().getWidth()/4;
 		final int height = callback.getMap().getHeight()/4;

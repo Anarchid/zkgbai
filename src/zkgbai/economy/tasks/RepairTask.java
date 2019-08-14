@@ -16,11 +16,11 @@ public class RepairTask extends WorkerTask{
 		String defName = target.getDef().getName();
 
 		UnitClasses unitTypes = UnitClasses.getInstance();
-		if (unitTypes.shieldMobs.contains(target.getDef().getName()) && !target.getDef().getName().equals("funnelweb")){
+		if (unitTypes.shieldMobs.contains(target.getDef().getName()) && !target.getDef().getName().equals("striderfunnelweb")){
 			this.isShieldMob = true;
 		}
 
-		if (defName.equals("correap") || defName.equals("tawf114") || defName.equals("corgol")){
+		if (defName.equals("tankassault") || defName.equals("tankriot") || defName.equals("tankheavyassault")){
 			this.isTank = true;
 		}
 	}
