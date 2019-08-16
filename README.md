@@ -10,7 +10,9 @@ It uses a static graph derived from resource points on the game map as a major p
 
 Compiling
 =========
-The git repository contains everything necessary to build the AI except for the ant build tool. 
+The git repository contains everything necessary to build the AI except for the ant build tool and the JDK.
+
+Spring now requires JDK8 for javaAIs, 32bit for windows and 64bit for linux. (previously was JDK7)
 
 To compile the AI using only `ant`, simply `cd` to your checkout folder, and run `ant dist`.
 
