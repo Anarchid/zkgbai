@@ -1378,7 +1378,7 @@ public class EconomyManager extends Module {
 				|| (thirdFac && staticIncome > 65 && facManager.factories.size() == 2 && factoryTasks.isEmpty())
 				|| (ai.mergedAllies > 0 && staticIncome > 65 && !hasStriders && graphManager.eminentTerritory && factoryTasks.isEmpty())
 				|| (ai.mergedAllies > 0 && staticIncome > 65 && graphManager.territoryFraction > 0.35f && (!hasPlanes && !hasGunship) && factoryTasks.isEmpty())
-				|| (ai.mergedAllies > 0 && bigMap && graphManager.territoryFraction > 0.4f && (!warManager.miscHandler.striders.isEmpty() || (warManager.squadHandler.nextShieldSquad != null && warManager.squadHandler.nextShieldSquad.hasFunnel)) && (!hasPlanes || !hasGunship) && factoryTasks.isEmpty())) {
+				|| (ai.mergedAllies > 0 && bigMap && graphManager.territoryFraction > 0.4f && (!warManager.miscHandler.striders.isEmpty() || warManager.squadHandler.nextShieldSquad != null) && (!hasPlanes || !hasGunship) && factoryTasks.isEmpty())) {
 			createFactoryTask(worker, hasPlop);
 		}
 

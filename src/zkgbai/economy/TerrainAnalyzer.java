@@ -71,7 +71,9 @@ public class TerrainAnalyzer {
             debug(taMsg + "Bot path check succeeded, enabling bots!");
             initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");
-            initialFacList.add("factoryamph");
+	        if (Math.max(callback.getMap().getHeight(), callback.getMap().getWidth()) <= 640 || ai.mergedAllies > 0){
+		        initialFacList.add("factoryamph");; // No amphs in 1v1 on maps bigger than titan duel.
+	        }
         }else if (veh.result && bot.avgCostRatio >= veh.avgCostRatio - 0.05f) {
             debug(taMsg + "Bots not cost competitive, skipping!");
         }

@@ -861,7 +861,7 @@ public class FactoryManager extends Module {
             }
         }
     
-        if ((numAspis > 0 || (warManager.squadHandler.nextShieldSquad != null && warManager.squadHandler.nextShieldSquad.hasFunnel)) && numDomis < 8 && Math.random() > 0.5){
+        if ((numAspis > 0 || warManager.squadHandler.nextShieldSquad != null) && numDomis < 8 && Math.random() > 0.5){
             return "vehcapture";
         }
 
@@ -1160,10 +1160,6 @@ public class FactoryManager extends Module {
         }
 
         double rand = Math.random();
-        if (warManager.squadHandler.nextShieldSquad != null && (ai.mergedAllies == 0 || rand > 0.5)){
-            return "striderfunnelweb";
-        }
-
         if(rand > 0.75){
             return  "striderscorpion";
         }else{

@@ -15,8 +15,6 @@ public class ShieldSquad extends Squad {
     static short OPTION_SHIFT_KEY = (1 << 5);
     public Fighter leader;
     private int leaderWeight;
-    public boolean hasFunnel = false;
-    public float funnelValue = 0;
 
     public ShieldSquad(){
         super();
@@ -27,38 +25,26 @@ public class ShieldSquad extends Squad {
     @Override
     public void addUnit(Fighter f, int frame){
         f.squad = this;
-        if (!f.getUnit().getDef().getName().equals("striderfunnelweb")) {
-            metalValue += f.metalValue;
-        }else{
-            funnelValue += f.metalValue;
-        }
-
-        // for funnels
-        if (getUnitWeight(f) == 1){
-            hasFunnel = true;
-            if (leader != null) {
-                List<Float> moveparams = new ArrayList<>();
-                moveparams.add(1f);
-                leader.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, frame+15);
-            }
-        }
+        metalValue += f.metalValue;
 
         if (leader == null){
             f.getUnit().setMoveState(1, (short) 0, frame+300);
             leader = f;
             leaderWeight = getUnitWeight(f);
+	        List<Float> moveparams = new ArrayList<>();
+	        moveparams.add(40f);
+	        f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, frame+300);
             f.fightTo(target, frame);
-            if (hasFunnel){
-                List<Float> moveparams = new ArrayList<>();
-                moveparams.add(1f);
-                f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, frame+15);
-            }
         }else if (getUnitWeight(f) > leaderWeight){
             f.getUnit().setMoveState(1, (short) 0, frame+300);
             leader.getUnit().setMoveState(0, (short) 0, frame + 300);
+	        // Set the wanted max speed for the new leader and remove the speed limit from the old leader.
             List<Float> moveparams = new ArrayList<>();
-            moveparams.add(2f);
-            f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, frame+15);
+            moveparams.add(40f);
+            f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, frame+150);
+            moveparams.clear();
+	        moveparams.add(leader.getUnit().getMaxSpeed() * 30f); // CMD_WANTED_SPEED uses elmos/sec while the game returns elmos/frame, thus MaxSpeed*30.
+	        leader.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, frame+150);
             fighters.add(leader);
             leader = f;
             leaderWeight = getUnitWeight(f);
@@ -78,12 +64,6 @@ public class ShieldSquad extends Squad {
                 fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, frame + 3000);
                 fi.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, frame + 3000);
                 params.clear();
-            }
-
-            if (hasFunnel){
-                moveparams.clear();
-                moveparams.add(1f);
-                f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, frame+15);
             }
         }else{
             f.getUnit().setMoveState(0, (short) 0, frame+300);
@@ -105,25 +85,20 @@ public class ShieldSquad extends Squad {
     @Override
     public void removeUnit(Fighter f){
         if (leader != null && leader.equals(f)){
-            if (!f.getUnit().getDef().getName().equals("striderfunnelweb")) {
-                metalValue -= f.metalValue;
-            }else{
-                funnelValue -= f.metalValue;
-            }
+        	metalValue -= f.metalValue;
+
             leader = getNewLeader();
             if (leader == null){
                 leaderWeight = 0;
                 return;
             }
 
-            if (hasFunnel){
-                List<Float> moveparams = new ArrayList<>();
-                moveparams.add(1f);
-                f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
-            }
             fighters.remove(leader);
             leaderWeight = getUnitWeight(leader);
             leader.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
+	        List<Float> moveparams = new ArrayList<>();
+	        moveparams.add(40f);
+	        leader.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
             target = null;
             List<Float> params = new ArrayList<>();
             List<Float> drawParams = new ArrayList<>();
@@ -211,8 +186,7 @@ public class ShieldSquad extends Squad {
     int getUnitWeight(Fighter f){
         String type = f.getUnit().getDef().getName();
         switch (type){
-            case "striderfunnelweb": return 1; // funnels skimrmish from too large a range for other units to do any damage
-            case "vehcapture": return 2;
+            case "vehcapture": return 1;
             case "shieldriot": return 2; // outlaws are too fast for other units to keep up with
             case "shieldarty": return 3;
             case "shieldassault": return 4;
