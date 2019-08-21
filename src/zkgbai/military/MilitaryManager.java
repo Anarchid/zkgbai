@@ -181,7 +181,7 @@ public class MilitaryManager extends Module {
 			AIFloat3 position = squadHandler.nextShieldSquad.getPos();
 			int x = (int) (position.x / 32);
 			int y = (int) (position.z / 32);
-			int value = (int) ((squadHandler.nextShieldSquad.metalValue + squadHandler.nextShieldSquad.funnelValue)/10f);
+			int value = (int) (squadHandler.nextShieldSquad.metalValue/10f);
 			valueGraphics.unpaintCircle(x, y, r, value);
 		}
 	}

@@ -115,7 +115,7 @@ public class RetreatHandler {
                         position = graphManager.getClosestHaven(u.getPos());
                     }
                     Deque<AIFloat3> path = pathfinder.findPath(u, position, pathfinder.AVOID_ENEMIES);
-                    u.moveTo(path.poll(), (short) 0, frame + 300); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
+                    u.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
                     if (path.size() > 2){
                         path.poll();
                         path.poll();
@@ -124,13 +124,13 @@ public class RetreatHandler {
                     if (path.isEmpty()) {
                         // pathing failed
                     } else {
-                        u.moveTo(path.poll(), (short) 0, frame + 300); // immediately move to first non-redundant waypoint
+                        u.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // immediately move to first non-redundant waypoint
 
 
                         int pathSize = Math.min(5, path.size());
                         int i = 0;
                         while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
-                            u.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 3000);
+                            u.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
                             i++;
                             // skip every other waypoint except the last, since they're not very far apart.
                             if (path.size() > 1) {
@@ -147,11 +147,11 @@ public class RetreatHandler {
                     List<Float> params = new ArrayList<Float>();
 
                     if (!graphManager.isEnemyTerritory(u.getPos())) {
-                        u.executeCustomCommand(CMD_FIND_PAD, params, (short) 0, frame + 300);
+                        u.executeCustomCommand(CMD_FIND_PAD, params, (short) 0, Integer.MAX_VALUE);
                     }else{
                         Fighter b = new Fighter(u, 0);
-                        b.moveTo(graphManager.getAllyCenter(), frame); // if in enemy territory, maneuver back to safety before finding an airpad.
-                        b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 32, frame + 300);
+                        b.moveTo(graphManager.getAllyCenter()); // if in enemy territory, maneuver back to safety before finding an airpad.
+                        b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 32,  Integer.MAX_VALUE);
                     }
                 }
 

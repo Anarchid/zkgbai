@@ -136,7 +136,7 @@ public class BomberHandler {
                 continue;
             }
 
-            b.fightTo(getRadialPoint(target, 300f), frame);
+            b.fightTo(getRadialPoint(target, 300f));
         }
 
         for (Integer id:swap){
@@ -149,7 +149,7 @@ public class BomberHandler {
             if (!graphManager.isEnemyTerritory(b.getPos())) {
                 b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 0, frame + 300);
             }else{
-                b.moveTo(graphManager.getAllyCenter(), frame); // if in enemy territory, maneuver back to safety before finding an airpad.
+                b.moveTo(graphManager.getAllyCenter()); // if in enemy territory, maneuver back to safety before finding an airpad.
                 b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 32, frame + 300);
             }
         }

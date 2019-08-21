@@ -148,13 +148,13 @@ public class FactoryManager extends Module {
             }
             
             for (Factory f : factories.values()) {
-                f.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 60);
+                f.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
             }
             for (Nanotower n:economyManager.nanos.values()){
-                n.unit.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 60);
+                n.unit.executeCustomCommand(CMD_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
             }
             if (striderTarget != null){
-                striderTarget.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 60);
+                striderTarget.executeCustomCommand(CMD_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
             }
         }
 
@@ -163,7 +163,7 @@ public class FactoryManager extends Module {
                 if (striderTarget == null){
                     assignFactoryTask(striderHub);
                 }else{
-                    striderHub.getUnit().guard(striderTarget, (short) 0, frame+30);
+                    striderHub.getUnit().guard(striderTarget, (short) 0, Integer.MAX_VALUE);
                 }
             }
         }
@@ -177,7 +177,7 @@ public class FactoryManager extends Module {
         String defName = def.getName();
 
         if (defName.contains("hub")){
-            unit.setMoveState(0, (short) 0, frame + 10);
+            unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
         }
         if(defName.contains("factory") || defName.contains("hub")){
             Factory fac;
@@ -188,7 +188,7 @@ public class FactoryManager extends Module {
             }
             factories.put(fac.id, fac);
             assignFactoryTask(fac);
-            unit.setMoveState(2, (short) 0, frame+300);
+            unit.setMoveState(2, (short) 0, Integer.MAX_VALUE);
 
             if (defName.equals("striderhub")){
                 striderHub = fac;
@@ -525,7 +525,7 @@ public class FactoryManager extends Module {
     public int unitGiven(Unit unit, int oldTeamID, int newTeamID){
         if (newTeamID == ai.teamID){
             if (unit.getDef().getName().equals("striderhub")){
-                unit.selfDestruct((short) 0, frame + 30);
+                unit.selfDestruct((short) 0, Integer.MAX_VALUE);
             }else {
                 return unitCreated(unit, null);
             }
@@ -562,40 +562,40 @@ public class FactoryManager extends Module {
     }
 
     void assignFactoryTask(Factory fac){
-        fac.getUnit().stop((short) 0, frame+30);
+        fac.getUnit().stop((short) 0, Integer.MAX_VALUE);
         String defName = fac.getUnit().getDef().getName();
         UnitDef unit;
         if (defName.equals("factorycloak")){
             unit = callback.getUnitDefByName(getCloaky(fac));
-            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, Integer.MAX_VALUE);
         }else if (defName.equals("factoryshield")){
             unit = callback.getUnitDefByName(getShields(fac));
-            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, Integer.MAX_VALUE);
         }else if (defName.equals("factorygunship")){
             unit = callback.getUnitDefByName(getGunship(fac));
-            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, Integer.MAX_VALUE);
         }else if (defName.equals("factoryplane")){
             unit = callback.getUnitDefByName(getPlanes(fac));
-            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, Integer.MAX_VALUE);
         }else if (defName.equals("factoryamph")){
             unit = callback.getUnitDefByName(getAmphs(fac));
-            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, Integer.MAX_VALUE);
         }else if (defName.equals("factoryveh")){
             unit = callback.getUnitDefByName(getLV(fac));
-            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, Integer.MAX_VALUE);
         }else if (defName.equals("factoryhover")){
             unit = callback.getUnitDefByName(getHovers(fac));
-            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, Integer.MAX_VALUE);
         }else if (defName.equals("factorytank")){
             unit = callback.getUnitDefByName(getTanks(fac));
-            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, Integer.MAX_VALUE);
         }else if (defName.equals("factoryspider")){
             unit = callback.getUnitDefByName(getSpiders(fac));
-            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, frame + 3000);
+            fac.getUnit().build(unit, fac.getPos(), (short) 0, (short) 0, Integer.MAX_VALUE);
         }else if (defName.equals("striderhub")){
             unit = callback.getUnitDefByName(getStrider());
             AIFloat3 pos = callback.getMap().findClosestBuildSite(unit, fac.getPos(), 250f, 3, 0);
-            fac.getUnit().build(unit, pos, (short) 0, (short) 0, frame+3000);
+            fac.getUnit().build(unit, pos, (short) 0, (short) 0, Integer.MAX_VALUE);
         }
     }
 

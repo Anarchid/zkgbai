@@ -107,7 +107,7 @@ public class MiscHandler {
                         }else {
                             target = warManager.getTarget(u.getPos(), false);
                         }
-                        st.fightTo(target, frame);
+                        st.fightTo(target);
                     }
                 }
             }
@@ -126,7 +126,7 @@ public class MiscHandler {
                         }else {
                             target = warManager.getKrowTarget(u.getPos());
                         }
-                        st.fightTo(target, frame);
+                        st.flyTo(target, frame);
                     }
                 }
             }
@@ -136,9 +136,9 @@ public class MiscHandler {
                 for (Unit b: berthas.values()){
                     AIFloat3 target = warManager.getBerthaTarget(b.getPos());
                     if (target != null) {
-                        b.attackArea(target, 0f, (short) 0, frame + 300);
+                        b.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
                     }else{
-                        b.stop((short) 0, frame+30);
+                        b.stop((short) 0, Integer.MAX_VALUE);
                     }
                 }
             }
@@ -148,7 +148,7 @@ public class MiscHandler {
                 if (nuke != null && !warManager.enemyHasAntiNuke && nuke.getStockpile() > 0 && frame - lastNukeFrame > 1800){
                     AIFloat3 target = warManager.getSuperWepTarget(nuke, true);
                     if (target != null){
-                        nuke.attackArea(target, 0f, (short) 0, frame + 300);
+                        nuke.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
                         lastNukeFrame = frame;
                     }
                 }
@@ -160,10 +160,10 @@ public class MiscHandler {
                         AIFloat3 target;
                         if ((u.getRulesParamFloat("disarmed", 0f) > 0 || warManager.getEffectiveThreat(l.getPos()) > 0) && !l.getUnit().getDef().getName().equals("spidercrabe")){
                             target = graphManager.getClosestHaven(u.getPos());
-                            l.moveTo(target, frame);
+                            l.moveTo(target);
                         }else {
                             target = warManager.getTarget(u.getPos(), false);
-                            l.fightTo(target, frame);
+                            l.fightTo(target);
                         }
                     }
                 }
@@ -175,10 +175,10 @@ public class MiscHandler {
                         AIFloat3 target;
                         if (u.getRulesParamFloat("disarmed", 0f) > 0 || (warManager.getEffectiveThreat(a.getPos()) > 0 && a.getUnit().getDef().getName().equals("amphassault"))){
                             target = graphManager.getClosestHaven(u.getPos());
-                            a.moveTo(target, frame);
+                            a.moveTo(target);
                         }else {
                             target = warManager.getArtyTarget(u.getPos(), false);
-                            a.fightTo(target, frame);
+                            a.fightTo(target);
                         }
                     }
                 }
@@ -190,12 +190,12 @@ public class MiscHandler {
                     if (meteors > 150) {
                         AIFloat3 target = warManager.getSuperWepTarget(zenith, true);
                         if (target != null) {
-                            zenith.attackArea(target, 0f, (short) 0, frame + 300);
+                            zenith.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
                         }else{
-                            zenith.stop((short) 0, frame + 10);
+                            zenith.stop((short) 0, Integer.MAX_VALUE);
                         }
                     }else{
-                        zenith.stop((short) 0, frame + 10);
+                        zenith.stop((short) 0, Integer.MAX_VALUE);
                     }
                 }
             }
@@ -204,9 +204,9 @@ public class MiscHandler {
                 if (derp != null){
                     AIFloat3 target = warManager.getSuperWepTarget(derp, false);
                     if (target != null){
-                        derp.attackArea(target, 0f, (short) 0, frame + 300);
+                        derp.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
                     }else{
-                        derp.stop((short) 0, frame+30);
+                        derp.stop((short) 0, Integer.MAX_VALUE);
                     }
                 }
             }
@@ -437,7 +437,7 @@ public class MiscHandler {
             if (!retreatHandler.isRetreating(s.getUnit())) {
                 if (s.squad != null) {
                     if (!s.squad.isDead()) {
-                        s.moveTo(s.squad.getPos(), frame);
+                        s.moveTo(s.squad.getPos());
                     } else {
                         s.squad = null;
                     }
@@ -457,12 +457,12 @@ public class MiscHandler {
 
                     if (s.squad != null) {
                         if (s.squad.status == 'f') {
-                            s.moveTo(s.squad.target, frame);
+                            s.moveTo(s.squad.target);
                         } else if (s.squad.getPos() != null) {
-                            s.moveTo(s.squad.getPos(), frame);
+                            s.moveTo(s.squad.getPos());
                         }
                     }else {
-                        s.moveTo(warManager.getRallyPoint(s.getPos()), frame);
+                        s.moveTo(warManager.getRallyPoint(s.getPos()));
                     }
                 }
             }

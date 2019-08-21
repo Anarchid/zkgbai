@@ -303,7 +303,7 @@ public class EconomyManager extends Module {
 				if (!fusionTasks.isEmpty()) {
 					params.add(1f);
 					for (Unit u : superWeps) {
-						u.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 60);
+						u.executeCustomCommand(CMD_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
 					}
 				}else {
 					if (energy > 100f) {
@@ -312,7 +312,7 @@ public class EconomyManager extends Module {
 						params.add(1f);
 					}
 					for (Unit u : superWeps) {
-						u.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 60);
+						u.executeCustomCommand(CMD_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
 					}
 				}
 			}
@@ -332,14 +332,14 @@ public class EconomyManager extends Module {
 
 			for (Unit u: screamers){
 				if (u.getStockpileQueued() < 2) {
-					u.stockpile((short) 0, frame + 300);
+					u.stockpile((short) 0, Integer.MAX_VALUE);
 				}
 			}
 			
 			if (!warManager.enemyHasAntiNuke) {
 				for (Unit u : superWeps){
 					if (u.getDef().getName().equals("staticnuke") && !u.isBeingBuilt() && u.getStockpileQueued() < 2){
-						u.stockpile((short) 0, frame + 300);
+						u.stockpile((short) 0, Integer.MAX_VALUE);
 					}
 				}
 			}
@@ -443,13 +443,13 @@ public class EconomyManager extends Module {
 			defendSingu(unit.getPos());
 			for (Nanotower n : nanos.values()) {
 				if (n.target.getUnitId() == unit.getUnitId()) {
-					n.unit.selfDestruct((short) 0, frame+30);
+					n.unit.selfDestruct((short) 0, Integer.MAX_VALUE);
 				}
 			}
 			List<ConstructionTask> unneeded = new ArrayList<>();
 			for (ConstructionTask c:nanoTasks){
 				if (c.ctTarget.getUnitId() == unit.getUnitId()){
-					List<Worker> idle = c.stopWorkers(frame);
+					List<Worker> idle = c.stopWorkers();
 					idlers.addAll(idle);
 					assigned.removeAll(idle);
 					unneeded.add(c);
@@ -467,7 +467,7 @@ public class EconomyManager extends Module {
 			Worker w = new Worker(unit);
 			workers.add(w);
 			assignWorkers(w);
-			unit.setMoveState(0, (short) 0, frame+300);
+			unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
 			if (def.getBuildSpeed() > 8) {
 				commanders.add(w);
 			}
@@ -478,7 +478,7 @@ public class EconomyManager extends Module {
 			if (ct.target != null){
 				if(ct.target.getUnitId() == unit.getUnitId()){
 					finished = ct;
-					List<Worker> idle = ct.stopWorkers(frame);
+					List<Worker> idle = ct.stopWorkers();
 					idlers.addAll(idle);
 					assigned.removeAll(idle);
 					break;
@@ -519,10 +519,10 @@ public class EconomyManager extends Module {
 				// retreat if a worker gets attacked by enemy porc, is taking serious damage, or is in a hopeless situation.
 				if (w.getTask() != null) {
 					w.getTask().removeWorker(w);
-					w.clearTask(frame);
+					w.clearTask();
 				}
 				AIFloat3 pos = graphManager.getClosestHaven(h.getPos());
-				w.retreatTo(pos, frame);
+				w.retreatTo(pos);
 				w.isChicken = true;
 				w.chickenFrame = frame;
 				warManager.defenseTargets.add(new DefenseTarget(h.getPos(), h.getMaxHealth(), frame));
@@ -539,7 +539,7 @@ public class EconomyManager extends Module {
 				if (ct.target != null && ct.target.getUnitId() == h.getUnitId()) {
 					// if a building was killed by enemy porc, cancel it.
 					invalidtask = ct;
-					List<Worker> idle = ct.stopWorkers(frame);
+					List<Worker> idle = ct.stopWorkers();
 					idlers.addAll(idle);
 					assigned.removeAll(idle);
 					break;
@@ -657,7 +657,7 @@ public class EconomyManager extends Module {
 					WorkerTask task = w.getTask();
 					constructionTasks.remove(task);
 					factoryTasks.remove(task);
-					w.clearTask(frame);
+					w.clearTask();
 				}
 			}
 		}
@@ -695,7 +695,7 @@ public class EconomyManager extends Module {
 			nanos.put(unit.getUnitId(), nt);
 			ArrayList<Float> params = new ArrayList<>();
 			params.add(2f);
-			unit.executeCustomCommand(CMD_PRIORITY, params, (short) 0, frame + 60);
+			unit.executeCustomCommand(CMD_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
 		}
 
 		if(defName.equals("energypylon")){
@@ -744,7 +744,7 @@ public class EconomyManager extends Module {
 			if (defName.equals("staticnuke")){
 				ArrayList<Float> params = new ArrayList<>();
 				params.add(2f);
-				unit.executeCustomCommand(CMD_MISC_PRIORITY, params, (short) 0, frame + 60);
+				unit.executeCustomCommand(CMD_MISC_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
 			}
 		}
 
@@ -793,7 +793,7 @@ public class EconomyManager extends Module {
 			}
 
 			if (defName.equals("staticcon")){
-				unit.selfDestruct((short) 0, frame+30);
+				unit.selfDestruct((short) 0, Integer.MAX_VALUE);
 			}
 
 			if(defName.equals("staticmex")){
@@ -867,10 +867,10 @@ public class EconomyManager extends Module {
 	private void assignNanos(){
 		for (Nanotower n:nanos.values()){
 			if (n.target != null && n.target.getHealth() > 0) {
-				n.unit.guard(n.target, (short) 0, frame + 3000);
-				n.unit.setRepeat(true, (short) 0, frame + 3000);
+				n.unit.guard(n.target, (short) 0, Integer.MAX_VALUE);
+				n.unit.setRepeat(true, (short) 0, Integer.MAX_VALUE);
 			}else{
-				n.unit.selfDestruct((short) 0, frame + 30);
+				n.unit.selfDestruct((short) 0, Integer.MAX_VALUE);
 			}
 		}
 	}
@@ -893,10 +893,10 @@ public class EconomyManager extends Module {
 				ConstructionTask ctask = (ConstructionTask) task;
 				try {
 					if (distance(w.getPos(), ctask.getPos()) > w.getUnit().getDef().getBuildDistance() * 2f) {
-						w.moveTo(ctask.getPos(), frame);
-						w.getUnit().build(ctask.buildType, ctask.getPos(), ctask.facing, (short) 32, frame + 5000);
+						w.moveTo(ctask.getPos());
+						w.getUnit().build(ctask.buildType, ctask.getPos(), ctask.facing, (short) 32, Integer.MAX_VALUE);
 					}else{
-						w.getUnit().build(ctask.buildType, ctask.getPos(), ctask.facing, (short) 0, frame + 5000);
+						w.getUnit().build(ctask.buildType, ctask.getPos(), ctask.facing, (short) 0, Integer.MAX_VALUE);
 					}
 				}catch (Throwable e){
 					ai.printException(e);
@@ -905,24 +905,24 @@ public class EconomyManager extends Module {
 				}
 			} else if (task instanceof ReclaimTask) {
 				ReclaimTask rt = (ReclaimTask) task;
-				w.moveTo(rt.getPos(), frame);
-				w.getUnit().reclaimInArea(rt.getPos(), 75f, OPTION_SHIFT_KEY, frame + 5000);
+				w.moveTo(rt.getPos());
+				w.getUnit().reclaimInArea(rt.getPos(), 75f, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 			}else if (task instanceof CombatReclaimTask){
 				CombatReclaimTask crt = (CombatReclaimTask) task;
 				// prevent workers from being assigned to dangerous/invalid combat reclaim jobs
 				if (!crt.target.isBeingBuilt() || warManager.getThreat(crt.getPos()) > 0 || crt.target.getHealth() <= 0){
-					List<Worker> idle = task.stopWorkers(frame);
+					List<Worker> idle = task.stopWorkers();
 					idlers.addAll(idle);
 					combatReclaimTasks.remove(crt);
 					assigned.remove(w);
 					return;
 				}
 				// else assign
-				w.getUnit().moveTo(getDirectionalPoint(crt.getPos(), w.getPos(), 100f), (short) 0, frame + 300);
-				w.getUnit().reclaimUnit(crt.target, OPTION_SHIFT_KEY, frame + 5000);
+				w.getUnit().moveTo(getDirectionalPoint(crt.getPos(), w.getPos(), 100f), (short) 0, Integer.MAX_VALUE);
+				w.getUnit().reclaimUnit(crt.target, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 			} else if (task instanceof RepairTask) {
 				RepairTask rt = (RepairTask) task;
-				w.getUnit().repair(rt.target, (short) 0, frame + 5000);
+				w.getUnit().repair(rt.target, (short) 0, Integer.MAX_VALUE);
 			}
 			w.setTask(task, frame);
 			task.addWorker(w);
@@ -1184,7 +1184,7 @@ public class EconomyManager extends Module {
 				}
 				if (!isNano) {
 					// if a construction job is blocked and it isn't our own nanoframe, remove it
-					List<Worker> idle = t.stopWorkers(frame);
+					List<Worker> idle = t.stopWorkers();
 					idlers.addAll(idle);
 					assigned.removeAll(idle);
 					invalidtasks.add(t);
@@ -1192,7 +1192,7 @@ public class EconomyManager extends Module {
 			}
 			
 			if (warManager.getPorcThreat(t.getPos()) > 0 && t.target == null){
-				List<Worker> idle = t.stopWorkers(frame);
+				List<Worker> idle = t.stopWorkers();
 				idlers.addAll(idle);
 				assigned.removeAll(idle);
 				invalidtasks.add(t);
@@ -1202,7 +1202,7 @@ public class EconomyManager extends Module {
 		// clear fac and nano tasks that workers can't reach.
 		for (ConstructionTask t: factoryTasks){
 			if (frame-t.frameIssued > 900 && t.target == null){
-				List<Worker> idle = t.stopWorkers(frame);
+				List<Worker> idle = t.stopWorkers();
 				idlers.addAll(idle);
 				assigned.removeAll(idle);
 				potentialFacList.add(t.buildType.getName());
@@ -1211,7 +1211,7 @@ public class EconomyManager extends Module {
 		}
 		for (ConstructionTask t: nanoTasks){
 			if (frame-t.frameIssued > 600 && t.target == null){
-				List<Worker> idle = t.stopWorkers(frame);
+				List<Worker> idle = t.stopWorkers();
 				idlers.addAll(idle);
 				assigned.removeAll(idle);
 				invalidtasks.add(t);
@@ -1220,7 +1220,7 @@ public class EconomyManager extends Module {
 		
 		for (ConstructionTask t: superWepTasks){
 			if (frame-t.frameIssued > 900 && t.target == null){
-				List<Worker> idle = t.stopWorkers(frame);
+				List<Worker> idle = t.stopWorkers();
 				idlers.addAll(idle);
 				assigned.removeAll(idle);
 				invalidtasks.add(t);
@@ -1229,7 +1229,7 @@ public class EconomyManager extends Module {
 		// remove old porc push tasks, so as not to waste metal on unneeded porc.
 		for (ConstructionTask t: porcTasks){
 			if (t.frameIssued > 0 && frame - t.frameIssued > 600 && t.assignedWorkers.isEmpty() && t.target == null){
-				List<Worker> idle = t.stopWorkers(frame);
+				List<Worker> idle = t.stopWorkers();
 				idlers.addAll(idle);
 				assigned.removeAll(idle);
 				invalidtasks.add(t);
@@ -1252,13 +1252,13 @@ public class EconomyManager extends Module {
 		for (ReclaimTask rt:reclaimTasks){
 			if (losManager.isInLos(rt.getPos())){
 				if (rt.target.getReclaimLeft() <= 0){
-					List<Worker> idle = rt.stopWorkers(frame);
+					List<Worker> idle = rt.stopWorkers();
 					idlers.addAll(idle);
 					assigned.removeAll(idle);
 					invalidtasks.add(rt);
 				}
 			}else{
-				List<Worker> idle = rt.stopWorkers(frame);
+				List<Worker> idle = rt.stopWorkers();
 				idlers.addAll(idle);
 				assigned.removeAll(idle);
 				invalidtasks.add(rt);
@@ -1279,7 +1279,7 @@ public class EconomyManager extends Module {
 
 		for (RepairTask rt:repairTasks){
 			if (rt.target.getHealth() <= 0 || rt.target.getHealth() == rt.target.getMaxHealth()) {
-				List<Worker> idle = rt.stopWorkers(frame);
+				List<Worker> idle = rt.stopWorkers();
 				idlers.addAll(idle);
 				assigned.removeAll(idle);
 				invalidtasks.add(rt);
@@ -1316,7 +1316,7 @@ public class EconomyManager extends Module {
 				// unstick workers that were interrupted by random things and lost their orders.
 				if (w.getUnit().getCurrentCommands().size() == 0 && w.getTask() != null) {
 					w.getTask().removeWorker(w);
-					w.clearTask(frame);
+					w.clearTask();
 					idlers.add(w);
 					assigned.remove(w);
 				}
@@ -1331,7 +1331,7 @@ public class EconomyManager extends Module {
 				if (w.isChicken && frame - w.chickenFrame > 600 || w.getUnit().getCurrentCommands().isEmpty()) {
 					w.isChicken = false;
 					idlers.add(w);
-					w.getUnit().stop((short) 0, frame + 3000);
+					w.getUnit().stop((short) 0, Integer.MAX_VALUE);
 				}
 			}
 		}
@@ -1345,7 +1345,7 @@ public class EconomyManager extends Module {
 		if (invalidcom != null) {
 			if (invalidcom.getTask() != null) {
 				invalidcom.getTask().removeWorker(invalidcom);
-				invalidcom.clearTask(frame);
+				invalidcom.clearTask();
 			}
 			commanders.remove(invalidcom);
 		}
@@ -1703,7 +1703,7 @@ public class EconomyManager extends Module {
 		}
 		
 		/*if (facManager.factories.size() == 0){
-			factory = callback.getUnitDefByName("factorycloak");
+			factory = callback.getUnitDefByName("factoryshield");
 			potentialFacList.remove("factorycloak");
 		}else*/ if (firstFac != null && facManager.factories.size() == 0){
 			factory = callback.getUnitDefByName(firstFac);
@@ -2266,11 +2266,11 @@ public class EconomyManager extends Module {
 		    }
 		    params.add(8f);
 		    params.add(37f);
-		    u.executeCustomCommand(CMD_MORPH_UPGRADE_INTERNAL, params, (short) 0, frame+30);
+		    u.executeCustomCommand(CMD_MORPH_UPGRADE_INTERNAL, params, (short) 0, Integer.MAX_VALUE);
 		    params.clear();
 		    
 		    params.add(3f);
-		    u.executeCustomCommand(CMD_MISC_PRIORITY, params, (short) 0, frame+30);
+		    u.executeCustomCommand(CMD_MISC_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
 	    }
 	    morphedComs = true;
     }

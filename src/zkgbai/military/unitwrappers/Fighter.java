@@ -36,9 +36,9 @@ public class Fighter {
         return unit.getPos();
     }
 
-    public void fightTo(AIFloat3 pos, int frame){
+    public void fightTo(AIFloat3 pos){
         Deque<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(pos, 200f), pathfinder.ASSAULT_PATH);
-        unit.fight(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
+        unit.fight(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
         if (path.size() > 2){
             path.poll();
             path.poll();
@@ -48,12 +48,12 @@ public class Fighter {
         if (path.isEmpty()) {
             return; // pathing failed
         } else {
-            unit.fight(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
+            unit.fight(path.poll(), (short) 0, Integer.MAX_VALUE); // immediately move to first waypoint
 
             int pathSize = Math.min(5, path.size());
             int i = 0;
             while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
-                unit.fight(path.poll(), OPTION_SHIFT_KEY, frame + 3000);
+                unit.fight(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
                 i++;
                 // skip every two of three waypoints except the last, since they're not very far apart.
                 if (path.size() > 2) {
@@ -64,10 +64,10 @@ public class Fighter {
         }
     }
 
-    public void moveTo(AIFloat3 pos, int frame){
+    public void moveTo(AIFloat3 pos){
         Deque<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(pos, 100f), pathfinder.AVOID_ENEMIES);
 
-        unit.moveTo(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
+        unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
         if (path.size() > 2){
             path.poll();
             path.poll();
@@ -76,12 +76,12 @@ public class Fighter {
         if (path.isEmpty()) {
             return; // pathing failed
         } else {
-            unit.moveTo(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
+            unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // immediately move to first waypoint
 
             int pathSize = Math.min(5, path.size());
             int i = 0;
             while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
-                unit.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 3000);
+                unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
                 i++;
                 // skip every two of three waypoints except the last, since they're not very far apart.
                 if (path.size() > 2) {

@@ -28,14 +28,14 @@ public class Squad {
 		// a = attacking
 	}
 
-	public void addUnit(Fighter f, int frame){
+	public void addUnit(Fighter f){
 		fighters.add(f);
 		f.squad = this;
 		f.index = index;
 		index++;
 		metalValue = metalValue + f.metalValue;
-		f.getUnit().setMoveState(1, (short) 0, frame+30);
-		f.fightTo(target, frame);
+		f.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
+		f.fightTo(target);
 
 		if (leader == null){
 			leader = f;
@@ -50,19 +50,19 @@ public class Squad {
 		metalValue -= f.metalValue;
 	}
 
-	public void setTarget(AIFloat3 pos, int frame){
+	public void setTarget(AIFloat3 pos){
 		// set a target for the squad to attack.
 		target = pos;
 		for (Fighter f:fighters){
-			f.fightTo(target, frame);
+			f.fightTo(target);
 		}
 	}
 
-	public void retreatTo(AIFloat3 pos, int frame){
+	public void retreatTo(AIFloat3 pos){
 		// set a target for the squad to attack.
 		target = pos;
 		for (Fighter f:fighters){
-			f.moveTo(target, frame);
+			f.moveTo(target);
 		}
 	}
 
@@ -98,10 +98,10 @@ public class Squad {
 		boolean rallied = true;
 		for (Fighter f: fighters){
 			if (distance(target, f.getPos()) > 300 && distance(leader.getPos(), f.getPos()) > 300){
-				f.moveTo(getRadialPoint(target, 50f), frame);
+				f.moveTo(getRadialPoint(target, 50f));
 				rallied = false;
 			}else{
-				f.fightTo(target, frame);
+				f.fightTo(target);
 			}
 		}
 		return rallied;

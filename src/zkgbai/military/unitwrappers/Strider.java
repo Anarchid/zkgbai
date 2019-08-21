@@ -29,7 +29,7 @@ public class Strider extends Fighter {
     }
 
     @Override
-    public void fightTo(AIFloat3 pos, int frame){
+    public void fightTo(AIFloat3 pos){
         AIFloat3 target;
         if (unit.getDef().getName().equals("striderscorpion")) {
             target = getDirectionalPoint(pos, getPos(), 250f);
@@ -40,7 +40,7 @@ public class Strider extends Fighter {
         }
     
         Deque<AIFloat3> path = pathfinder.findPath(unit, target, pathfinder.ASSAULT_PATH);
-        unit.moveTo(path.poll(), (short) 0, frame + 3000); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
+        unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
         if (path.size() > 2){
             path.poll();
             path.poll();
@@ -50,12 +50,12 @@ public class Strider extends Fighter {
         if (path.isEmpty()) {
             return; // pathing failed
         } else {
-            unit.moveTo(path.poll(), (short) 0, frame + 3000); // immediately move to first waypoint
+            unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // immediately move to first waypoint
         
             int pathSize = Math.min(5, path.size());
             int i = 0;
             while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
-                unit.moveTo(path.poll(), OPTION_SHIFT_KEY, frame + 3000);
+                unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
                 i++;
                 // skip every two of three waypoints except the last, since they're not very far apart.
                 if (path.size() > 2) {
