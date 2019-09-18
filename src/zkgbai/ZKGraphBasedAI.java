@@ -1,5 +1,6 @@
 package zkgbai;
 
+import java.awt.*;
 import java.util.*;
 
 import com.springrts.ai.oo.AIFloat3;
@@ -7,16 +8,25 @@ import com.springrts.ai.oo.clb.*;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.List;
 
+import javafx.scene.shape.Path;
 import zkgbai.economy.EconomyManager;
+import zkgbai.economy.Factory;
 import zkgbai.economy.FactoryManager;
 import zkgbai.economy.Worker;
-import zkgbai.economy.tasks.ReclaimTask;
+import zkgbai.economy.tasks.CombatReclaimTask;
+import zkgbai.economy.tasks.ConstructionTask;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
 import zkgbai.kgbutil.Pathfinder;
 import zkgbai.los.LosManager;
+import zkgbai.military.Enemy;
 import zkgbai.military.MilitaryManager;
+import zkgbai.military.UnitClasses;
+import zkgbai.military.tasks.DefenseTarget;
+import zkgbai.military.unitwrappers.Fighter;
+import zkgbai.military.unitwrappers.Raider;
 import zkgbai.military.unitwrappers.Squad;
 
 import static zkgbai.kgbutil.KgbUtil.*;
@@ -35,6 +45,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     //DebugView debugView;
     boolean debugActivated;
     boolean rsgn = false;
+    boolean resigned = false;
 
 	private boolean slave = false;
 	private int mergeTarget = Integer.MAX_VALUE;
@@ -43,7 +54,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	public int mergedAllyID = 0;
 	
 	public boolean isFFA = false;
-    
+ 
 	public LosManager losManager;
 	public GraphManager graphManager;
 	public EconomyManager ecoManager;
@@ -68,7 +79,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	public static ZKGraphBasedAI getInstance(){
 		return instance;
 	}
-    
+ 
 	@Override
     public int init(int AIId, OOAICallback callback) {
 		this.debugActivated = false;
@@ -82,20 +93,20 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			identifyAllyTeams();
 			checkTeamsMerging();
 		}catch (Throwable e){
-			printException(e);
+			debug(e);
 		}
 
 		try{
 			graphManager = new GraphManager(this);
-			debug(graphManager.getModuleName() + " initialized.");
+			log(graphManager.getModuleName() + " initialized.");
 		} catch (Throwable e){
-			printException(e);
+			debug(e);
 		}
 
 		if (slave){
 			selectRandomCommander();
 			chooseStartPos();
-			debug("Entering merge mode! Discarding modules.");
+			log("Entering merge mode! Discarding modules.");
 			graphManager = null;
 			return 0;
 		}
@@ -103,27 +114,49 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		// load modules
         try {
 			losManager = new LosManager(this);
-			debug(losManager.getModuleName() + " initialized.");
+			log(losManager.getModuleName() + " initialized.");
 		} catch (Throwable e){
-			printException(e);
+			debug(e);
 		}
 		try {
         	ecoManager = new EconomyManager(this);
-			debug(ecoManager.getModuleName() + " initialized.");
+			log(ecoManager.getModuleName() + " initialized.");
 		} catch (Throwable e){
-			printException(e);
+			debug(e);
 		}
         try {
 			warManager = new MilitaryManager(this);
-			debug(warManager.getModuleName() + " initialized.");
+			log(warManager.getModuleName() + " initialized.");
 		} catch (Throwable e){
-			printException(e);
+			debug(e);
 		}
 		try {
 			facManager = new FactoryManager(this);
-			debug(facManager.getModuleName() + " initialized.");
+			log(facManager.getModuleName() + " initialized.");
 		} catch (Throwable e){
-			printException(e);
+			debug(e);
+		}
+
+		try {
+			UnitClasses unitTypes = UnitClasses.getInstance();
+			List<UnitDef> porcdefs = new ArrayList<>();
+			porcdefs.add(callback.getUnitDefByName("turretmissile"));
+			porcdefs.add(callback.getUnitDefByName("turretlaser"));
+			porcdefs.add(callback.getUnitDefByName("turretriot"));
+			porcdefs.add(callback.getUnitDefByName("turretheavylaser"));
+			porcdefs.add(callback.getUnitDefByName("turretgauss"));
+			porcdefs.add(callback.getUnitDefByName("turretemp"));
+			porcdefs.add(callback.getUnitDefByName("turretimpulse"));
+			porcdefs.add(callback.getUnitDefByName("turretheavy"));
+			porcdefs.add(callback.getUnitDefByName("turretantiheavy"));
+
+			for (UnitDef ud : porcdefs) {
+				for (WeaponMount wm : ud.getWeaponMounts()) {
+					unitTypes.porcWeps.add(wm.getWeaponDef().getWeaponDefId());
+				}
+			}
+		}catch (Throwable e){
+			debug(e);
 		}
 
 		/*try{
@@ -148,30 +181,23 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 				m.init(AIId, callback);
 			}
 		} catch (Throwable e){
-			printException(e);
+			debug(e);
 		}
 		
 		try {
 			selectRandomCommander();
 			chooseStartPos();
 		}catch (Throwable e){
-			printException(e);
+			debug(e);
 		}
         
         return 0;
     }
 
-	private void debug(Throwable e) {
-		debug(e.getMessage());
-		for(StackTraceElement ste:e.getStackTrace()){
-			debug(ste.toString());
-		}
-	}
-
 	private void selectRandomCommander(){
 		String name = "dyntrainer_support_base";
 		callback.getLua().callRules("ai_commander:"+name, -1);
-		debug("Selected Commander: " + callback.getUnitDefByName(name).getHumanName() + ".");
+		log("Selected Commander: " + callback.getUnitDefByName(name).getHumanName() + ".");
 	}
 
     @Override
@@ -180,10 +206,10 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    	try {
 	            module.luaMessage(inData);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-        }	        
-	        
+        }
+	       
     	return 0; //signaling: OK
     }
     
@@ -201,44 +227,53 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 		}
 		
 		if (frame == 0){
-			callback.getGame().sendTextMessage("/say <ZKGBAI> glhf!", 0);
+			say("glhf!");
 		}
 
 		if (frame % 1800 == 0){
 			Pathfinder.getInstance().updateSlopeMap();
 		}
 		
-		if (frame % 300 == 0){
-			List<MetalSpot> espots = graphManager.getEnemySpots();
-			List<MetalSpot> ospots = graphManager.getOwnedSpots();
-			if ((((enemyAllyTeams.size() == 1 && espots.size() > 2 * ospots.size() && (facManager.factories.isEmpty() || allies.size() > 1)) || (ospots.size() == 0 && facManager.factories.isEmpty())) && frame > 18000)
-				|| (ecoManager.workers.isEmpty() && facManager.factories.isEmpty())){
-				callback.getGame().sendTextMessage("/say <ZKGBAI> gg!", 0);
-				callback.getGame().sendTextMessage("/say <ZKGBAI resigned>", 0);
+		if (frame % 300 == 0 && frame > 18000){
+			if (!resigned) {
+				List<MetalSpot> espots = graphManager.getEnemySpots();
+				List<MetalSpot> ospots = graphManager.getOwnedSpots();
+				if (!isFFA && espots.size() > 1.5f * ospots.size() && (warManager.enemyFighterValue > facManager.armyValue * 1.5f || facManager.factories.isEmpty()) && !resigned) {
+					resigned = true;
+					say("gg!");
+					emote("resigned");
+					modules.clear();
+					for (Unit u : callback.getTeamUnits()) {
+						u.selfDestruct((short) 0, Integer.MAX_VALUE);
+					}
+				}
+			}else{
 				for (Unit u : callback.getTeamUnits()) {
 					u.selfDestruct((short) 0, Integer.MAX_VALUE);
 				}
 			}
 		}
 		
-		if (frame % 1350 == 0){
-			if (graphManager.territoryFraction > 0.6f && frame > 18000 && (!rsgn || Math.random() > 0.5) && !graphManager.getEnemySpots().isEmpty()){
+		if (frame % 1350 == 0 && frame > 18000){
+			List<MetalSpot> espots = graphManager.getEnemySpots();
+			List<MetalSpot> ospots = graphManager.getOwnedSpots();
+			if (!isFFA && graphManager.territoryFraction > 0.5f && ospots.size() > 1.5f * espots.size() && facManager.armyValue > warManager.enemyFighterValue * 2f && (!rsgn || Math.random() > 0.5) && !graphManager.getEnemySpots().isEmpty()){
 				rsgn = true;
 				double rand = Math.random();
 				if (rand > 0.75) {
-					callback.getGame().sendTextMessage("/say <ZKGBAI> Do you know what time it is?", 0);
-					callback.getGame().sendTextMessage("/say <ZKGBAI> It's time to resign!", 0);
+					say("Do you know what time it is?");
+					say("It's time to resign!");
 				}else if (rand > 0.5){
 					if (enemyTeams.size() > 1) {
-						callback.getGame().sendTextMessage("/say <ZKGBAI> Resign lobsters!", 0);
+						say("Resign lobsters!");
 					}else {
-						callback.getGame().sendTextMessage("/say <ZKGBAI> Resign lobster!", 0);
+						say("Resign lobster!");
 					}
 				}else if (rand > 0.25){
-					callback.getGame().sendTextMessage("/say <ZKGBAI> It's over, resign already.", 0);
+					say("It's over, resign already.");
 				}else{
-					callback.getGame().sendTextMessage("/say <ZKGBAI> Having trouble?", 0);
-					callback.getGame().sendTextMessage("/say <ZKGBAI> Type \"!resign\" for help.", 0);
+					say("Having trouble?");
+					say("Type \"!resign\" for help.");
 				}
 			}
 		}
@@ -249,7 +284,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			try {
 				module.update(frame);
 			} catch (Throwable e) {
-				printException(e);
+				debug(e);
 			}
 		}
         return 0; // signaling: OK
@@ -258,20 +293,28 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-		    for (Worker w:ecoManager.workers){
-		    	if (w.getTask() != null){
-		    		callback.getMap().getDrawer().addPoint(w.getPos(), w.getTask().toString());
-			    }else{
-				    callback.getMap().getDrawer().addPoint(w.getPos(), "(no task)");
-			    }
+	    	for (ConstructionTask ct:ecoManager.constructionTasks){
+	    		callback.getMap().getDrawer().addPoint(ct.getPos(), ct.buildType.getHumanName() + ": " + callback.getMap().isPossibleToBuildAt(ct.buildType, ct.getPos(), ct.facing));
 		    }
+	    	/*if (warManager.squadHandler.nextSquad != null){
+	    		callback.getMap().getDrawer().addPoint(warManager.squadHandler.nextSquad.getPos(), "nextSquad");
+			    callback.getMap().getDrawer().addPoint(warManager.squadHandler.nextSquad.target, "nextSquad target");
+	    		callback.getMap().getDrawer().addLine(warManager.squadHandler.nextSquad.getPos(), warManager.squadHandler.nextSquad.target);
+		    }
+	    	int i = 1;
+	    	for (Squad s:warManager.squadHandler.squads){
+			    callback.getMap().getDrawer().addPoint(s.getPos(), "Squad " + i);
+			    callback.getMap().getDrawer().addPoint(s.target, "Squad " + i + " target");
+			    callback.getMap().getDrawer().addLine(s.getPos(), s.target);
+			    i++;
+		    }*/
 		}
 
 		for (Module module : modules) {
 	    	try {
 	            module.message(player, message);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
 	    }
 	    
@@ -290,9 +333,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    	try {
 	            module.unitCreated(unit, builder);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-	    } 
+	    }
         return 0;
     }
 
@@ -302,7 +345,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	        try {
 	            module.unitFinished(unit);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
 	    }
         return 0; // signaling: OK
@@ -314,9 +357,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    	try {
 	    		module.unitIdle(unit);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-	    } 
+	    }
         return 0; // signaling: OK
     }
 
@@ -326,7 +369,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    	try {
 	            module.unitMoveFailed(unit);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
 	    }
         return 0; // signaling: OK
@@ -338,26 +381,21 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         	try {
         		module.unitDamaged(unit, attacker, damage, dir, weaponDef, paralyzed);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-        } 
+        }
         return 0; // signaling: OK
     }
 
     @Override
     public int unitDestroyed(Unit unit, Unit attacker) {
-        try {
-        	//this.unitManager.deRegisterUnit(unit);
-    	} catch (Throwable e) {
-    		printException(e);
-    	}
 	    for (Module module : modules) {
 	    	try {
 	            module.unitDestroyed(unit, attacker);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-	    }	    
+	    }
         return 0; // signaling: OK
     }
 
@@ -374,9 +412,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         	try {
         		module.unitGiven(unit, oldTeamId, newTeamId);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-        }	  
+        }
         return 0; // signaling: OK
     }
 
@@ -386,7 +424,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         	try {
             	module.unitCaptured(unit, oldTeamId, newTeamId);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
         }
 	    
@@ -399,9 +437,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    	try {
 	    		module.enemyEnterLOS(enemy);
 	    	} catch (Throwable e) {
-	    		printException(e);
-	    	}    	 
-	    }	    
+	    		debug(e);
+	    	}
+	    }
         return 0; // signaling: OK
     }
 
@@ -411,9 +449,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
             try {
             	module.enemyLeaveLOS(enemy);
 	    	} catch (Throwable e) {
-				printException(e);
+				debug(e);
 	    	}
-        }	    
+        }
         return 0; // signaling: OK
     }
 
@@ -423,7 +461,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			try {
 				module.enemyCreated(enemy);
 			} catch (Throwable e) {
-				printException(e);
+				debug(e);
 			}
 		}
 		return 0; // signaling: OK
@@ -435,7 +473,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			try {
 				module.enemyFinished(enemy);
 			} catch (Throwable e) {
-				printException(e);
+				debug(e);
 			}
 		}
 		return 0; // signaling: OK
@@ -447,9 +485,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     		try {
     			module.enemyEnterRadar(enemy);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-        }	   
+        }
         return 0; // signaling: OK
     }
 
@@ -459,9 +497,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			try {
 				module.enemyLeaveRadar(enemy);
 	    	} catch (Throwable e) {
-	    		printException(e);
-	    	}        
-	    }	    
+	    		debug(e);
+	    	}
+	    }
         return 0; // signaling: OK
     }
 
@@ -471,9 +509,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     		try {
     			module.enemyDamaged(enemy, attacker, damage, dir, weaponDef, paralyzed);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-        }	    
+        }
         return 0; // signaling: OK
     }
 
@@ -483,9 +521,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     		try {
     			module.enemyDestroyed(enemy, attacker);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-        }	    
+        }
         return 0; // signaling: OK
     }
 
@@ -495,9 +533,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     		try {
     			module.weaponFired(unit, weaponDef);
 	    	} catch (Throwable e) {
-	    		printException(e);
-	    	}		
-        }	    
+	    		debug(e);
+	    	}
+        }
         return 0; // signaling: OK
     }
 
@@ -507,9 +545,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	    	try {
 	    		module.commandFinished(unit, commandId, commandTopicId);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-	    }	    
+	    }
         return 0; // signaling: OK
     }
 
@@ -519,17 +557,36 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     		try {
     			module.seismicPing(pos, strength);
 	    	} catch (Throwable e) {
-	    		printException(e);
+	    		debug(e);
 	    	}
-        }	    
+        }
         return 0; // signaling: OK
     }
+
+	@Override
+	public int release(int reason) {
+		warManager = null;
+		ecoManager = null;
+		facManager = null;
+		losManager = null;
+		graphManager = null;
+		modules = null;
+		enemyTeams = null;
+		enemyAllyTeams = null;
+		allies = null;
+		callback = null;
+		instance = null;
+		UnitClasses.release();
+		Pathfinder.release();
+
+		return 0; // signaling: OK
+	}
     
     private void identifyEnemyTeams(){
     	List<Team> enemies = callback.getEnemyTeams();
 		
     	for(Team i:enemies){
-    		int enemyTeam = i.getTeamId(); 
+    		int enemyTeam = i.getTeamId();
     		int allyTeam = callback.getGame().getTeamAllyTeam(enemyTeam);
     		if (!callback.getGame().getRulesParamString("allyteam_short_name_" + allyTeam, "").equals("Neutral")) {
 			    enemyTeams.add(enemyTeam);
@@ -540,6 +597,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 			    }
 		    }
     	}
+    	this.isFFA = enemyAllyTeams.size() > 1;
     }
 
 	// creates a list of teams that are allied with the AI.
@@ -556,17 +614,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     	return callback;
     }
     
-    public void debug(String s) {
-    	callback.getGame().sendTextMessage(s, 0);
-    }
-    
-    public void marker(AIFloat3 position, String message){
-    	callback.getMap().getDrawer().deletePointsAndLines(position);
-    	callback.getMap().getDrawer().addPoint(position, message);
-    }
-    
-    public void drawLine(AIFloat3 v0, AIFloat3 v1){
-    	callback.getMap().getDrawer().addLine(v0,v1);
+    public void log(String s) {
+    	callback.getLog().log(s);
     }
     
     public Set<Integer> getEnemyAllyTeamIDs(){
@@ -576,19 +625,25 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public Set<Integer> getEnemyTeamIDs(){
     	return this.enemyTeams;
     }
-    
-    public void printException(Exception ex) {
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        ex.printStackTrace(pw);
-        debug("exception(" + sw.toString().replace("\n", " ") + ") " + ex);
-    }
 
-	public void printException(Throwable ex) {
+	public void debug(Throwable ex) {
 		StringWriter sw = new StringWriter();
 		PrintWriter pw = new PrintWriter(sw);
 		ex.printStackTrace(pw);
-		debug("exception(" + sw.toString().replace("\n", " ") + ") " + ex);
+		String s = "exception(" + sw.toString().replace("\n", " ") + ") " + ex;
+		if (currentFrame > 0) {
+			say(s);
+		}else{
+			log(s);
+		}
+	}
+
+	public void say(String s){
+		callback.getGame().sendTextMessage("/say <ZKGBAI> " + s, 0);
+	}
+
+	public void emote(String s){
+		callback.getGame().sendTextMessage("/say <ZKGBAI " + s + ">", 0);
 	}
 
 	private void chooseStartPos(){
@@ -632,7 +687,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
 				callback.getGame().sendStartPosition(false, best.getPos());
 				graphManager.setStartPos(best.getPos());
-				debug("Solo Mode: Start Position Selected!");
+				log("Solo Mode: Start Position Selected!");
 			}else{ // when playing on teams, generate a position based on relative teamID
 				AIFloat3 startPos;
 				List<AIFloat3> cachedPositions = new ArrayList<>();
@@ -718,13 +773,13 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 				if (best != null) {
 					callback.getGame().sendStartPosition(false, startPos);
 					graphManager.setStartPos(startPos);
-					debug("Teams Mode: Start Position Selected!");
+					log("Teams Mode: Start Position Selected!");
 				}else{
-					debug("Teams Mode: No start positions available!");
+					log("Teams Mode: No start positions available!");
 				}
 			}
 		}else{
-			debug("chooseStartPos: Startbox inference failed, or there were no mexes within the startbox.");
+			log("chooseStartPos: Startbox inference failed, or there were no mexes within the startbox.");
 		}
 	}
 

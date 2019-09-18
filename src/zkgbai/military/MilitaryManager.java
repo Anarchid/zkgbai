@@ -7,6 +7,7 @@ import com.springrts.ai.oo.clb.*;
 
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
+import zkgbai.economy.Worker;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
 import zkgbai.kgbutil.Pathfinder;
@@ -24,9 +25,10 @@ public class MilitaryManager extends Module {
 	public Pathfinder pathfinder;
 	
 	java.util.Map<Integer,Enemy> targets = new HashMap<Integer,Enemy>();
-	java.util.Map<Integer,Enemy> enemyPorcs = new HashMap<Integer,Enemy>();
-	public List<DefenseTarget> defenseTargets;
-	List<DefenseTarget> airDefenseTargets;
+	public java.util.Map<Integer,Enemy> enemyPorcs = new HashMap<Integer,Enemy>();
+	public List<DefenseTarget> defenseTargets = new ArrayList<DefenseTarget>();
+	List<DefenseTarget> airDefenseTargets = new ArrayList<DefenseTarget>();
+	public List<DefenseTarget> sniperSightings = new ArrayList<DefenseTarget>();
 
 	public java.util.Map<Integer, Raider> AAs;
 	public java.util.Map<Integer, Raider> hawks = new HashMap<>();
@@ -40,6 +42,9 @@ public class MilitaryManager extends Module {
 	ArrayGraphics aaThreatGraphics;
 	ArrayGraphics aaPorcGraphics;
 	ArrayGraphics valueGraphics;
+	ByteArrayGraphics bpGraphics;
+	ByteArrayGraphics riotGraphics;
+	ByteArrayGraphics scytheGraphics;
 	public ArrayList<TargetMarker> targetMarkers;
 	final int width;
 	final int height;
@@ -66,19 +71,32 @@ public class MilitaryManager extends Module {
 	int lastValueRedrawFrame = 0;
 
 	public float enemyPorcValue = 0f;
+	public float enemyLightPorcValue = 0f;
+	public float enemyHeavyPorcValue = 0f;
 	public float maxEnemyAirValue = 0f;
 	public int slasherSpam = 0;
 	public int enemyHeavyFactor = 0;
 	public boolean enemyHasTrollCom = false;
+
+	public float enemyFighterValue = 0f;
 	
 	public boolean enemyHasAntiNuke = false;
 	public boolean enemyHasNuke = false;
 	boolean hasNuke = false;
 
+	Set<Integer> newUnits = new HashSet<>();
+	Set<Integer> unbuiltPorcs = new HashSet<>();
+
 	static int CMD_DONT_FIRE_AT_RADAR = 38372;
 	static int CMD_AIR_STRAFE = 39381;
 	static int CMD_AP_FLY_STATE = 34569;
 	static int CMD_UNIT_AI = 36214;
+
+	// unit and weapon def IDs for unitDamaged.
+	int wolvMineID = 0;
+	int wolvMineBomblet = 0;
+	int sniperBulletID = 0;
+	int brawlerBulletID = 0;
 	
 	@Override
 	public String getModuleName() {
@@ -88,8 +106,6 @@ public class MilitaryManager extends Module {
 	public MilitaryManager(ZKGraphBasedAI ai){
 		this.ai = ai;
 		this.callback = ai.getCallback();
-		this.defenseTargets = new ArrayList<DefenseTarget>();
-		this.airDefenseTargets = new ArrayList<DefenseTarget>();
 
 		this.AAs = new HashMap<Integer, Raider>();
 
@@ -108,13 +124,16 @@ public class MilitaryManager extends Module {
 		this.aaThreatGraphics = new ArrayGraphics(width, height);
 		this.aaPorcGraphics = new ArrayGraphics(width, height);
 		this.valueGraphics = new ArrayGraphics(width, height);
+		this.bpGraphics = new ByteArrayGraphics(width, height);
+		this.riotGraphics = new ByteArrayGraphics(width, height);
+		this.scytheGraphics = new ByteArrayGraphics(width, height);
 		allyPorcGraphics.clear();
 		aaPorcGraphics.clear();
 		
 		try{
 			radarID = new RadarIdentifier(ai.getCallback());
 		}catch(Exception e){
-			ai.printException(e);
+			ai.debug(e);
 		}
 	}
 
@@ -133,7 +152,577 @@ public class MilitaryManager extends Module {
 
 		retreatHandler.init();
 
+		wolvMineID = callback.getUnitDefByName("wolverine_mine").getUnitDefId();
+		wolvMineBomblet = callback.getWeaponDefByName("wolverine_mine_bomblet").getWeaponDefId();
+		sniperBulletID = callback.getWeaponDefByName("cloaksnipe_shockrifle").getWeaponDefId();
+		brawlerBulletID = callback.getWeaponDefByName("gunshipheavyskirm_emg").getWeaponDefId();
+
 		return 0;
+	}
+	
+	@Override
+	public int update(int frame) {
+		this.frame = frame;
+		
+		if(frame % 15 == 2) {
+			updateTargets();
+			paintThreatMap();
+		}
+		
+		retreatHandler.update(frame);
+		raiderHandler.update(frame);
+		squadHandler.update(frame);
+		miscHandler.update(frame);
+		bomberHandler.update(frame);
+		
+		if (frame % 22 == 0 && !AAs.isEmpty()){
+			List<Integer> dead = new ArrayList<>();
+			for (Raider r:AAs.values()){
+				if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID){
+					dead.add(r.id);
+					continue;
+				}
+				if (retreatHandler.isRetreating(r.getUnit())){
+					continue;
+				}
+				if (getPorcThreat(r.getPos()) > 0 || getEffectiveThreat(r.getPos()) > 0){
+					if (r.getUnit().getDef().isAbleToFly()){
+						r.sneak(graphManager.getClosestAirHaven(r.getPos()), frame);
+					}else {
+						r.sneak(graphManager.getClosestHaven(r.getPos()), frame);
+					}
+				}else {
+					r.raid(getAngularPoint(getAATarget(r), r.getPos(), 350f), frame);
+				}
+			}
+			for (Integer id:dead){
+				AAs.remove(id);
+			}
+		}
+		
+		return 0; // signaling: OK
+	}
+	
+	@Override
+	public int unitCreated(Unit unit, Unit builder){
+		UnitDef ud = unit.getDef();
+		
+		if (ud.getSpeed() > 0 && ud.getBuildOptions().isEmpty()){
+			newUnits.add(unit.getUnitId());
+		}
+		
+		// Paint ally threat for porc
+		if (unit.getDef().getSpeed() == 0 && unit.getDef().isAbleToAttack() && unit.getDef().getCost(m) < 1500f){
+			unbuiltPorcs.add(unit.getUnitId());
+		}
+		return 0;
+	}
+	
+	@Override
+	public int unitFinished(Unit unit){
+		String defName = unit.getDef().getName();
+		if (defName.equals("staticnuke")){
+			hasNuke = true;
+			miscHandler.addNuke(unit);
+		}
+		
+		if (defName.equals("zenith")){
+			miscHandler.addZenith(unit);
+		}
+		
+		if (defName.equals("raveparty")){
+			miscHandler.addDRP(unit);
+		}
+		
+		if (defName.equals("staticheavyarty")) {
+			miscHandler.addBertha(unit);
+		}
+		
+		if (defName.equals("striderantiheavy")){
+			unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
+			unit.setFireState(1, (short) 0, Integer.MAX_VALUE);
+			Raider f = new Raider(unit, unit.getDef().getCost(m));
+			miscHandler.addUlti(f);
+		}
+		
+		if (unitTypes.striders.contains(defName)){
+			Strider st = new Strider(unit, unit.getDef().getCost(m));
+			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			miscHandler.addStrider(st);
+		}
+		
+		if (unit.getDef().getSpeed() > 0 && unit.getDef().getBuildOptions().isEmpty()
+			      && !defName.equals("shieldfelon") && !unitTypes.noRetreat.contains(defName)){
+			retreatHandler.addCoward(unit);
+		}
+		
+		if (unbuiltPorcs.contains(unit.getUnitId())){
+			unbuiltPorcs.remove(unit.getUnitId());
+			int power = (int) ((unit.getPower() + unit.getMaxHealth())/10);
+			float radius = unit.getMaxRange();
+			AIFloat3 pos = unit.getPos();
+			int x = (int) pos.x/32;
+			int y = (int) pos.z/32;
+			int rad = (int) radius/32;
+			
+			allyPorcGraphics.paintCircle(x, y, rad, power);
+		}
+		return 0;
+	}
+	
+	@Override
+	public int unitIdle(Unit unit) {
+		if (newUnits.contains(unit.getUnitId())){
+			newUnits.remove(unit.getUnitId());
+		}else{
+			return 0;
+		}
+		
+		String defName = unit.getDef().getName();
+		
+		// enable snipers and penetrators to shoot radar dots
+		if (defName.equals("cloaksnipe") || defName.equals("hoverarty")){
+			ArrayList<Float> params = new ArrayList<>();
+			params.add((float) 0);
+			unit.executeCustomCommand(CMD_DONT_FIRE_AT_RADAR, params, (short) 0, Integer.MAX_VALUE);
+			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+		}
+		
+		// disable air strafe for brawlers
+		if (defName.equals("gunshipheavyskirm")){
+			ArrayList<Float> params = new ArrayList<>();
+			params.add((float) 0);
+			unit.executeCustomCommand(CMD_AIR_STRAFE, params, (short) 0, Integer.MAX_VALUE);
+		}
+		
+		// set blastwings to land when idle
+		if (defName.equals("gunshipbomb")){
+			unit.setIdleMode(1, (short) 0, Integer.MAX_VALUE);
+		}
+		
+		if (unitTypes.planes.contains(defName)){
+			unit.setIdleMode(0, (short) 0, Integer.MAX_VALUE);
+		}
+		
+		// Activate outlaws
+		if (defName.equals("shieldriot")){
+			unit.setOn(true, (short) 0, Integer.MAX_VALUE);
+		}
+		
+		if (defName.equals("planefighter")){
+			unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
+			miscHandler.addSwift(unit);
+		}
+		
+		if (defName.equals("planeheavyfighter")){
+			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			Raider f = new Raider(unit, unit.getDef().getCost(m));
+			hawks.put(f.id, f);
+			if (hawks.size() > 4){
+				AAs.putAll(hawks);
+				hawks.clear();
+			}
+		}
+		
+		if (defName.equals("gunshipkrow")){
+			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			Krow f = new Krow(unit, unit.getDef().getCost(m));
+			miscHandler.addKrow(f);
+		}
+		
+		if (unitTypes.smallRaiders.contains(defName)) {
+			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			Raider r = new Raider(unit, unit.getDef().getCost(m));
+			raiderHandler.addSmallRaider(r);
+		}else if (unitTypes.mediumRaiders.contains(defName)) {
+			if ((defName.equals("hoverassault") || defName.equals("tankheavyraid")) && graphManager.eminentTerritory){
+				unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+				Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+				squadHandler.addRaidAssault(f);
+			}else{
+			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			Raider r = new Raider(unit, unit.getDef().getCost(m));
+			raiderHandler.addMediumRaider(r);
+			}
+		}else if (unitTypes.soloRaiders.contains(defName)) {
+			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			Raider r = new Raider(unit, unit.getDef().getCost(m));
+			raiderHandler.addSoloRaider(r);
+		}else if (unitTypes.assaults.contains(defName)) {
+			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			squadHandler.addAssault(f);
+		}else if (unitTypes.shieldMobs.contains(defName)){
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			f.shieldMob = true;
+			squadHandler.addShieldMob(f);
+		}else if (unitTypes.airMobs.contains(defName)){
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			squadHandler.addAirMob(f);
+		}else if(unitTypes.mobSupports.contains(defName)){
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			miscHandler.addSupport(f);
+		}else if(unitTypes.loners.contains(defName)) {
+			if (defName.equals("vehsupport") || defName.equals("spidercrabe")) {
+				unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
+				ArrayList<Float> params = new ArrayList<>();
+				params.add((float) 1);
+				unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, Integer.MAX_VALUE);
+			} else {
+				unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			}
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			miscHandler.addLoner(f);
+		}else if (unitTypes.arties.contains(defName)){
+			if (defName.equals("vehheavyarty") || defName.equals("tankarty") || defName.equals("striderarty") || defName.equals("tankheavyarty")){
+				unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
+				ArrayList<Float> params = new ArrayList<>();
+				params.add((float) 1);
+				unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, Integer.MAX_VALUE);
+			}else{
+				unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			}
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			miscHandler.addArty(f);
+		}else if (unitTypes.AAs.contains(defName)){
+			unit.setMoveState(2, (short) 0, Integer.MAX_VALUE);
+			Raider f = new Raider(unit, unit.getDef().getCost(m));
+			AAs.put(f.id, f);
+			AIFloat3 pos = graphManager.getAllyCenter();
+			if (pos != null){
+				unit.fight(pos, (short) 0, Integer.MAX_VALUE);
+			}
+		}else if (unitTypes.sappers.contains(defName)){
+			unit.setMoveState(2, (short) 0, Integer.MAX_VALUE);
+			unit.setFireState(2, (short) 0, Integer.MAX_VALUE);
+			ArrayList<Float> params = new ArrayList<>();
+			params.add((float) 0);
+			unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, Integer.MAX_VALUE);
+			unit.fight(getRadialPoint(graphManager.getAllyCenter(), 800f), (short) 0, Integer.MAX_VALUE);
+			miscHandler.addSapper(unit);
+		}else if (unitTypes.bombers.contains(defName)) {
+			unit.setMoveState(2, (short) 0, Integer.MAX_VALUE);
+			unit.setFireState(2, (short) 0, Integer.MAX_VALUE);
+			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
+			bomberHandler.addBomber(f);
+		}
+		
+		return 0; // signaling: OK
+	}
+	
+	@Override
+	public int unitDamaged(Unit h, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {
+		if (h.getDef().getUnitDefId() == wolvMineID || (weaponDef != null && weaponDef.getWeaponDefId() == wolvMineBomblet)){
+			return 0;
+		}
+		// check if the damaged unit is on fire.
+		boolean on_fire = h.getRulesParamFloat("on_fire", 0.0f) > 0;
+		
+		retreatHandler.checkUnit(h, on_fire);
+		// retreat scouting raiders so that they don't suicide into enemy raiders
+		if (!on_fire && !retreatHandler.isRetreating(h)) {
+			raiderHandler.avoidEnemies(h, attacker, dir);
+		}
+		
+		// create a defense task, if appropriate.
+		if ((attacker == null || attacker.getPos() == null || attacker.getPos().equals(nullpos) || attacker.getDef() == null)
+			      && (frame - lastDefenseFrame > 30 || (weaponDef != null && weaponDef.getWeaponDefId() == sniperBulletID)) && !on_fire) {
+			lastDefenseFrame = frame;
+			DefenseTarget dt = null;
+			
+			// only create defense targets on unitDamaged if the attacker is invisible or out of los.
+			if ((attacker == null || attacker.getDef() == null) && (weaponDef == null || !unitTypes.porcWeps.contains(weaponDef.getWeaponDefId()))) {
+				float x = 800 * dir.x;
+				float z = 800 * dir.z;
+				AIFloat3 pos = h.getPos();
+				AIFloat3 target = new AIFloat3();
+				target.x = pos.x + x;
+				target.z = pos.z + z;
+				dt = new DefenseTarget(target, 2000f, frame);
+			} else if (attacker != null && attacker.getDef() != null) {
+				dt = new DefenseTarget(attacker.getPos(), (attacker.getMaxHealth() + h.getMaxHealth()) / 2f, frame);
+			}
+			
+			// don't create defense targets vs air units.
+			if (dt != null) {
+				if (weaponDef != null && weaponDef.getWeaponDefId() == sniperBulletID){
+					sniperSightings.add(dt);
+					defenseTargets.add(dt);
+				}else if (weaponDef != null && weaponDef.getWeaponDefId() == brawlerBulletID) {
+					airDefenseTargets.add(dt);
+				} else {
+					defenseTargets.add(dt);
+				}
+			}
+		}
+		return 0;
+	}
+	
+	@Override
+	public int unitDestroyed(Unit unit, Unit attacker) {
+		if (unit.getDef().getName().equals("wolverine_mine")){
+			return 0;
+		}
+		
+		if (newUnits.contains(unit.getUnitId())){
+			newUnits.remove(unit.getUnitId());
+		}
+		
+		retreatHandler.removeUnit(unit);
+		raiderHandler.removeUnit(unit);
+		squadHandler.removeUnit(unit);
+		bomberHandler.removeUnit(unit);
+		miscHandler.removeUnit(unit);
+		
+		if (unit.getDef().getName().equals("staticnuke")){
+			hasNuke = false;
+		}
+		
+		if (AAs.containsKey(unit.getUnitId())){
+			AAs.remove(unit.getUnitId());
+		}
+		
+		if (hawks.containsKey(unit.getUnitId())){
+			hawks.remove(unit.getUnitId());
+		}
+		
+		if (unitTypes.sappers.contains(unit.getDef().getName())){
+			// rally units to fight if a tick/roach etc dies.
+			DefenseTarget dt = new DefenseTarget(unit.getPos(), 1500f, frame);
+			defenseTargets.add(dt);
+		}
+		
+		// create a defense task, if appropriate.
+		if ((!unit.getDef().isAbleToAttack() || unit.getDef().getSpeed() == 0 || unit.getDef().isBuilder() || graphManager.isAllyTerritory(unit.getPos()))
+			      && frame - lastDefenseFrame > 150){
+			lastDefenseFrame = frame;
+			DefenseTarget dt = null;
+			
+			float udmg = (unit.getDef().getName().equals("staticmex") && graphManager.isFrontLine(unit.getPos())) ? 1500f : unit.getMaxHealth();
+			if (attacker != null){
+				if (attacker.getPos() != null && attacker.getDef() != null && !attacker.getDef().isAbleToFly()) {
+					dt = new DefenseTarget(attacker.getPos(), udmg + attacker.getMaxHealth(), frame);
+				}
+			}else {
+				dt = new DefenseTarget(unit.getPos(), udmg, frame);
+			}
+			if (dt != null) {
+				defenseTargets.add(dt);
+			}
+			
+			if (attacker != null) {
+				if (attacker.getDef() != null) {
+					if (attacker.getDef().isAbleToFly()) {
+						DefenseTarget adt = new DefenseTarget(unit.getPos(), udmg + attacker.getMaxHealth(), frame);
+						airDefenseTargets.add(adt);
+					}
+				}
+			}
+		}
+		
+		// Unpaint ally threat for porc
+		if (unit.getDef().getSpeed() == 0 && unit.getDef().isAbleToAttack() && !unit.getDef().getName().equals("staticheavyarty")){
+			if (unbuiltPorcs.contains(unit.getUnitId())){
+				unbuiltPorcs.remove(unit.getUnitId());
+			}else{
+				int power = (int) ((unit.getPower() + unit.getMaxHealth()) / 10);
+				float radius = unit.getMaxRange();
+				AIFloat3 pos = unit.getPos();
+				int x = (int) pos.x / 32;
+				int y = (int) pos.z / 32;
+				int rad = (int) radius / 32;
+				
+				allyPorcGraphics.unpaintCircle(x, y, rad, power);
+			}
+		}
+		
+		return 0; // signaling: OK
+	}
+	
+	@Override
+	public int unitCaptured(Unit unit, int oldTeamID, int newTeamID){
+		if (oldTeamID == ai.teamID){
+			return unitDestroyed(unit, null);
+		}
+		return 0;
+	}
+	
+	@Override
+	public int unitGiven(Unit unit, int oldTeamID, int newTeamID){
+		// remove units that allies captured from enemy targets
+		if (targets.containsKey(unit.getUnitId())){
+			Enemy e = targets.get(unit.getUnitId());
+			e.position = null; // needed for bomberTasks
+			targets.remove(unit.getUnitId());
+		}
+		if (newTeamID == ai.teamID){
+			unitCreated(unit, null);
+			unitFinished(unit);
+			unitIdle(unit);
+		}
+		return 0;
+	}
+	
+	@Override
+	public int enemyEnterLOS(Unit enemy) {
+		Resource metal = ai.getCallback().getResourceByName("Metal");
+		
+		if(targets.containsKey(enemy.getUnitId())){
+			if (enemy.getDef().getName().equals("wolverine_mine")){
+				targets.remove(enemy.getUnitId());
+				return 0;
+			}
+			Enemy e = targets.get(enemy.getUnitId());
+			e.visible = true;
+			e.lastSeen = frame;
+			e.checkNano();
+			if (!e.identified) {
+				e.setIdentified();
+				e.updateFromUnitDef(enemy.getDef(), enemy.getDef().getCost(metal));
+				if (e.isPorc && !e.isNanoSpam){
+					enemyPorcs.put(enemy.getUnitId(),e);
+				}
+			}
+			
+			// paint enemy threat for aa
+			if (e.isStatic && e.isAA && !e.isPainted && !e.unit.isBeingBuilt()) {
+				int effectivePower = (int) e.getDanger();
+				AIFloat3 position = e.position;
+				int x = (int) (position.x / 32);
+				int y = (int) (position.z / 32);
+				int r = (int) ((e.threatRadius) / 32);
+				
+				aaPorcGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower);
+				e.isPainted = true;
+			}
+		}else if (!enemy.getDef().getName().equals("wolverine_mine")){
+			Enemy e = new Enemy(enemy, enemy.getDef().getCost(metal));
+			targets.put(enemy.getUnitId(),e);
+			e.visible = true;
+			e.setIdentified();
+			e.lastSeen = frame;
+			e.checkNano();
+			
+			if (e.isPorc && !e.isNanoSpam){
+				enemyPorcs.put(enemy.getUnitId(),e);
+			}
+			
+			if (e.isStatic && e.isAA && !e.isPainted && !e.unit.isBeingBuilt()) {
+				int effectivePower = (int) e.getDanger();
+				AIFloat3 position = e.position;
+				int x = (int) (position.x / 32);
+				int y = (int) (position.z / 32);
+				int r = (int) ((e.threatRadius) / 32);
+				
+				aaPorcGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower);
+				e.isPainted = true;
+			}
+		}
+		return 0; // signaling: OK
+	}
+	
+	@Override
+	public int enemyFinished(Unit enemy) {
+		if (enemy.getDef() == null){
+			return 0;
+		}
+		
+		Resource metal = ai.getCallback().getResourceByName("Metal");
+		
+		if(targets.containsKey(enemy.getUnitId())){
+			Enemy e = targets.get(enemy.getUnitId());
+			e.checkNano();
+			if (!e.identified) {
+				e.setIdentified();
+				e.updateFromUnitDef(enemy.getDef(), enemy.getDef().getCost(metal));
+				if (e.isPorc && !e.isNanoSpam){
+					enemyPorcs.put(enemy.getUnitId(),e);
+				}
+			}
+			// paint enemy threat for aa
+			if (e.isStatic && e.isAA && !e.isPainted) {
+				int effectivePower = (int) e.getDanger();
+				AIFloat3 position = e.position;
+				int x = (int) (position.x / 32);
+				int y = (int) (position.z / 32);
+				int r = (int) ((e.threatRadius) / 32);
+				
+				aaThreatGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower);
+				e.isPainted = true;
+			}
+		}else if (!enemy.getDef().getName().equals("wolverine_mine")){
+			Enemy e = new Enemy(enemy, enemy.getDef().getCost(metal));
+			targets.put(enemy.getUnitId(),e);
+			e.visible = true;
+			e.setIdentified();
+			e.lastSeen = frame;
+			
+			if (e.isPorc && !e.isNanoSpam){
+				enemyPorcs.put(enemy.getUnitId(),e);
+			}
+		}
+		return 0;
+	}
+	
+	@Override
+	public int enemyLeaveLOS(Unit enemy) {
+		if(targets.containsKey(enemy.getUnitId())){
+			targets.get(enemy.getUnitId()).visible = false;
+			targets.get(enemy.getUnitId()).lastSeen = frame;
+		}
+		return 0; // signaling: OK
+	}
+	
+	@Override
+	public int enemyEnterRadar(Unit enemy) {
+		if(targets.containsKey(enemy.getUnitId())){
+			targets.get(enemy.getUnitId()).isRadarVisible = true;
+			targets.get(enemy.getUnitId()).lastSeen = frame;
+		}else{
+			Enemy e = new Enemy(enemy, 50);
+			targets.put(enemy.getUnitId(),e);
+			e.isRadarVisible = true;
+			e.lastSeen = frame;
+		}
+		
+		return 0; // signaling: OK
+	}
+	
+	@Override
+	public int enemyLeaveRadar(Unit enemy) {
+		if(targets.containsKey(enemy.getUnitId())){
+			targets.get(enemy.getUnitId()).isRadarVisible = false;
+			targets.get(enemy.getUnitId()).lastSeen = frame;
+		}
+		return 0; // signaling: OK
+	}
+	
+	@Override
+	public int enemyDestroyed(Unit unit, Unit attacker) {
+		if(targets.containsKey(unit.getUnitId())){
+			Enemy e = targets.get(unit.getUnitId());
+			if (e.identified && e.ud != null && (e.ud.getName().equals("energysingu") || e.ud.getName().equals("energyheavygeo")) && !e.isNanoSpam){
+				ai.say("SHINY!");
+			}
+			
+			// Unpaint enemy threat for statics
+			if (e.isStatic && e.isAA && e.isPainted) {
+				int effectivePower = (int) e.getDanger();
+				AIFloat3 position = e.position;
+				int x = (int) (position.x / 32);
+				int y = (int) (position.z / 32);
+				int r = (int) ((e.threatRadius) / 32);
+				
+				aaPorcGraphics.unpaintCircle(x, y, (int) (r * 1.2f), effectivePower);
+			}
+			e.position = null;
+			
+			targets.remove(unit.getUnitId());
+			if (e.isPorc && !e.isNanoSpam){
+				enemyPorcs.remove(unit.getUnitId());
+			}
+		}
+		return 0; // signaling: OK
 	}
 	
 	private void paintValueMap(String wepName){
@@ -177,12 +766,14 @@ public class MilitaryManager extends Module {
 			valueGraphics.unpaintCircle(x, y, rr, value);
 		}
 		
-		if (squadHandler.nextShieldSquad != null && !squadHandler.nextShieldSquad.isDead()){
-			AIFloat3 position = squadHandler.nextShieldSquad.getPos();
-			int x = (int) (position.x / 32);
-			int y = (int) (position.z / 32);
-			int value = (int) (squadHandler.nextShieldSquad.metalValue/10f);
-			valueGraphics.unpaintCircle(x, y, r, value);
+		for (ShieldSquad s: squadHandler.shieldSquads){
+			if (!s.isDead()) {
+				AIFloat3 position = s.getPos();
+				int x = (int) (position.x / 32);
+				int y = (int) (position.z / 32);
+				int value = (int) (s.metalValue / 10f);
+				valueGraphics.unpaintCircle(x, y, r, value);
+			}
 		}
 	}
 	
@@ -190,9 +781,11 @@ public class MilitaryManager extends Module {
 		threatGraphics.clear();
 		allyThreatGraphics.clear();
 		aaThreatGraphics.clear();
+		riotGraphics.clear();
+		scytheGraphics.clear();
 		
 		boolean updatePorc = false;
-		if (frame % 300 == 0){
+		if (frame % 300 == 2){
 			enemyPorcGraphics.clear();
 			updatePorc = true;
 		}
@@ -203,38 +796,38 @@ public class MilitaryManager extends Module {
 			public void run() {
 				// paint allythreat for raiders
 				for (Raider r : raiderHandler.soloRaiders) {
-					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 20);
+					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 16f);
 					AIFloat3 pos = r.getPos();
-					int x = (int) pos.x / 32;
-					int y = (int) pos.z / 32;
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
 					int rad = 13;
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 
 				for (Raider r : raiderHandler.smallRaiders.values()) {
-					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 20);
+					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 16f);
 					AIFloat3 pos = r.getPos();
-					int x = (int) pos.x / 32;
-					int y = (int) pos.z / 32;
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
 					int rad = 13;
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 
 				for (Raider r : raiderHandler.mediumRaiders.values()) {
-					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 20);
+					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 12f);
 					AIFloat3 pos = r.getPos();
-					int x = (int) pos.x / 32;
-					int y = (int) pos.z / 32;
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
 					int rad = 13;
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 
 				// paint allythreat for fighters
 				for (Fighter f : squadHandler.fighters.values()) {
-					int power = (int) ((f.getUnit().getPower() + f.getUnit().getMaxHealth()) / 8);
+					int power = (int) ((f.getUnit().getPower() + f.getUnit().getMaxHealth()) / 8f);
 					AIFloat3 pos = f.getPos();
-					int x = (int) pos.x / 32;
-					int y = (int) pos.z / 32;
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
 					int rad = 40;
 
 					allyThreatGraphics.paintCircle(x, y, rad, power);
@@ -242,10 +835,10 @@ public class MilitaryManager extends Module {
 
 				// paint allythreat for striders
 				for (Strider s : miscHandler.striders.values()) {
-					int power = (int) ((s.getUnit().getPower() + s.getUnit().getMaxHealth()) / 6);
+					int power = (int) ((s.getUnit().getPower() + s.getUnit().getMaxHealth()) / 6f);
 					AIFloat3 pos = s.getPos();
-					int x = (int) pos.x / 32;
-					int y = (int) pos.z / 32;
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
 					int rad = 40;
 
 					allyThreatGraphics.paintCircle(x, y, rad, power);
@@ -253,13 +846,33 @@ public class MilitaryManager extends Module {
 				
 				// paint allythreat for krows
 				for (Strider s : miscHandler.krows.values()) {
-					int power = (int) ((s.getUnit().getPower() + s.getUnit().getMaxHealth()) / 6);
+					int power = (int) ((s.getUnit().getPower() + s.getUnit().getMaxHealth()) / 6f);
 					AIFloat3 pos = s.getPos();
-					int x = (int) pos.x / 32;
-					int y = (int) pos.z / 32;
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
 					int rad = 40;
 					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
+
+				// paint allythreat for commanders
+				for (Worker w: ai.ecoManager.commanders){
+					int power = (int) ((w.getUnit().getPower() + w.getUnit().getMaxHealth()) / 10f);
+					AIFloat3 pos = w.getPos();
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
+					int rad = 40;
+
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
+
+				//paint buildpower
+				for (Worker w: ai.ecoManager.workers.values()){
+					AIFloat3 pos = w.getPos();
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
+
+					bpGraphics.paintCircle(x, y, w.buildRange, Math.round(w.bp));
 				}
 			}
 		});
@@ -271,6 +884,12 @@ public class MilitaryManager extends Module {
 			int effectivePower = (int) t.getDanger();
 
 			AIFloat3 position = t.position;
+			
+			int x = Math.round(position.x / 32f);
+			int y = Math.round(position.z / 32f);
+			if (!t.identified || t.ud == null || !t.ud.isAbleToFly()) {
+				scytheGraphics.paintCircle(x, y, 7, 1);
+			}
 
 			if (position != null && t.ud != null
 					&& effectivePower > 0
@@ -278,28 +897,27 @@ public class MilitaryManager extends Module {
 					&& !t.unit.isBeingBuilt()
 					&& !t.unit.isParalyzed()
 					&& t.unit.getRulesParamFloat("disarmed", 0f) == 0) {
-				int x = (int) (position.x / 32);
-				int y = (int) (position.z / 32);
-				int r = (int) ((t.threatRadius) / 32);
+				int r = (int) Math.ceil(t.threatRadius/32f);
 
-				if (t.ud.getName().equals("gushipsupport")){
+				if (t.ud.getName().equals("gunshipskirm")){
 					r *= 5;
 				}
-
+				
 				if (!t.isStatic) {
 					if (!t.ud.isAbleToFly()) {
 						effectivePower = (int) ((float) effectivePower * Math.max(0, (1f - (((float) (frame - t.lastSeen)) / 900f))));
 					}
 					// paint enemy threat for mobiles
 					if (t.isAA || t.isFlexAA){
-						aaThreatGraphics.paintCircle(x, y, (int) (r*1.25f), effectivePower);
-					}
-					if (!t.isAA){
-						threatGraphics.paintCircle(x, y, (int) (r*1.25f), effectivePower);
+						aaThreatGraphics.paintCircle(x, y, (int) Math.ceil(r * 1.25f), effectivePower);
+					}else{
+						if (t.isRiot) riotGraphics.paintCircle(x, y, r, 1);
+						threatGraphics.paintCircle(x, y, r + 2, effectivePower);
 					}
 				}else if (!t.isAA){
 					// for statics
-					threatGraphics.paintCircle(x, y, (int) (r*1.25f), effectivePower);
+					if (t.isRiot) riotGraphics.paintCircle(x, y, r, 1);
+					threatGraphics.paintCircle(x, y, r, effectivePower);
 					if (updatePorc){
 						enemyPorcGraphics.paintCircle(x, y, r - 1, effectivePower);
 					}
@@ -330,70 +948,209 @@ public class MilitaryManager extends Module {
 				// ignore, JVM is just being a dolt
 			} catch (Exception e) {
 				// something more brutal happened
-				ai.printException(e);
+				ai.debug(e);
 				System.exit(-1);
 			}
 		}
 	}
 	
+	private void updateTargets() {
+		List<Enemy> outdated = new ArrayList<Enemy>();
+		for (Enemy t : targets.values()) {
+			AIFloat3 tpos = t.unit.getPos();
+			if (tpos != null && !tpos.equals(nullpos)) {
+				t.lastSeen = frame;
+				t.position = tpos;
+			}else if (frame - t.lastSeen > 1800 && !t.isStatic) {
+				// remove mobiles that haven't been seen for over 60 seconds.
+				outdated.add(t);
+			}else if (t.position != null && losManager.isInLos(t.position)) {
+				// remove targets that aren't where we last saw them.
+				outdated.add(t);
+				
+				// Unpaint enemy threat for aa
+				if (t.isAA && t.isPainted) {
+					int effectivePower = (int) t.getDanger();
+					AIFloat3 position = t.position;
+					int x = (int) (position.x / 32);
+					int y = (int) (position.z / 32);
+					int r = (int) ((t.threatRadius) / 32);
+					
+					aaPorcGraphics.unpaintCircle(x, y, (int) (r * 1.2f), effectivePower);
+				}
+			}
+		}
+		
+		for (Enemy t: outdated){
+			t.position = null; // needed for BomberTasks
+			targets.remove(t.unitID);
+			if (t.isPorc && !t.isNanoSpam){
+				enemyPorcs.remove(t.unitID);
+			}
+		}
+		
+		List<DefenseTarget> expired = new ArrayList<DefenseTarget>();
+		for (DefenseTarget d:defenseTargets){
+			if (frame - d.frameIssued > 300){
+				expired.add(d);
+			}
+		}
+		defenseTargets.removeAll(expired);
+		expired.clear();
+		
+		for (DefenseTarget d:airDefenseTargets){
+			if (frame - d.frameIssued > 900){
+				expired.add(d);
+			}
+		}
+		airDefenseTargets.removeAll(expired);
+		
+		for (DefenseTarget d:sniperSightings){
+			if (frame - d.frameIssued > 900){
+				expired.add(d);
+			}
+		}
+		sniperSightings.removeAll(expired);
+		
+		enemyPorcValue = 0f;
+		enemyLightPorcValue = 0f;
+		enemyHeavyPorcValue = 0f;
+		slasherSpam = 0;
+		// add up the value of heavy porc that the enemy has
+		// and also check for slasher spam
+		enemyHasAntiNuke = false;
+		enemyHasNuke = false;
+		float enemyAirValue = 0f;
+		enemyHeavyFactor = 0;
+		enemyFighterValue = 0;
+		for (Enemy t: targets.values()){
+			if (t.identified){
+				String defName = t.ud.getName();
+				if (defName.equals("turretheavylaser") || defName.equals("turretgauss") || defName.equals("turretriot")
+					      || defName.equals("turretemp") || defName.equals("turretimpulse") || defName.equals("spidercrabe")){
+					enemyPorcValue += t.ud.getCost(m);
+					enemyHeavyPorcValue += t.ud.getCost(m);
+				}else if (defName.equals("turretmissile") || defName.equals("turretlaser")) {
+					enemyPorcValue += t.ud.getCost(m);
+					enemyLightPorcValue += t.ud.getCost(m);
+				}else if (defName.equals("turretantiheavy") || defName.equals("turretheavy") || defName.equals("staticshield") || defName.equals("shieldshield")) {
+					enemyPorcValue += 1.5f * t.ud.getCost(m);
+					enemyHeavyPorcValue += 1.5f * t.ud.getCost(m);
+				}else if (defName.equals("shieldfelon") || defName.equals("shieldassault") || defName.equals("amphassault")){
+					enemyPorcValue += 2f * t.ud.getCost(m);
+					enemyLightPorcValue += t.ud.getCost(m);
+					enemyHeavyPorcValue += t.ud.getCost(m);
+				}else if (defName.equals("vehsupport")) {
+					slasherSpam++;
+				}else if (t.isRaider){
+					slasherSpam--;
+				}else if (defName.equals("staticantinuke")){
+					enemyHasAntiNuke = true;
+				}else if (defName.equals("staticnuke")){
+					enemyHasNuke = true;
+				}else if (defName.equals("striderbantha")){
+					enemyHeavyFactor++;
+				}else if (defName.equals("striderdetriment")){
+					enemyHeavyFactor += 2;
+				}else if (t.ud.isAbleToFly() && !t.isNanoSpam){
+					if (defName.equals("dronelight") || defName.equals("droneheavyslow") || defName.equals("dronecarry")){
+						enemyAirValue += 25f;
+					}else {
+						enemyAirValue += t.ud.getBuildTime();
+					}
+				}else if (t.unit.getRulesParamFloat("comm_level", 0f) > 3f){
+					enemyHasTrollCom = true;
+				}
+				
+				if (t.identified && t.ud.getSpeed() > 0 && t.ud.getMaxWeaponRange() > 0 && t.ud.getBuildOptions().isEmpty()){
+					enemyFighterValue += t.ud.getCost(m);
+				}
+			}
+		}
+		if (enemyAirValue > maxEnemyAirValue){
+			maxEnemyAirValue = enemyAirValue;
+		}
+	}
+	
 	public float getThreat(AIFloat3 position){
-		int x = (int) (position.x/32);
-		int y = (int) (position.z/32);
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
 
 		return (threatGraphics.getValue(x, y))/500f;
 	}
 	
 	public float getPorcThreat(AIFloat3 position){
-		int x = (int) (position.x/32);
-		int y = (int) (position.z/32);
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
 		
 		return (enemyPorcGraphics.getValue(x, y))/500f;
 	}
 
+	public float getRiotThreat(AIFloat3 position){
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
+
+		return riotGraphics.getValue(x, y);
+	}
+
+	public float getScytheThreat(AIFloat3 position){
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
+
+		return scytheGraphics.getValue(x, y);
+	}
+
 	public float getEffectiveThreat(AIFloat3 position){
-		int x = (int) (position.x/32);
-		int y = (int) (position.z/32);
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
 
 		return ((threatGraphics.getValue(x, y)) - (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y)))/500f;
 	}
 
 	public float getFriendlyThreat(AIFloat3 position){
-		int x = (int) (position.x/32);
-		int y = (int) (position.z/32);
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
 
 		return allyThreatGraphics.getValue(x, y)/500f;
 	}
 	
 	public float getTotalFriendlyThreat(AIFloat3 position){
-		int x = (int) (position.x/32);
-		int y = (int) (position.z/32);
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
 		
 		return (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y))/500f;
 	}
 
 	public float getAAThreat(AIFloat3 position){
-		int x = (int) (position.x/32);
-		int y = (int) (position.z/32);
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
 
 		return (aaThreatGraphics.getValue(x, y) + aaPorcGraphics.getValue(x, y))/500f;
 	}
 
 	public float getEffectiveAAThreat(AIFloat3 position){
-		int x = (int) (position.x/32);
-		int y = (int) (position.z/32);
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
 
 		return Math.max(0, ((aaThreatGraphics.getValue(x, y) + aaPorcGraphics.getValue(x, y) + threatGraphics.getValue(x, y)) - (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y)))/500f);
 	}
 	
 	public float getValue(AIFloat3 position){
-		int x = (int) (position.x/32);
-		int y = (int) (position.z/32);
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
 		
 		return (valueGraphics.getValue(x, y));
 	}
-    
-    
-	public AIFloat3 getTarget(AIFloat3 origin, boolean defend){
+
+	public float getBP(AIFloat3 position){
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
+
+		return (bpGraphics.getValue(x, y));
+	}
+ 
+	public AIFloat3 getTarget(Unit u, boolean defend){
+		AIFloat3 origin = u.getPos();
     	AIFloat3 target = null;
 		float fthreat = getFriendlyThreat(origin);
     	float cost = Float.MAX_VALUE;
@@ -402,10 +1159,9 @@ public class MilitaryManager extends Module {
 		if (defend) {
 			// check for defense targets first
 			for (DefenseTarget d : defenseTargets) {
-				if (getThreat(d.position) > getFriendlyThreat(origin)){
-					continue;
-				}
-				float tmpcost = distance(origin, d.position) - d.damage;
+				float ethreat = getEffectiveThreat(d.position);
+				if (ethreat > fthreat * 2f) continue;
+				float tmpcost = distance(origin, d.position) - (d.damage * (1f + ethreat));
 
 				if (tmpcost < cost) {
 					cost = tmpcost;
@@ -415,13 +1171,13 @@ public class MilitaryManager extends Module {
 		}
 
 		// then look for enemy mexes to kill, and see which is cheaper
-		List<MetalSpot> ms = graphManager.getEnemySpots();
-		for (MetalSpot m:ms){
-			if (getThreat(m.getPos()) > getFriendlyThreat(origin)){
+		for (MetalSpot m:graphManager.getEnemySpots()){
+			if (getThreat(m.getPos()) > fthreat || !pathfinder.isAssaultReachable(u, m.getPos(), fthreat)){
 				continue;
 			}
-			float tmpcost = (distance(m.getPos(), origin)/4) - 500;
-    			
+			float tmpcost = (distance(m.getPos(), origin)/4f) - 500f;
+			tmpcost += 500f * getThreat(m.getPos());
+   
 			if (tmpcost < cost){
 				target = m.getPos();
 				cost = tmpcost;
@@ -432,28 +1188,27 @@ public class MilitaryManager extends Module {
 		// then look for enemy units to kill, and see if any are better targets
 		// then check for nearby enemies that aren't raiders.
 		for (Enemy e : targets.values()) {
-			if (getThreat(e.position) > getFriendlyThreat(origin)
-					|| (e.identified && e.ud.isAbleToFly())
-					|| (e.isRaider)){
+			boolean allyTerritory = graphManager.isAllyTerritory(e.position);
+			float ethreat = getEffectiveThreat(e.position);
+			if ((ethreat > fthreat && (!allyTerritory || getPorcThreat(e.position) > 0))
+					  || ethreat > fthreat * 2f
+					|| (e.identified && e.ud.isAbleToFly())){
 				continue;
 			}
 			float tmpcost = distance(origin, e.position);
 			if (!e.isAA){
-				tmpcost -= e.getDanger();
+				if (e.identified && !e.isRaider && allyTerritory){
+					tmpcost /= (1f + Math.max(0, ethreat));
+					tmpcost -= e.getDanger() * (1f + getThreat(e.position));
+				}else if (e.isFac && pathfinder.isAssaultReachable(u, e.position, fthreat)){
+					tmpcost /= 4f;
+					tmpcost -= 750f;
+				}else {
+					tmpcost -= e.getDanger();
+				}
 			}
-
-			if (e.isMajorCancer){
-				tmpcost /= 4;
-				tmpcost -= 1000;
-			}else if (e.isMinorCancer){
-				tmpcost /= 2;
-				tmpcost -= 500;
-			}
-
-			if (graphManager.isAllyTerritory(e.position)){
-				tmpcost /= 2;
-				tmpcost -= 250;
-			}
+			
+			//if (allyTerritory) cost -= 1000f;
 
 			if (tmpcost < cost) {
 				cost = tmpcost;
@@ -468,8 +1223,7 @@ public class MilitaryManager extends Module {
 		}
 
 		// if no targets are available attack enemyshadowed metal spots until we find one
-    	ms = graphManager.getUnownedSpots();
-    	for (MetalSpot m:ms){
+    	for (MetalSpot m:graphManager.getUnownedSpots()){
 			if (m.enemyShadowed){
 				float tmpcost = distance(m.getPos(), origin);
 				tmpcost /= 1+getThreat(m.getPos());
@@ -574,7 +1328,8 @@ public class MilitaryManager extends Module {
 		return nullpos;
 	}
 
-	public AIFloat3 getAirTarget(AIFloat3 origin, boolean defend){
+	public AIFloat3 getAirTarget(Unit u, boolean defend){
+		AIFloat3 origin = u.getPos();
 		AIFloat3 target = null;
 		float fthreat = getFriendlyThreat(origin);
 		float cost = Float.MAX_VALUE;
@@ -582,60 +1337,59 @@ public class MilitaryManager extends Module {
 		// first check defense targets
 		if (defend) {
 			for (DefenseTarget d : defenseTargets) {
-				float tmpcost = (distance(origin, d.position) - d.damage)/1+(2 * getThreat(d.position));
+				if (getEffectiveAAThreat(d.position) > fthreat){
+					continue;
+				}
+				float tmpcost = distance(origin, d.position) - d.damage;
 				
-				if (tmpcost < cost && getEffectiveAAThreat(d.position) < fthreat) {
+				if (tmpcost < cost) {
 					cost = tmpcost;
 					target = d.position;
 				}
-				
 			}
 		}
 		
 		// then look for enemy mexes to kill, and see which is cheaper
-		List<MetalSpot> ms = graphManager.getEnemySpots();
-		if(ms.size() > 0){
-			for (MetalSpot m:ms){
-				float tmpcost = distance(m.getPos(), origin)/2;
-				tmpcost += 2000f * getAAThreat(m.getPos());
+		for (MetalSpot m:graphManager.getEnemySpots()){
+			if (getEffectiveAAThreat(m.getPos()) > fthreat || !pathfinder.isAssaultReachable(u, m.getPos(), fthreat)){
+				continue;
+			}
+			float tmpcost = (distance(m.getPos(), origin)/4f) - 500f;
+			
+			if (tmpcost < cost){
+				target = m.getPos();
+				cost = tmpcost;
+			}
+		}
+		
+		
+		// then look for enemy units to kill, and see if any are better targets
+		for (Enemy e: targets.values()) {
+			boolean allyTerritory = graphManager.isAllyTerritory(e.position);
+			if (e.position != null && e.identified && getEffectiveAAThreat(e.position) < fthreat) {
+				float tmpcost = distance(origin, e.position);
+				if (!e.isAA){
+					if (!e.isRaider && allyTerritory){
+						tmpcost /= (1f + Math.max(0, getEffectiveThreat(e.position)));
+					}
+					tmpcost -= e.getDanger();
+				}
 				
-				if (tmpcost < cost && getEffectiveAAThreat(m.getPos()) < fthreat){
-					target = m.getPos();
+				if (e.isMajorCancer) {
+					tmpcost /= 4;
+				} else if (e.isMinorCancer) {
+					tmpcost /= 2;
+				}
+				
+				tmpcost += 2000f * getAAThreat(e.position);
+				
+				if (tmpcost < cost) {
 					cost = tmpcost;
+					target = e.position;
 				}
 			}
 		}
 		
-		// then look for enemy units to kill, and see if any are better targets
-		if(targets.size() > 0){
-			Iterator<Enemy> enemies = targets.values().iterator();
-			while(enemies.hasNext()){
-				Enemy e = enemies.next();
-				if (e.position != null && e.identified && getEffectiveAAThreat(e.position) < fthreat) {
-					float tmpcost = distance(origin, e.position) - e.getDanger();
-					
-					if (e.isMajorCancer){
-						tmpcost /= 4;
-						tmpcost -= 1000;
-					}else if (e.isMinorCancer){
-						tmpcost /= 2;
-						tmpcost -= 500;
-					}
-					
-					if (graphManager.isAllyTerritory(e.position)){
-						tmpcost /= 4;
-						tmpcost -= 500;
-					}
-					
-					tmpcost += 2000f * getAAThreat(e.position);
-					
-					if (tmpcost < cost) {
-						cost = tmpcost;
-						target = e.position;
-					}
-				}
-			}
-		}
 		
 		if (target != null){
 			TargetMarker tm = new TargetMarker(target, frame);
@@ -644,12 +1398,11 @@ public class MilitaryManager extends Module {
 		}
 		
 		// if no targets are available attack enemyshadowed metal spots until we find one
-		ms = graphManager.getUnownedSpots();
-		for (MetalSpot m:ms){
+		for (MetalSpot m:graphManager.getUnownedSpots()){
 			if (m.enemyShadowed){
 				float tmpcost = distance(m.getPos(), origin);
-				tmpcost /= 1+getThreat(m.getPos());
-				tmpcost /= (frame-m.getLastSeen())/600;
+				tmpcost /= 1f + getThreat(m.getPos());
+				tmpcost /= (frame - m.getLastSeen())/600;
 				
 				if (tmpcost < cost) {
 					target = m.getPos();
@@ -685,21 +1438,19 @@ public class MilitaryManager extends Module {
 		}
 		
 		// then look for enemy units to kill, and see if any are better targets
-		if(targets.size() > 0){
-			Iterator<Enemy> enemies = targets.values().iterator();
-			while(enemies.hasNext()){
-				Enemy e = enemies.next();
-				if (e.position != null && e.identified && !e.ud.isAbleToFly()) {
-					float tmpcost = distance(origin, e.position) - (!e.isAA ? 10f * Math.min(e.ud.getCost(m), 1500f) : e.ud.getCost(m));
-					tmpcost += 10000f * getAAThreat(e.position);
-					
-					if (tmpcost < cost) {
-						cost = tmpcost;
-						target = e.position;
-					}
+		for (Enemy e:targets.values()) {
+			if (e.position != null && e.identified && !e.ud.isAbleToFly()) {
+				float tmpcost = distance(origin, e.position) - (!e.isAA ? 10f * Math.min(e.ud.getCost(m), 1500f) : e.ud.getCost(m));
+				tmpcost += 10000f * getAAThreat(e.position);
+				
+				if (tmpcost < cost) {
+					cost = tmpcost;
+					target = e.position;
 				}
 			}
 		}
+		
+		
 		
 		if (target != null){
 			TargetMarker tm = new TargetMarker(target, frame);
@@ -818,7 +1569,7 @@ public class MilitaryManager extends Module {
 		float cost = Float.MAX_VALUE;
 		
 		for (Enemy e:targets.values()){
-			if (!e.identified || e.ud == null || e.ud.isAbleToFly() || e.ud.getCost(m) < 700f || e.ud.getHealth() < 1000f || !graphManager.isAllyTerritory(e.position) || getPorcThreat(e.position) > 0){
+			if (!e.identified || e.ud == null || e.ud.isAbleToFly() || e.ud.getCost(m) < 600f || e.ud.getHealth() < 1000f || !graphManager.isAllyTerritory(e.position) || getPorcThreat(e.position) > 0){
 				continue;
 			}
 			
@@ -856,8 +1607,7 @@ public class MilitaryManager extends Module {
 		for (Enemy e : targets.values()) {
 			if (!e.identified
 					|| !e.ud.isAbleToFly()
-					|| (!graphManager.isAllyTerritory(e.position) && getEffectiveThreat(getDirectionalPoint(e.position, origin, range)) > 0)
-				|| getTotalFriendlyThreat(e.position) == 0
+					|| getEffectiveThreat(getDirectionalPoint(e.position, origin, range)) > 0
 				|| getPorcThreat(e.position) > 0){
 				continue;
 			}
@@ -877,7 +1627,7 @@ public class MilitaryManager extends Module {
 		
 		if (target == null){
 			try {
-				target = graphManager.getClosestAirHaven(graphManager.getClosestFrontLineSpot(graphManager.getAllyCenter()).getPos());
+				target = graphManager.getClosestAirHaven(graphManager.getClosestFrontLineSpot(graphManager.getEnemyCenter()).getPos());
 			}catch (Exception e){
 				// null pointer guard
 			}
@@ -890,14 +1640,34 @@ public class MilitaryManager extends Module {
 		}
 		return nullpos;
 	}
+	
+	public AIFloat3 getMerlinTarget(Unit u){
+		float maxRange = u.getMaxRange();
+		float cost = Float.MAX_VALUE;
+		AIFloat3 target = nullpos;
+		for (Enemy e:targets.values()){
+			if (!e.identified || e.ud == null || e.ud.isAbleToFly() || e.isRaider
+			|| !graphManager.isAllyTerritory(getDirectionalPoint(e.position, u.getPos(), maxRange))) continue;
+			float tmpcost = distance(e.position, u.getPos());
+			tmpcost += 250f * e.ud.getSpeed();
+			tmpcost -= e.ud.getCost(m) * getScytheThreat(e.position);
+			
+			if (tmpcost < cost){
+				cost = tmpcost;
+				target = e.position;
+			}
+		}
+		return target;
+	}
 
 	public AIFloat3 getBerthaTarget(AIFloat3 origin){
 		AIFloat3 target = null;
 		float cost = Float.MIN_VALUE;
+		float maxrange = callback.getUnitDefByName("staticheavyarty").getMaxWeaponRange();
 
 		// for berthas the more expensive the target the better
 		for (Enemy e : targets.values()) {
-			if (!e.identified || e.position == null || e.position.equals(nullpos) || e.isNanoSpam || distance(e.position, origin) > 6200 || e.ud.isAbleToFly() || (e.ud.getName().equals("staticantinuke") && !hasNuke)
+			if (!e.identified || e.position == null || e.position.equals(nullpos) || e.isNanoSpam || distance(e.position, origin) > maxrange || e.ud.isAbleToFly() || (e.ud.getName().equals("staticantinuke") && !hasNuke)
 				|| (e.ud.getSpeed() > 0 && e.ud.getBuildSpeed() > 8f)){
 				// berthas can't target things outside their range, and are not good vs air.
 				// we also ignore antinukes because kgb doesn't build nukes anyway.
@@ -970,15 +1740,15 @@ public class MilitaryManager extends Module {
 	void cook(){
 		double rand = Math.random();
 		if (rand > 0.8){
-			callback.getGame().sendTextMessage("/say <ZKGBAI> Nice knowing you.", 0);
+			ai.say("Nice knowing you.");
 		}else if (rand > 0.6){
-			callback.getGame().sendTextMessage("/say <ZKGBAI> It's cooking time!", 0);
+			ai.say("It's cooking time!");
 		}else if (rand > 0.4){
-			callback.getGame().sendTextMessage("/say <ZKGBAI> SHINY!", 0);
+			ai.say("SHINY!");
 		}else if (rand > 0.2){
-			callback.getGame().sendTextMessage("/say <ZKGBAI> R.I.P.", 0);
+			ai.say("R.I.P.");
 		}else{
-			callback.getGame().sendTextMessage("/say <ZKGBAI> Get rekt.", 0);
+			ai.say("Get rekt.");
 		}
 	}
 	
@@ -986,7 +1756,7 @@ public class MilitaryManager extends Module {
 		Enemy best = null;
 		float dist = Float.MAX_VALUE;
 		for (Enemy e:enemyPorcs.values()){
-			if (!e.identified || e.ud == null || !e.isStatic || e.getDanger() == 0 || e.isAA || e.isNanoSpam){
+			if (!e.identified || e.ud == null || !e.isStatic || e.getDanger() == 0 || e.isAA || e.isNanoSpam || e.position == null){
 				continue;
 			}
 			float tmpdist = distance(position, e.position) + e.ud.getMaxWeaponRange();
@@ -1012,10 +1782,11 @@ public class MilitaryManager extends Module {
 		}
 
 		float cost = Float.MAX_VALUE;
+		float fthreat = getFriendlyThreat(pos);
 
 		// check for defense targets first
 		for (DefenseTarget d : defenseTargets) {
-			if (getThreat(d.position) > getFriendlyThreat(pos) || getPorcThreat(d.position) > 0){
+			if (getPorcThreat(d.position) > 0 || getEffectiveThreat(d.position) > fthreat * 2f){
 				continue;
 			}
 			float tmpcost = distance(pos, d.position) - d.damage;
@@ -1028,19 +1799,21 @@ public class MilitaryManager extends Module {
 
 		// then check for nearby enemies
 		for (Enemy e : targets.values()) {
-			if (getThreat(e.position) > getFriendlyThreat(pos)
+			boolean allyTerritory = graphManager.isAllyTerritory(e.position);
+			float ethreat = getEffectiveThreat(e.position);
+			float pthreat = getPorcThreat(e.position);
+			if ((ethreat > fthreat && (!allyTerritory || pthreat > 0))
+					  || ethreat > fthreat * 2f
 					|| (e.identified && e.ud.isAbleToFly())
-					|| (!graphManager.isAllyTerritory(e.position) || getPorcThreat(e.position) > 0)){
+					|| (!allyTerritory || pthreat > 0)){
 				continue;
 			}
-			float tmpcost = distance(pos, e.position) - e.getDanger();
-
-			if (e.isMajorCancer){
-				tmpcost /= 4;
-				tmpcost -= 1000;
-			}else if (e.isMinorCancer){
-				tmpcost /= 2;
-				tmpcost -= 500;
+			float tmpcost = distance(pos, e.position);
+			if (!e.isAA){
+				if (!e.isRaider){
+					tmpcost /= (1f + Math.max(0, getEffectiveThreat(e.position)));
+				}
+				tmpcost -= e.getDanger();
 			}
 
 			if (tmpcost < cost) {
@@ -1054,7 +1827,10 @@ public class MilitaryManager extends Module {
 		}
 
 		//if there aren't any, then rally near the front line.
-		AIFloat3 position = null;
+		AIFloat3 position;
+		position = getWorkerEscort(pos);
+		if (position != null) return position;
+
 		try {
 			position = graphManager.getClosestFrontLineSpot(pos).getPos();
 		}catch (Exception e){}
@@ -1112,12 +1888,15 @@ public class MilitaryManager extends Module {
 		
 		// then check for nearby enemies
 		for (Enemy e : targets.values()) {
-			if (getAAThreat(e.position) > getFriendlyThreat(pos)
+			if (getEffectiveAAThreat(e.position) > getFriendlyThreat(pos)
 					    || !graphManager.isAllyTerritory(e.position)
 				    || getPorcThreat(e.position) > 0){
 				continue;
 			}
-			float tmpcost = distance(pos, e.position) - e.getDanger();
+			float tmpcost = distance(pos, e.position);
+			if (!e.isAA){
+				tmpcost -= e.getDanger() * (1f + Math.max(0, getEffectiveThreat(e.position)));
+			}
 			tmpcost += 2000f * getAAThreat(e.position);
 			
 			if (e.isMajorCancer){
@@ -1181,7 +1960,7 @@ public class MilitaryManager extends Module {
 
 		// check for defense targets first
 		for (DefenseTarget d : defenseTargets) {
-			if (getThreat(d.position) > getFriendlyThreat(pos) || getPorcThreat(d.position) > 0){
+			if ((getEffectiveThreat(d.position) > getFriendlyThreat(pos) || getPorcThreat(d.position) > 0 || getRiotThreat(d.position) > 0) && !squadHandler.fighters.isEmpty()){
 				continue;
 			}
 			float tmpcost = distance(pos, d.position) - d.damage;
@@ -1194,9 +1973,9 @@ public class MilitaryManager extends Module {
 
 		// then check for nearby enemies
 		for (Enemy e : targets.values()) {
-			if (getThreat(e.position) > getFriendlyThreat(pos)
-					|| e.isRiot
-					|| (e.identified && e.ud.isAbleToFly())
+			if (((getEffectiveThreat(e.position) > getFriendlyThreat(pos)
+					|| (e.isRiot || getRiotThreat(e.position) > 0)
+					|| (e.identified && e.ud.isAbleToFly())) && !squadHandler.fighters.isEmpty())
 					|| (!graphManager.isAllyTerritory(e.position) || getPorcThreat(e.position) > 0)){
 				continue;
 			}
@@ -1221,6 +2000,9 @@ public class MilitaryManager extends Module {
 		}
 		
 		AIFloat3 position = null;
+		position = getWorkerEscort(pos);
+		if (position != null) return position;
+
 		try {
 			position = graphManager.getClosestFrontLineSpot(pos).getPos();
 		}catch (Exception e){}
@@ -1248,625 +2030,24 @@ public class MilitaryManager extends Module {
 		return graphManager.getClosestSpot(pos).getPos();
 	}
 
+	private AIFloat3 getWorkerEscort(AIFloat3 pos){
+		AIFloat3 target = null;
+		float mindist = Float.MAX_VALUE;
+		Worker nearestFac = ai.ecoManager.getNearestFac(pos);
+		AIFloat3 facpos = (nearestFac != null) ? nearestFac.getPos() : pos;
+		AIFloat3 enemyCenter = !graphManager.getEnemyCenter().equals(nullpos) ? graphManager.getEnemyCenter() : pos;
+		for (Worker w: ai.ecoManager.workers.values()){
+			if (getEffectiveThreat(w.getPos()) > getFriendlyThreat(pos)) continue;
+			float dist = distance(pos, w.getPos()) - distance(w.getPos(), facpos) + distance(w.getPos(), enemyCenter) + (1000f * (getTotalFriendlyThreat(w.getPos()) - getEffectiveThreat(w.getPos())));
+			if (dist < mindist){
+				target = w.getPos();
+				mindist = dist;
+			}
+		}
+		return target;
+	}
+
 	public Collection<Enemy> getTargets(){
 		return targets.values();
-	}
-
-	private void updateTargets() {
-		List<Enemy> outdated = new ArrayList<Enemy>();
-		for (Enemy t : targets.values()) {
-			AIFloat3 tpos = t.unit.getPos();
-			if (tpos != null && !tpos.equals(nullpos)) {
-				t.lastSeen = frame;
-				t.position = tpos;
-			}else if (frame - t.lastSeen > 1800 && !t.isStatic) {
-				// remove mobiles that haven't been seen for over 60 seconds.
-				outdated.add(t);
-			}else if (t.position != null && losManager.isInLos(t.position)) {
-				// remove targets that aren't where we last saw them.
-				outdated.add(t);
-
-				// Unpaint enemy threat for aa
-				if (t.isAA && t.isPainted) {
-					int effectivePower = (int) t.getDanger();
-					AIFloat3 position = t.position;
-					int x = (int) (position.x / 32);
-					int y = (int) (position.z / 32);
-					int r = (int) ((t.threatRadius) / 32);
-
-					aaPorcGraphics.unpaintCircle(x, y, (int) (r * 1.2f), effectivePower);
-				}
-			}
-		}
-
-		for (Enemy t: outdated){
-			t.position = null; // needed for BomberTasks
-			targets.remove(t.unitID);
-			if (t.isPorc && !t.isNanoSpam){
-				enemyPorcs.remove(t.unitID);
-			}
-		}
-
-		List<DefenseTarget> expired = new ArrayList<DefenseTarget>();
-		for (DefenseTarget d:defenseTargets){
-			if (frame - d.frameIssued > 300){
-				expired.add(d);
-			}
-		}
-		defenseTargets.removeAll(expired);
-		expired.clear();
-
-		for (DefenseTarget d:airDefenseTargets){
-			if (frame - d.frameIssued > 900){
-				expired.add(d);
-			}
-		}
-		airDefenseTargets.removeAll(expired);
-
-		enemyPorcValue = 0f;
-		slasherSpam = 0;
-		// add up the value of heavy porc that the enemy has
-		// and also check for slasher spam
-		enemyHasAntiNuke = false;
-		enemyHasNuke = false;
-		float enemyAirValue = 0f;
-		enemyHeavyFactor = 0;
-		for (Enemy t: targets.values()){
-			if (t.identified){
-				String defName = t.ud.getName();
-				if (defName.equals("turretheavylaser") || defName.equals("turretgauss") || defName.equals("turretriot") || defName.equals("spidercrabe")
-				|| defName.equals("turretmissile") || defName.equals("turretlaser") || defName.equals("amphassault")) {
-					enemyPorcValue += t.ud.getCost(m);
-				}else if (defName.equals("turretantiheavy") || defName.equals("turretheavy") || defName.equals("staticshield") || defName.equals("shieldshield")) {
-					enemyPorcValue += 1.5f * t.ud.getCost(m);
-				}else if (defName.equals("shieldfelon")){
-					enemyPorcValue += 2f * t.ud.getCost(m);
-				}else if (defName.equals("vehsupport")) {
-					slasherSpam++;
-				}else if (t.isRaider){
-					slasherSpam--;
-				}else if (defName.equals("staticantinuke")){
-					enemyHasAntiNuke = true;
-				}else if (defName.equals("staticnuke")){
-					enemyHasNuke = true;
-				}else if (defName.equals("striderbantha")){
-					enemyHeavyFactor++;
-				}else if (defName.equals("striderdetriment")){
-					enemyHeavyFactor += 2;
-				}else if (t.ud.isAbleToFly() && !t.isNanoSpam){
-					if (defName.equals("dronelight") || defName.equals("droneheavyslow") || defName.equals("dronecarry")){
-						enemyAirValue += 25f;
-					}else {
-						enemyAirValue += t.ud.getBuildTime();
-					}
-				}else if (t.unit.getRulesParamFloat("comm_level", 0f) > 3f){
-					enemyHasTrollCom = true;
-				}
-			}
-		}
-		if (enemyAirValue > maxEnemyAirValue){
-			maxEnemyAirValue = enemyAirValue;
-		}
-	}
-    
-    @Override
-    public int update(int frame) {
-    	this.frame = frame;
-
-		if(frame%15 == 0) {
-			updateTargets();
-			paintThreatMap();
-		}
-
-		retreatHandler.update(frame);
-		raiderHandler.update(frame);
-		squadHandler.update(frame);
-		miscHandler.update(frame);
-		bomberHandler.update(frame);
-
-		if (frame % 4 == 0 && !AAs.isEmpty()){
-			boolean assigned = false;
-			for (Raider r:AAs.values()){
-				if (r.assigned || frame - r.lastTaskFrame < 15 || retreatHandler.isRetreating(r.getUnit())){
-					continue;
-				}
-				r.raid(getAATarget(r), frame);
-				r.assigned = true;
-				assigned = true;
-				break;
-			}
-			if (!assigned){
-				for (Raider r:AAs.values()){
-					r.assigned = false;
-				}
-			}
-		}
-
-        return 0; // signaling: OK
-    }
-	
-    @Override
-    public int enemyEnterLOS(Unit enemy) {
-    	Resource metal = ai.getCallback().getResourceByName("Metal");
-
-		if(targets.containsKey(enemy.getUnitId())){
-			if (enemy.getDef().getName().equals("wolverine_mine")){
-				targets.remove(enemy.getUnitId());
-				return 0;
-			}
-    		Enemy e = targets.get(enemy.getUnitId());
-    		e.visible = true;
-			e.lastSeen = frame;
-			e.checkNano();
-			if (!e.identified) {
-				e.setIdentified();
-				e.updateFromUnitDef(enemy.getDef(), enemy.getDef().getCost(metal));
-				if (e.isPorc && !e.isNanoSpam){
-					enemyPorcs.put(enemy.getUnitId(),e);
-				}
-			}
-
-			// paint enemy threat for aa
-			if (e.isStatic && e.isAA && !e.isPainted && !e.unit.isBeingBuilt()) {
-				int effectivePower = (int) e.getDanger();
-				AIFloat3 position = e.position;
-				int x = (int) (position.x / 32);
-				int y = (int) (position.z / 32);
-				int r = (int) ((e.threatRadius) / 32);
-
-				aaPorcGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower);
-				e.isPainted = true;
-			}
-    	}else if (!enemy.getDef().getName().equals("wolverine_mine")){
-			Enemy e = new Enemy(enemy, enemy.getDef().getCost(metal));
-			targets.put(enemy.getUnitId(),e);
-			e.visible = true;
-			e.setIdentified();
-			e.lastSeen = frame;
-			e.checkNano();
-			
-			if (e.isPorc && !e.isNanoSpam){
-				enemyPorcs.put(enemy.getUnitId(),e);
-			}
-			
-			if (e.isStatic && e.isAA && !e.isPainted && !e.unit.isBeingBuilt()) {
-				int effectivePower = (int) e.getDanger();
-				AIFloat3 position = e.position;
-				int x = (int) (position.x / 32);
-				int y = (int) (position.z / 32);
-				int r = (int) ((e.threatRadius) / 32);
-				
-				aaPorcGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower);
-				e.isPainted = true;
-			}
-		}
-        return 0; // signaling: OK
-    }
-
-	@Override
-	public int enemyFinished(Unit enemy) {
-		if (enemy.getDef() == null){
-			return 0;
-		}
-		
-		Resource metal = ai.getCallback().getResourceByName("Metal");
-		
-		if(targets.containsKey(enemy.getUnitId())){
-			Enemy e = targets.get(enemy.getUnitId());
-			e.checkNano();
-			if (!e.identified) {
-				e.setIdentified();
-				e.updateFromUnitDef(enemy.getDef(), enemy.getDef().getCost(metal));
-				if (e.isPorc && !e.isNanoSpam){
-					enemyPorcs.put(enemy.getUnitId(),e);
-				}
-			}
-			// paint enemy threat for aa
-			if (e.isStatic && e.isAA && !e.isPainted) {
-				int effectivePower = (int) e.getDanger();
-				AIFloat3 position = e.position;
-				int x = (int) (position.x / 32);
-				int y = (int) (position.z / 32);
-				int r = (int) ((e.threatRadius) / 32);
-
-				aaThreatGraphics.paintCircle(x, y, (int) (r*1.2f), effectivePower);
-				e.isPainted = true;
-			}
-		}else if (!enemy.getDef().getName().equals("wolverine_mine")){
-			Enemy e = new Enemy(enemy, enemy.getDef().getCost(metal));
-			targets.put(enemy.getUnitId(),e);
-			e.visible = true;
-			e.setIdentified();
-			e.lastSeen = frame;
-			
-			if (e.isPorc && !e.isNanoSpam){
-				enemyPorcs.put(enemy.getUnitId(),e);
-			}
-		}
-		return 0;
-	}
-
-    @Override
-    public int enemyLeaveLOS(Unit enemy) {
-    	if(targets.containsKey(enemy.getUnitId())){
-			targets.get(enemy.getUnitId()).visible = false;
-			targets.get(enemy.getUnitId()).lastSeen = frame;
-    	}	
-        return 0; // signaling: OK
-    }
-
-    @Override
-    public int enemyEnterRadar(Unit enemy) {
-    	if(targets.containsKey(enemy.getUnitId())){
-    		targets.get(enemy.getUnitId()).isRadarVisible = true;
-			targets.get(enemy.getUnitId()).lastSeen = frame;
-    	}else{
-			Enemy e = new Enemy(enemy, 50);
-			targets.put(enemy.getUnitId(),e);
-			e.isRadarVisible = true;
-			e.lastSeen = frame;
-    	}
-    	
-        return 0; // signaling: OK
-    }
-
-    @Override
-    public int enemyLeaveRadar(Unit enemy) {
-    	if(targets.containsKey(enemy.getUnitId())){
-			targets.get(enemy.getUnitId()).isRadarVisible = false;
-			targets.get(enemy.getUnitId()).lastSeen = frame;
-    	}
-        return 0; // signaling: OK
-    }
-    
-    @Override
-    public int enemyDestroyed(Unit unit, Unit attacker) {
-        if(targets.containsKey(unit.getUnitId())){
-			Enemy e = targets.get(unit.getUnitId());
-			if (e.identified && e.ud != null && (e.ud.getName().equals("energysingu") || e.ud.getName().equals("energyheavygeo")) && !e.isNanoSpam){
-				callback.getGame().sendTextMessage("/say <ZKGBAI> SHINY!", 0);
-			}
-
-			// Unpaint enemy threat for statics
-			if (e.isStatic && e.isAA && e.isPainted) {
-				int effectivePower = (int) e.getDanger();
-				AIFloat3 position = e.position;
-				int x = (int) (position.x / 32);
-				int y = (int) (position.z / 32);
-				int r = (int) ((e.threatRadius) / 32);
-
-				aaPorcGraphics.unpaintCircle(x, y, (int) (r * 1.2f), effectivePower);
-			}
-			e.position = null;
-
-        	targets.remove(unit.getUnitId());
-        	if (e.isPorc && !e.isNanoSpam){
-        		enemyPorcs.remove(unit.getUnitId());
-	        }
-        }	    
-        return 0; // signaling: OK
-    }
-    
-    @Override
-    public int unitFinished(Unit unit) {
-		String defName = unit.getDef().getName();
-
-		// enable snipers and penetrators to shoot radar dots
-		if (defName.equals("cloaksnipe") || defName.equals("hoverarty")){
-			ArrayList<Float> params = new ArrayList<>();
-			params.add((float) 0);
-			unit.executeCustomCommand(CMD_DONT_FIRE_AT_RADAR, params, (short) 0, frame+60);
-			unit.setMoveState(1, (short) 0, frame + 10);
-		}
-	
-	    if (defName.equals("staticnuke")){
-		    hasNuke = true;
-		    miscHandler.addNuke(unit);
-	    }
-	
-	    if (defName.equals("zenith")){
-		    miscHandler.addZenith(unit);
-	    }
-	
-	    if (defName.equals("raveparty")){
-		    miscHandler.addDRP(unit);
-	    }
-
-		// disable air strafe for brawlers
-		if (defName.equals("gunshipheavyskirm")){
-			ArrayList<Float> params = new ArrayList<>();
-			params.add((float) 0);
-			unit.executeCustomCommand(CMD_AIR_STRAFE, params, (short) 0, frame+30);
-		}
-
-		// set blastwings to land when idle
-		if (defName.equals("gunshipbomb")){
-			unit.setIdleMode(1, (short) 0, frame+30);
-		}
-
-		if (unitTypes.planes.contains(defName)){
-			unit.setIdleMode(0, (short) 0, frame+30);
-		}
-
-		// Activate outlaws
-		if (defName.equals("shieldriot")){
-			unit.setOn(true, (short) 0, frame+300);
-		}
-
-		if (defName.equals("planefighter")){
-			unit.setMoveState(0, (short) 0, frame + 10);
-			miscHandler.addSwift(unit);
-		}
-
-		if (defName.equals("planeheavyfighter")){
-			unit.setMoveState(1, (short) 0, frame + 10);
-			Raider f = new Raider(unit, unit.getDef().getCost(m));
-			hawks.put(f.id, f);
-			if (hawks.size() > 4){
-				AAs.putAll(hawks);
-				hawks.clear();
-			}
-		}
-		
-		if (defName.equals("striderantiheavy")){
-			unit.setMoveState(0, (short) 0, frame + 10);
-			unit.setFireState(1, (short) 0, frame + 10);
-			Raider f = new Raider(unit, unit.getDef().getCost(m));
-			miscHandler.addUlti(f);
-		}
-	
-	    if (defName.equals("gunshipkrow")){
-		    unit.setMoveState(1, (short) 0, frame + 10);
-		    Krow f = new Krow(unit, unit.getDef().getCost(m));
-		    miscHandler.addKrow(f);
-	    }
-
-		if (unitTypes.striders.contains(defName)){
-			Strider st = new Strider(unit, unit.getDef().getCost(m));
-			unit.setMoveState(1, (short) 0, frame + 10);
-			miscHandler.addStrider(st);
-		}else if (unitTypes.smallRaiders.contains(defName)) {
-			unit.setMoveState(1, (short) 0, frame + 10);
-			Raider r = new Raider(unit, unit.getDef().getCost(m));
-			raiderHandler.addSmallRaider(r);
-			AIFloat3 pos = graphManager.getAllyCenter();
-			unit.fight(pos, (short) 0, frame + 300);
-		}else if (unitTypes.mediumRaiders.contains(defName)) {
-			unit.setMoveState(1, (short) 0, frame + 10);
-			Raider r = new Raider(unit, unit.getDef().getCost(m));
-			raiderHandler.addMediumRaider(r);
-			AIFloat3 pos = graphManager.getAllyCenter();
-			unit.fight(pos, (short) 0, frame + 300);
-		}else if (unitTypes.soloRaiders.contains(defName)) {
-			unit.setMoveState(1, (short) 0, frame + 10);
-			Raider r = new Raider(unit, unit.getDef().getCost(m));
-			raiderHandler.addSoloRaider(r);
-		}else if (unitTypes.assaults.contains(defName)) {
-			unit.setMoveState(1, (short) 0, frame + 10);
-			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-			squadHandler.addAssault(f);
-		}else if (unitTypes.shieldMobs.contains(defName)){
-			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-			squadHandler.addShieldMob(f);
-		}else if (unitTypes.airMobs.contains(defName)){
-			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-			squadHandler.addAirMob(f);
-		}else if(unitTypes.mobSupports.contains(defName)){
-			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-			miscHandler.addSupport(f);
-    	}else if(unitTypes.loners.contains(defName)) {
-			if (defName.equals("vehsupport") || defName.equals("spidercrabe")) {
-				unit.setMoveState(0, (short) 0, frame + 10);
-				ArrayList<Float> params = new ArrayList<>();
-				params.add((float) 1);
-				unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, frame + 30);
-			} else {
-				unit.setMoveState(1, (short) 0, frame + 10);
-			}
-			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-			miscHandler.addLoner(f);
-		}else if (unitTypes.arties.contains(defName)){
-			if (defName.equals("vehheavyarty") || defName.equals("tankarty") || defName.equals("striderarty") || defName.equals("tankheavyarty")){
-				unit.setMoveState(0, (short) 0, frame + 10);
-				ArrayList<Float> params = new ArrayList<>();
-				params.add((float) 1);
-				unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, frame + 30);
-			}else{
-				unit.setMoveState(1, (short) 0, frame + 10);
-			}
-			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-			miscHandler.addArty(f);
-		}else if (unitTypes.AAs.contains(defName)){
-			unit.setMoveState(2, (short) 0, frame + 10);
-			Raider f = new Raider(unit, unit.getDef().getCost(m));
-			AAs.put(f.id, f);
-			AIFloat3 pos = graphManager.getAllyCenter();
-			if (pos != null){
-				unit.fight(pos, (short) 0, frame + 300);
-			}
-		}else if (unitTypes.sappers.contains(defName)){
-			unit.setMoveState(2, (short) 0, frame + 10);
-			unit.setFireState(2, (short) 0, frame + 10);
-			ArrayList<Float> params = new ArrayList<>();
-			params.add((float) 0);
-			unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, frame+30);
-			unit.fight(getRadialPoint(graphManager.getAllyCenter(), 800f), (short) 0, frame+300);
-			miscHandler.addSapper(unit);
-		}else if (unitTypes.bombers.contains(defName)){
-			unit.setMoveState(2, (short) 0, frame + 10);
-			unit.setFireState(2, (short) 0, frame + 10);
-			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-			bomberHandler.addBomber(f);
-		}else if (defName.equals("staticheavyarty")) {
-			miscHandler.addBertha(unit);
-		}
-    	
-    	if (unit.getDef().getSpeed() > 0 && unit.getDef().getBuildOptions().size() == 0
-				&& !unitTypes.shieldMobs.contains(defName) && !unitTypes.noRetreat.contains(defName)){
-    		retreatHandler.addCoward(unit);
-    	}
-
-        return 0; // signaling: OK
-    }
-
-	@Override
-	public int unitCreated(Unit unit, Unit builder){
-		String defName = unit.getDef().getName();
-
-		// Paint ally threat for porc
-		if (unit.getDef().getSpeed() == 0 && unit.getDef().isAbleToAttack() && !unit.getDef().getName().equals("staticheavyarty")){
-			int power = (int) ((unit.getPower() + unit.getMaxHealth())/10);
-			float radius = unit.getMaxRange();
-			AIFloat3 pos = unit.getPos();
-			int x = (int) pos.x/32;
-			int y = (int) pos.z/32;
-			int rad = (int) radius/32;
-
-			allyPorcGraphics.paintCircle(x, y, rad, power);
-		}
-		return 0;
-	}
-    
-    @Override
-    public int unitDestroyed(Unit unit, Unit attacker) {
-	    if (unit.getDef().getName().equals("wolverine_mine")){
-		    return 0;
-	    }
-        retreatHandler.removeUnit(unit);
-		raiderHandler.removeUnit(unit);
-		squadHandler.removeUnit(unit);
-		bomberHandler.removeUnit(unit);
-		miscHandler.removeUnit(unit);
-	
-		if (unit.getDef().getName().equals("staticnuke")){
-			hasNuke = false;
-		}
-
-		if (AAs.containsKey(unit.getUnitId())){
-			AAs.remove(unit.getUnitId());
-		}
-
-		if (hawks.containsKey(unit.getUnitId())){
-			hawks.remove(unit.getUnitId());
-		}
-
-		if (unitTypes.sappers.contains(unit.getDef().getName())){
-			// rally units to fight if a tick/roach etc dies.
-			DefenseTarget dt = new DefenseTarget(unit.getPos(), 1500f, frame);
-			defenseTargets.add(dt);
-		}
-
-		// create a defense task, if appropriate.
-		if ((!unit.getDef().isAbleToAttack() || unit.getDef().getSpeed() == 0 || unit.getDef().isBuilder() || graphManager.isAllyTerritory(unit.getPos()))
-				&& frame - lastDefenseFrame > 150){
-			lastDefenseFrame = frame;
-			DefenseTarget dt = null;
-			
-			float udmg = (unit.getDef().getName().equals("staticmex") && graphManager.isFrontLine(unit.getPos())) ? 1500f : unit.getMaxHealth();
-			if (attacker != null){
-				if (attacker.getPos() != null && attacker.getDef() != null && !attacker.getDef().isAbleToFly()) {
-					dt = new DefenseTarget(attacker.getPos(), udmg + attacker.getMaxHealth(), frame);
-				}
-			}else {
-				dt = new DefenseTarget(unit.getPos(), udmg, frame);
-			}
-			if (dt != null) {
-				defenseTargets.add(dt);
-			}
-
-			if (attacker != null) {
-				if (attacker.getDef() != null) {
-					if (attacker.getDef().isAbleToFly()) {
-						DefenseTarget adt = new DefenseTarget(unit.getPos(), udmg + attacker.getMaxHealth(), frame);
-						airDefenseTargets.add(adt);
-					}
-				}
-			}
-		}
-
-		// Unpaint ally threat for porc
-		if (unit.getDef().getSpeed() == 0 && unit.getDef().isAbleToAttack() && !unit.getDef().getName().equals("staticheavyarty")){
-			int power = (int) ((unit.getPower() + unit.getMaxHealth())/10);
-			float radius = unit.getMaxRange();
-			AIFloat3 pos = unit.getPos();
-			int x = (int) pos.x/32;
-			int y = (int) pos.z/32;
-			int rad = (int) radius/32;
-
-			allyPorcGraphics.unpaintCircle(x, y, rad, power);
-		}
-
-        return 0; // signaling: OK
-    }
-    
-    @Override
-    public int unitDamaged(Unit h, Unit attacker, float damage, AIFloat3 dir, WeaponDef weaponDef, boolean paralyzed) {
-		if (h.getDef().getName().equals("wolverine_mine")){
-			return 0;
-		}
-		// check if the damaged unit is on fire.
-		boolean on_fire = false;
-	
-		if (h.getRulesParamFloat("on_fire", 0.0f) > 0) {
-			on_fire = true;
-		}
-	
-		retreatHandler.checkUnit(h);
-		// retreat scouting raiders so that they don't suicide into enemy raiders
-		if (!retreatHandler.isRetreating(h) && !on_fire) {
-			raiderHandler.avoidEnemies(h, attacker, dir);
-		}
-	
-		// create a defense task, if appropriate.
-		if ((attacker == null || attacker.getPos() == null || attacker.getPos().equals(nullpos) || attacker.getDef() == null)
-				&& frame - lastDefenseFrame > 30 && !on_fire) {
-			lastDefenseFrame = frame;
-			DefenseTarget dt = null;
-		
-			// only create defense targets on unitDamaged if the attacker is invisible or out of los.
-			if (attacker == null || attacker.getDef() == null) {
-				float x = 800 * dir.x;
-				float z = 800 * dir.z;
-				AIFloat3 pos = h.getPos();
-				AIFloat3 target = new AIFloat3();
-				target.x = pos.x + x;
-				target.z = pos.z + z;
-				dt = new DefenseTarget(target, 2000f, frame);
-			} else if (!attacker.getDef().getName().equals("wolverine_mine")) {
-				dt = new DefenseTarget(h.getPos(), (attacker.getMaxHealth() + h.getMaxHealth()) / 2f, frame);
-			}
-		
-			// don't create defense targets vs air units.
-			if (dt != null) {
-				if (weaponDef != null && weaponDef.getName().startsWith("gunshipheavyskirm")) {
-					airDefenseTargets.add(dt);
-				} else {
-					defenseTargets.add(dt);
-				}
-			}
-		}
-		return 0;
-    }
-
-	@Override
-	public int unitCaptured(Unit unit, int oldTeamID, int newTeamID){
-		if (oldTeamID == ai.teamID){
-			return unitDestroyed(unit, null);
-		}
-		return 0;
-	}
-
-	@Override
-	public int unitGiven(Unit unit, int oldTeamID, int newTeamID){
-		// remove units that allies captured from enemy targets
-		if (targets.containsKey(unit.getUnitId())){
-			Enemy e = targets.get(unit.getUnitId());
-			e.position = null; // needed for bomberTasks
-			targets.remove(unit.getUnitId());
-		}
-		if (newTeamID == ai.teamID){
-			unitFinished(unit);
-		}
-		return 0;
 	}
 }

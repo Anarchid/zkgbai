@@ -1,9 +1,13 @@
 package zkgbai.military.unitwrappers;
 
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.Weapon;
+import com.springrts.ai.oo.clb.WeaponDef;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by aeonios on 11/29/2015.
@@ -15,6 +19,10 @@ public class ShieldSquad extends Squad {
     static short OPTION_SHIFT_KEY = (1 << 5);
     public Fighter leader;
     private int leaderWeight;
+    public int numFelons = 0;
+    public int numAspis = 0;
+    private float maxShieldPower = 0f;
+    private Map<Integer, Weapon> shields = new HashMap<>();
 
     public ShieldSquad(){
         super();
@@ -27,12 +35,24 @@ public class ShieldSquad extends Squad {
         f.squad = this;
         metalValue += f.metalValue;
 
+        if (f.getUnit().getDef().getName().equals("shieldfelon")) numFelons++;
+
+        if (!f.getUnit().getDef().getName().equals("shieldshield")) {
+            for (Weapon w : f.getUnit().getWeapons()) {
+                if (w.getDef().getShield() != null && w.getDef().getShield().getPower() > 0) {
+                    maxShieldPower += w.getDef().getShield().getPower();
+                    shields.put(f.id, w);
+                    break;
+                }
+            }
+        }
+
         if (leader == null){
             f.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
             leader = f;
             leaderWeight = getUnitWeight(f);
 	        List<Float> moveparams = new ArrayList<>();
-	        moveparams.add(40f);
+	        moveparams.add(45f);
 	        f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
             f.fightTo(target);
         }else if (getUnitWeight(f) > leaderWeight){
@@ -40,7 +60,7 @@ public class ShieldSquad extends Squad {
             leader.getUnit().setMoveState(0, (short) 0, Integer.MAX_VALUE);
 	        // Set the wanted max speed for the new leader and remove the speed limit from the old leader.
             List<Float> moveparams = new ArrayList<>();
-            moveparams.add(40f);
+            moveparams.add(45f);
             f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
             moveparams.clear();
 	        moveparams.add(leader.getUnit().getMaxSpeed() * 30f); // CMD_WANTED_SPEED uses elmos/sec while the game returns elmos/frame, thus MaxSpeed*30.
@@ -58,6 +78,8 @@ public class ShieldSquad extends Squad {
                 params.add((float)leader.id);
                 if (fi.getUnit().getDef().getName().equals("vehcapture")){
                     params.add(175f);
+                }else if (fi.getUnit().getDef().getName().equals("shieldshield")){
+                    params.add(40f);
                 }else {
                     params.add(75f);
                 }
@@ -74,6 +96,8 @@ public class ShieldSquad extends Squad {
             drawParams.add((float)leader.id);
             if (f.getUnit().getDef().getName().equals("vehcapture")){
                 params.add(175f);
+            }else if (f.getUnit().getDef().getName().equals("shieldshield")){
+                params.add(40f);
             }else {
                 params.add(75f);
             }
@@ -84,9 +108,17 @@ public class ShieldSquad extends Squad {
 
     @Override
     public void removeUnit(Fighter f){
-        if (leader != null && leader.equals(f)){
-        	metalValue -= f.metalValue;
+        if (f.getUnit().getDef().getName().equals("shieldfelon")) numFelons--;
 
+        if (shields.containsKey(f.id)){
+            WeaponDef w = shields.get(f.getUnit().getUnitId()).getDef();
+            maxShieldPower -= w.getShield().getPower();
+            shields.remove(f.id);
+        }
+
+        metalValue -= f.metalValue;
+
+        if (leader != null && leader.equals(f)){
             leader = getNewLeader();
             if (leader == null){
                 leaderWeight = 0;
@@ -97,7 +129,7 @@ public class ShieldSquad extends Squad {
             leaderWeight = getUnitWeight(leader);
             leader.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
 	        List<Float> moveparams = new ArrayList<>();
-	        moveparams.add(40f);
+	        moveparams.add(45f);
 	        leader.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
             target = null;
             List<Float> params = new ArrayList<>();
@@ -107,6 +139,8 @@ public class ShieldSquad extends Squad {
                 params.add((float)leader.id);
                 if (fi.getUnit().getDef().getName().equals("vehcapture")){
                     params.add(175f);
+                }else if (fi.getUnit().getDef().getName().equals("shieldshield")){
+                    params.add(40f);
                 }else {
                     params.add(75f);
                 }
@@ -115,7 +149,7 @@ public class ShieldSquad extends Squad {
                 params.clear();
             }
         }else{
-            super.removeUnit(f);
+            fighters.remove(f);
         }
     }
 
@@ -170,6 +204,15 @@ public class ShieldSquad extends Squad {
         return health;
     }
 
+    public float getShields(){
+        if (maxShieldPower == 0) return 1f;
+        float currentShields = 0;
+        for (Weapon w: shields.values()){
+            currentShields += w.getShieldPower();
+        }
+        return currentShields/maxShieldPower;
+    }
+
     Fighter getNewLeader(){
         Fighter bestFighter = null;
         int score = 0;
@@ -186,12 +229,34 @@ public class ShieldSquad extends Squad {
     int getUnitWeight(Fighter f){
         String type = f.getUnit().getDef().getName();
         switch (type){
+            case "shieldshield": return 0;
             case "vehcapture": return 1;
-            case "shieldriot": return 2; // outlaws are too fast for other units to keep up with
-            case "shieldarty": return 3;
-            case "shieldassault": return 4;
+            case "shieldarty": return 2;
+            case "shieldassault": return 3;
+            case "shieldriot": return 4;
             case "shieldfelon": return 5;
         }
         return 0;
+    }
+
+    public List<Fighter> disband(){
+        List<Fighter> disbanded = new ArrayList<>();
+
+        if (leader != null){
+            List<Float> moveparams = new ArrayList<>();
+            moveparams.add(leader.getUnit().getMaxSpeed() * 30f);
+            leader.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
+            disbanded.add(leader);
+            leader.squad = null;
+            leader = null;
+        }
+        for (Fighter f: fighters){
+            f.squad = null;
+            f.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
+        }
+        disbanded.addAll(fighters);
+        fighters.clear();
+        this.metalValue = 0;
+        return disbanded;
     }
 }

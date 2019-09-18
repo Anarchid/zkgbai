@@ -19,6 +19,7 @@ public class Enemy {
 	public boolean isPainted = false;
 	boolean visible = false;
 	public boolean isStatic = false;
+	public boolean isFac = false;
 	boolean isRadarOnly = true;
 	boolean isRadarVisible = false;
 	public boolean identified = false;
@@ -51,7 +52,6 @@ public class Enemy {
 			checkNano();
 		}else{
 			this.value = 50;
-			this.position = unit.getPos();
 			this.isStatic = false;
 		}
 	}
@@ -97,7 +97,7 @@ public class Enemy {
 
 		String defName = ud.getName();
 
-		if (defName.equals("veharty") || defName.equals("cloaksnipe") || defName.equals("hoverarty")
+		if (defName.equals("veharty") || u.getName().equals("vehheavyarty") || defName.equals("cloaksnipe") || defName.equals("hoverarty")
 				|| defName.equals("amphfloater") || defName.equals("spiderskirm")){
 			this.isMinorCancer = true;
 		}
@@ -110,7 +110,7 @@ public class Enemy {
 		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
-			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("turretaaheavy") || u.getName().equals("turretaaflak"))
+			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("turretemp") || u.getName().equals("turretheavy") || u.getName().equals("turretaaheavy") || u.getName().equals("turretaaflak"))
 					&& !defName.equals("striderdante")){
 				// identify riots
 				this.isRiot = true;
@@ -128,6 +128,10 @@ public class Enemy {
 					}
 					this.isFlamer = true;
 				}
+			}
+			
+			if (ud.getName().contains("factory") || ud.getName().contains("hub")){
+				this.isFac = true;
 			}
 
 			if (u.getTooltip().contains("aider") || u.getTooltip().contains("cout")){
@@ -193,7 +197,10 @@ public class Enemy {
 			if (isFlamer || ud.getName().equals("spideremp") || ud.getName().equals("amphimpulse")){
 				danger += 100f;
 			}
-			if (isRiot || isStrong){
+			if (ud.getName().equals("turretemp")){
+				danger += 250f;
+			}
+			if ((isRiot && isPorc) || isStrong){
 				danger *= 2f;
 			}else if ((isArty && !ud.getName().equals("amphfloater"))
 					|| ud.isBuilder()){

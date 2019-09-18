@@ -40,7 +40,7 @@ public class ArrayGraphics {
                 int sum = dxSq + dySq;
                 int index = (y * width) + x;
 
-                if(sum < radsq) {
+                if(sum <= radsq) {
                     data[index] += intensity;
                     if (data[index] < 0){
                         data[index] = Short.MAX_VALUE;
@@ -70,7 +70,7 @@ public class ArrayGraphics {
                 int sum = dxSq + dySq;
                 int index = (y * width) + x;
 
-                if(sum < radsq) {
+                if(sum <= radsq) {
                     data[index] = (short) Math.max(data[index] - intensity, 0);
                 }
             }

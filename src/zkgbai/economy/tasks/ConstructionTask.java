@@ -11,6 +11,7 @@ public class ConstructionTask extends WorkerTask {
 	public Unit ctTarget = null;
 	public int frameIssued = 0;
 	public boolean facPlop = false;
+	public boolean facDef = false;
 
 	public ConstructionTask(UnitDef def, AIFloat3 pos, int h) {
 		super();
@@ -38,6 +39,6 @@ public class ConstructionTask extends WorkerTask {
 
 	@Override
 	public String toString() {
-		return " to build "+this.buildType.getName() + " at " + "x:" + position.x + " z:" + position.z;
+		return " to build " + this.buildType.getName() + " at " + "x:" + position.x + " z:" + position.z;
 	}
 }

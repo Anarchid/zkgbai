@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.poly2tri.Poly2Tri;
@@ -19,17 +18,15 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Game;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Resource;
-import com.springrts.ai.oo.clb.Team;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.UnitDef;
 
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
+import zkgbai.economy.Worker;
 import zkgbai.los.LosManager;
 import zkgbai.military.ByteArrayGraphics;
 import zkgbai.military.MilitaryManager;
-
-import javax.lang.model.util.ElementScanner6;
 
 import static zkgbai.kgbutil.KgbUtil.*;
 
@@ -65,6 +62,7 @@ public class GraphManager extends Module {
 	AIFloat3 allyBase = new AIFloat3(0f, 0f, 0f);
 	AIFloat3 startPos = nullpos;
 	public boolean isWaterMap = false;
+	public MetalSpot nullspot;
 	
 	public HashMap<String, Integer> pylonDefs; 
 	int pylonCounter;
@@ -86,6 +84,7 @@ public class GraphManager extends Module {
 		int x = callback.getMap().getWidth() * 4;
 		int z = callback.getMap().getHeight() * 4;
 		mapCenter = new AIFloat3(x, 0, z);
+		nullspot = new MetalSpot(mapCenter.x, mapCenter.y, mapCenter.z, 0);
 		
 		// hardwired for now because of segfaults upon segfaults
 		pylonDefs = new java.util.HashMap<String, Integer>();
@@ -102,7 +101,7 @@ public class GraphManager extends Module {
 		this.allyTerritoryGraphics = new ByteArrayGraphics(width, height);
 		this.enemyTerritoryGraphics = new ByteArrayGraphics(width, height);
 
-		ai.debug("GraphManager: Parsing metal spots...");
+		ai.log("GraphManager: Parsing metal spots...");
 		
 		ArrayList<HashMap> grpMexes = parseMetalSpotsGRP();
 		if(grpMexes.size() > 0){
@@ -135,7 +134,7 @@ public class GraphManager extends Module {
 			return data;
 		}
 		
-		ai.debug("GraphManager: Detected "+numSpots+" metal spots in GRP");
+		ai.log("GraphManager: Detected "+numSpots+" metal spots in GRP");
 		
 		
 		if(numSpots < 0){
@@ -152,7 +151,7 @@ public class GraphManager extends Module {
 				data.add(map);
 			}
 			catch(NullPointerException e){
-				ai.debug("faulty GRP metal config; returning partial");
+				ai.log("faulty GRP metal config; returning partial");
 				return data;
 			}
 		}
@@ -167,7 +166,7 @@ public class GraphManager extends Module {
 			JsonParserFactory factory=JsonParserFactory.getInstance();
 			JSONParser parser=factory.newJsonParser();
 			ArrayList<HashMap> jsonData=(ArrayList)parser.parseJson(json).values().toArray()[0];
-			ai.debug("Parsed JSON metalmap with "+jsonData.size()+" spots");
+			ai.log("Parsed JSON metalmap with "+jsonData.size()+" spots");
 			if(!graphInitialized){
 				initializeGraph(jsonData);
 			}
@@ -316,8 +315,8 @@ public class GraphManager extends Module {
 		calcCenters();
 		
 		territoryFraction = ((float) getOwnedSpots().size()/(float) getMetalSpots().size());
-		eminentTerritory = (((float) getNeutralSpots().size()/(float) getMetalSpots().size() < (bigMap ? 0.1f : 0.15f))
-								|| (territoryFraction > 0.45f));
+		eminentTerritory = (((float) getTouchedSpots().size()/(float) getMetalSpots().size() > 0.85f)
+								|| (territoryFraction > 0.4f));
 
 		return 0;
 	}
@@ -325,6 +324,7 @@ public class GraphManager extends Module {
 	private void setHostile(MetalSpot ms){
 		ms.hostile = true;
 		ms.owned = false;
+		ms.touched = true;
 		ms.enemyShadowed = false;
 
 		// paint territory circles
@@ -348,6 +348,7 @@ public class GraphManager extends Module {
 	private void setOwned(MetalSpot ms){
 		ms.hostile = false;
 		ms.owned = true;
+		ms.touched = true;
 		ms.allyShadowed = false;
 
 		// paint territory circles
@@ -688,37 +689,53 @@ public class GraphManager extends Module {
 		UnitDef building = callback.getUnitDefByName("factorygunship");
 		AIFloat3 closest = null;
 		float distance = Float.MAX_VALUE;
-		for (Link l:links){
-			if (l.v0.owned && l.v1.owned && warManager.getThreat(l.getPos()) == 0){
-				float dist = distance(position, l.getPos());
-				if (dist < distance){
-					distance = dist;
-					closest = l.getPos();
-				}
+		for (Worker w: ai.ecoManager.workers.values()){
+			if (!isAllyTerritory(w.getPos()) || warManager.getThreat(w.getPos()) > 0 || w.getPos().equals(position)) continue;
+			float dist = distance(position, w.getPos())/warManager.getBP(w.getPos());
+			if (dist < distance){
+				distance = dist;
+				closest = getDirectionalPoint(w.getPos(), allyCenter, 100f);
 			}
 		}
 		if (closest != null) {
 			closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		}else{
+			return getAllyCenter();
 		}
 		return closest;
+	}
+
+	public AIFloat3 getClosestFrontLineLink(AIFloat3 position){
+		AIFloat3 bestpos = null;
+		float bestdist = Float.MAX_VALUE;
+		for (Link l: links){
+			if (l.v0.owned && l.v1.owned && isFrontLine(l.centerPos)){
+				float dist = distance(position, l.centerPos);
+				if (dist < bestdist){
+					bestdist = dist;
+					bestpos = l.centerPos;
+				}
+			}
+		}
+		return bestpos;
 	}
 
 	public AIFloat3 getClosestAirHaven(AIFloat3 position){
 		UnitDef building = callback.getUnitDefByName("factorygunship");
 		AIFloat3 closest = null;
 		float distance = Float.MAX_VALUE;
-		for (Link l:links){
-			if (l.v0.owned && l.v1.owned && warManager.getAAThreat(l.getPos()) == 0 && warManager.getThreat(l.getPos()) == 0){
-				float dist = distance(position, l.getPos());
-				if (dist < distance){
-					distance = dist;
-					closest = l.getPos();
-				}
+		for (Worker w: ai.ecoManager.workers.values()){
+			if (!isAllyTerritory(w.getPos()) || warManager.getThreat(w.getPos()) > 0 || warManager.getAAThreat(w.getPos()) > 0 || w.getPos().equals(position)) continue;
+			float dist = distance(position, w.getPos())/warManager.getBP(w.getPos());
+			if (dist < distance){
+				distance = dist;
+				closest = getDirectionalPoint(w.getPos(), allyCenter, 100f);
 			}
 		}
-		
 		if (closest != null) {
 			closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+		}else{
+			return getAllyCenter();
 		}
 		return closest;
 	}
@@ -762,6 +779,21 @@ public class GraphManager extends Module {
 		return closest;
 	}
 
+	public AIFloat3 getClosestBattleFront(AIFloat3 position){
+		AIFloat3 pos = null;
+		float mindist = Float.MAX_VALUE;
+		for (MetalSpot ms: metalSpots){
+			if (!ms.owned && !isAllyTerritory(ms.getPos())){
+				float dist = distance(ms.position, position);
+				if (dist < mindist){
+					mindist = dist;
+					pos = ms.position;
+				}
+			}
+		}
+		return (pos != null) ? pos : enemyCenter != null ? enemyCenter : mapCenter;
+	}
+
 	public List<MetalSpot> getOwnedSpots(){
 		// returns all metal spots not owned by allies.
 		List<MetalSpot> spots = new ArrayList<MetalSpot>();
@@ -787,10 +819,18 @@ public class GraphManager extends Module {
     	}
     	return spots;
     }
+
+	public List<MetalSpot> getTouchedSpots(){
+		ArrayList<MetalSpot> spots = new ArrayList<MetalSpot>();
+		for(MetalSpot ms:metalSpots){
+			if(ms.touched) spots.add(ms);
+		}
+		return spots;
+	}
     
     public MetalSpot getClosestNeutralSpot(AIFloat3 position){
     	float minRange = Float.MAX_VALUE;
-    	MetalSpot bestMS = null;
+    	MetalSpot bestMS = nullspot;
     	for(MetalSpot ms:metalSpots){
     		if(!ms.owned && !ms.hostile){
     			float dist = distance(position, ms.position);
@@ -806,7 +846,7 @@ public class GraphManager extends Module {
 
 	public MetalSpot getClosestEnemySpot(AIFloat3 position){
 		float minRange = Float.MAX_VALUE;
-		MetalSpot bestMS = null;
+		MetalSpot bestMS = nullspot;
 		for(MetalSpot ms:metalSpots){
 			if(ms.hostile){
 				float dist = distance(position, ms.position);
@@ -822,7 +862,7 @@ public class GraphManager extends Module {
 
 	public MetalSpot getClosestSpot(AIFloat3 position){
 		float minRange = Float.MAX_VALUE;
-		MetalSpot bestMS = null;
+		MetalSpot bestMS = nullspot;
 		for(MetalSpot ms:metalSpots){
 				float dist = distance(position, ms.position);
 				if(dist < minRange){
@@ -847,7 +887,7 @@ public class GraphManager extends Module {
 	public MetalSpot getClosestFrontLineSpot(AIFloat3 position){
 		List<MetalSpot> spots = getFrontLineSpots();
 		float distance = Float.MAX_VALUE;
-		MetalSpot bestSpot = null;
+		MetalSpot bestSpot = nullspot;
 		for (MetalSpot ms:spots){
 			if (ms.owned) {
 				float dist = distance(position, ms.getPos());

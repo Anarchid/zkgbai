@@ -74,9 +74,9 @@ public class BomberHandler {
     public void update(int frame){
         this.frame = frame;
 
-        if (unarmedBombers.isEmpty() && readyBombers.isEmpty() && activeBombers.isEmpty()) {return;}
-
         if(frame % 60 == 0) {
+            if (unarmedBombers.isEmpty() && readyBombers.isEmpty() && activeBombers.isEmpty()) {return;}
+            cleanUnits();
             checkBombers();
         }
 
@@ -152,6 +152,38 @@ public class BomberHandler {
                 b.moveTo(graphManager.getAllyCenter()); // if in enemy territory, maneuver back to safety before finding an airpad.
                 b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 32, frame + 300);
             }
+        }
+    }
+
+    void cleanUnits(){
+        List<Integer> invalidBombers = new ArrayList<Integer>();
+        for (Fighter f:unarmedBombers.values()){
+            if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != ai.teamID){
+                invalidBombers.add(f.id);
+            }
+        }
+        for (Integer key:invalidBombers){
+            unarmedBombers.remove(key);
+        }
+        invalidBombers.clear();
+
+        for (Fighter f:readyBombers.values()){
+            if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != ai.teamID){
+                invalidBombers.add(f.id);
+            }
+        }
+        for (Integer key:invalidBombers){
+            readyBombers.remove(key);
+        }
+        invalidBombers.clear();
+
+        for (Fighter f:activeBombers.values()){
+            if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != ai.teamID){
+                invalidBombers.add(f.id);
+            }
+        }
+        for (Integer key:invalidBombers){
+            activeBombers.remove(key);
         }
     }
 

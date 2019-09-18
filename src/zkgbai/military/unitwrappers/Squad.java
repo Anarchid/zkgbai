@@ -1,32 +1,30 @@
 package zkgbai.military.unitwrappers;
 
 import java.util.ArrayList;
+import java.util.Queue;
 import java.util.List;
 import static zkgbai.kgbutil.KgbUtil.*;
 
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.Unit;
 
 public class Squad {
-	List<Fighter> fighters;
-	public float metalValue;
-	public char status;
+	List<Fighter> fighters = new ArrayList<Fighter>();
+	public float metalValue = 0;
+	public char status = 'f';
+	// f = forming
+	// r = rallying
+	// a = attacking
 	public float income;
-	public boolean assigned;
+	public boolean assigned = false;
 	public boolean isAirSquad = false;
-	private Fighter leader;
+	Fighter leader;
 	private int index = 0;
 	public AIFloat3 target;
 	int firstRallyFrame = 0;
+	static final short OPTION_SHIFT_KEY = 32;
 	
-	public Squad(){
-		this.fighters = new ArrayList<Fighter>();
-		this.metalValue = 0;
-		this.assigned = false;
-		this.status = 'f';
-		// f = forming
-		// r = rallying
-		// a = attacking
-	}
+	public Squad(){}
 
 	public void addUnit(Fighter f){
 		fighters.add(f);
@@ -37,9 +35,7 @@ public class Squad {
 		f.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
 		f.fightTo(target);
 
-		if (leader == null){
-			leader = f;
-		}
+		if (leader == null) leader = f;
 	}
 
 	public void removeUnit(Fighter f){
@@ -53,33 +49,80 @@ public class Squad {
 	public void setTarget(AIFloat3 pos){
 		// set a target for the squad to attack.
 		target = pos;
-		for (Fighter f:fighters){
-			f.fightTo(target);
+		leader = getBestLeader();
+		if (leader == null) return;
+		
+		float maxdist = 200f;
+		float waydist = 100f;
+		if (isAirSquad){
+			maxdist = 300f;
+			waydist = 150f;
 		}
+		
+		Queue<AIFloat3> path = leader.getFightPath(pos);
+		if (isAirSquad && path.size() > 1) path.poll();
+		AIFloat3 waypoint = path.poll();
+		for (Fighter f:fighters){
+			if (f.getUnit().getHealth() <= 0) continue;
+			f.target = target;
+			float fdist = distance(f.getPos(), leader.getPos());
+			if (fdist > maxdist){
+				f.outOfRange = true;
+				if (fdist > 2f * maxdist){
+					f.moveTo(getAngularPoint(leader.getPos(), f.getPos(), lerp(waydist, maxdist, Math.random())));
+				}else{
+					f.getUnit().moveTo(getAngularPoint(leader.getPos(), f.getPos(), lerp(waydist, maxdist, Math.random())), (short) 0, Integer.MAX_VALUE);
+				}
+			}else {
+				f.outOfRange = false;
+				f.getUnit().fight(getFormationPoint(f.getPos(), leader.getPos(), waypoint), (short) 0, Integer.MAX_VALUE);
+			}
+		}
+		
+		// add one extra waypoint.
+		if (path.isEmpty()) return;
+		if (path.size() > 1) path.poll();
+		if (isAirSquad && path.size() > 1) path.poll();
+		waypoint = path.poll();
+		for (Fighter f:fighters){
+			if (f.getUnit().getHealth() <= 0 || f.outOfRange) continue;
+			f.getUnit().fight(getFormationPoint(f.getPos(), leader.getPos(), waypoint), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
+		}
+		
 	}
 
 	public void retreatTo(AIFloat3 pos){
 		// set a target for the squad to attack.
 		target = pos;
 		for (Fighter f:fighters){
-			f.moveTo(target);
+			if (f.getUnit().getHealth() > 0){
+				f.moveTo(target);
+				f.target = target;
+			}
 		}
 	}
 
 	public AIFloat3 getPos(){
-		if (status == 'f' && leader != null && leader.getUnit().getHealth() > 0){
-			return leader.getPos(); // if the squad is forming return the position of the oldest unit.
+		if (leader == null || leader.getUnit().getHealth() <= 0){
+			leader = getNewLeader();
 		}
+		if (leader == null) return new AIFloat3(0, 0,0);
+		
+		float maxdist = isAirSquad ? 300f: 200f;
 
 		if (fighters.size() > 0){
-			int count = fighters.size();
+			int count = 0;
 			float x = 0;
 			float z = 0;
 			for (Fighter f:fighters){
-				x += (f.getPos().x)/count;
-				z += (f.getPos().z)/count;
+				if (f.getUnit().getHealth() <= 0 || distance(f.getPos(), leader.getPos()) > maxdist) continue;
+				x += f.getPos().x;
+				z += f.getPos().z;
+				count++;
 			}
 			AIFloat3 pos = new AIFloat3();
+			x = x/count;
+			z = z/count;
 			pos.x = x;
 			pos.z = z;
 			return pos; // otherwise return the average position of all its units
@@ -95,40 +138,58 @@ public class Squad {
 		if (frame - firstRallyFrame > 900){
 			return true;
 		}
-		boolean rallied = true;
+		
+		setTarget(target);
+		
 		for (Fighter f: fighters){
-			if (distance(target, f.getPos()) > 300 && distance(leader.getPos(), f.getPos()) > 300){
-				f.moveTo(getRadialPoint(target, 50f));
-				rallied = false;
-			}else{
-				f.fightTo(target);
+			if (f.getUnit().getHealth() <= 0) continue;
+			if (f.outOfRange){
+				return false;
 			}
 		}
-		return rallied;
+		return true;
 	}
 
 	public boolean isDead(){
-		if (fighters.size() == 0){
-			return true;
-		}
-		return false;
+		return fighters.isEmpty();
 	}
 
 	public void cutoff(){
-		List<Fighter> extraUnits = new ArrayList<Fighter>();
-		if (fighters.size() < 4 && metalValue < 1000){
+		if (fighters.size() < 4 && metalValue < 1000f){
 			for (Fighter f:fighters){
 				f.squad = null;
 			}
-			extraUnits.addAll(fighters);
+			fighters.clear();
 		}
-		fighters.removeAll(extraUnits);
+	}
+	
+	public Unit getLeader(){
+		leader = getBestLeader();
+		if (leader == null) return null;
+		return leader.getUnit();
+	}
+	
+	private Fighter getBestLeader(){
+		if (leader == null || leader.getUnit().getHealth() <= 0) leader = getNewLeader();
+		Fighter newLeader = leader;
+		if (leader == null) return newLeader;
+		float minspeed = leader.getUnit().getDef().getSpeed();
+		for (Fighter f:fighters){
+			if (f.getUnit().getHealth() <= 0 || distance(f.getPos(), leader.getPos()) > 300f) continue;
+			float tmpspeed = f.getUnit().getSpeed();
+			if (tmpspeed < minspeed){
+				minspeed = tmpspeed;
+				newLeader = f;
+			}
+		}
+		return newLeader;
 	}
 
 	private Fighter getNewLeader(){
 		Fighter newLeader = null;
 		int tmpindex = Integer.MAX_VALUE;
 		for (Fighter f:fighters){
+			if (f.getUnit().getHealth() <= 0) continue;
 			if (f.index < tmpindex){
 				newLeader = f;
 				tmpindex = f.index;

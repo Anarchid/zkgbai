@@ -1,22 +1,30 @@
 package zkgbai.economy;
 
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.Resource;
+import com.springrts.ai.oo.clb.Weapon;
 import zkgbai.economy.tasks.WorkerTask;
 import static zkgbai.kgbutil.KgbUtil.*;
 
 import com.springrts.ai.oo.clb.Unit;
 import zkgbai.kgbutil.Pathfinder;
 
-import java.util.Deque;
+import java.util.Queue;
 
 public class Worker {
 	private Unit unit;
 	private WorkerTask task;
 	public int id;
+	public boolean isCom = false;
+	public float bp;
+	public int buildRange;
+	public boolean hasShields = false;
+	private Weapon shield;
 	public boolean isChicken;
 	public int chickenFrame;
-	AIFloat3 lastpos = null;
+	public int lastRetreatFrame;
 	int lastTaskFrame = 0;
+	int lastStuckFrame = Integer.MIN_VALUE/2;
 	static Pathfinder pathfinder = null;
 	protected static final short OPTION_SHIFT_KEY = (1 << 5);
 	
@@ -26,7 +34,15 @@ public class Worker {
 		this.id = unit.getUnitId();
 		this.isChicken = false;
 		this.chickenFrame = 0;
-		this.lastpos = unit.getPos();
+		this.bp = unit.getDef().getBuildSpeed();
+		this.buildRange = Math.round(unit.getDef().getBuildDistance()/32f);
+
+		for (Weapon w: unit.getWeapons()){
+			if (w.getDef().getShield() != null && w.getDef().getShield().getPower() > 0){
+				shield = w;
+				hasShields = true;
+			}
+		}
 		
 		if (pathfinder == null){
 			pathfinder = Pathfinder.getInstance();
@@ -35,7 +51,7 @@ public class Worker {
 	
 	public void setTask(WorkerTask task, int frame){
 		this.task = task;
-		this.lastpos = unit.getPos();
+		task.addWorker(this);
 		lastTaskFrame = frame;
 	}
 	
@@ -52,87 +68,64 @@ public class Worker {
 	}
 
 	public void clearTask(){
+		if (task != null) task.removeWorker(this);
+		this.task = null;
+		if (unit.getHealth() > 0) {
+			unit.stop((short) 0, Integer.MAX_VALUE);
+		}
+	}
+	
+	public void endTask(){
 		this.task = null;
 		if (unit.getHealth() > 0) {
 			unit.stop((short) 0, Integer.MAX_VALUE);
 		}
 	}
 
-	public boolean unstick(int frame){
+	public boolean unstick(int frame, Resource m, Resource e){
 		boolean unstuck = false;
-		if (task != null && frame - lastTaskFrame > 150){
-			float movedist = distance(unit.getPos(), lastpos);
-			float jobdist = distance(unit.getPos(), task.getPos());
+		if (frame - lastStuckFrame < 60) return true;
+		if (task == null || frame - lastTaskFrame < 120) return false;
+		
+		float jobdist = distance(unit.getPos(), task.getPos());
 
-			if (movedist < 50 && jobdist > unit.getDef().getBuildDistance()){
-				AIFloat3 unstickPoint = getRadialPoint(unit.getPos(), 75f);
-				unit.moveTo(unstickPoint, (short) 0, frame+6000);
-				task.removeWorker(this);
-				clearTask();
-				unstuck = true;
-			}
-			lastTaskFrame = frame;
-			lastpos = unit.getPos();
+		if ((getSpeed(unit) < unit.getDef().getSpeed()/10f && (jobdist > unit.getDef().getBuildDistance() || (unit.getResourceUse(m) == 0f && unit.getResourceUse(e) == 0f && unit.getResourceMake(m) == 0f)))
+			      || unit.getCurrentCommands().isEmpty()){
+			AIFloat3 unstickPoint = getAngularPoint(task.getPos(), unit.getPos(), distance(task.getPos(), unit.getPos()) + 50f);
+			unit.moveTo(unstickPoint, (short) 0, Integer.MAX_VALUE);
+			clearTask();
+			unstuck = true;
+			lastStuckFrame = frame;
 		}
+		lastTaskFrame = frame;
+		
 		return unstuck;
 	}
 	
 	public void moveTo(AIFloat3 pos){
-		Deque<AIFloat3> path = pathfinder.findPath(unit, getDirectionalPoint(pos, unit.getPos(), unit.getDef().getBuildDistance()), pathfinder.AVOID_ENEMIES);
-		unit.stop((short) 0, Integer.MAX_VALUE);
+		Queue<AIFloat3> path = pathfinder.findPath(unit, getDirectionalPoint(pos, unit.getPos(), unit.getDef().getBuildDistance()), pathfinder.AVOID_ENEMIES);
 		
 		unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
-		if (path.size() > 2){
-			path.poll();
-			path.poll();
-		}
-		
-		if (path.isEmpty()) {
-			return; // pathing failed
-		} else {
-			unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // immediately move to first waypoint
-			
-			int pathSize = Math.min(5, path.size());
-			int i = 0;
-			while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
-				unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
-				i++;
-				// skip every two of three waypoints except the last, since they're not very far apart.
-				if (path.size() > 2) {
-					path.poll();
-					path.poll();
-				}
-			}
+		while (!path.isEmpty()) {
+			if (path.size() > 1) path.poll();
+			if (!path.isEmpty()) unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 		}
 	}
 	
-	public void retreatTo(AIFloat3 pos){
-		Deque<AIFloat3> path = pathfinder.findPath(unit, pos, pathfinder.AVOID_ENEMIES);
-		unit.stop((short) 0, Integer.MAX_VALUE);
+	public void retreatTo(AIFloat3 pos, int frame){
+		lastRetreatFrame = frame;
+		Queue<AIFloat3> path = pathfinder.findPath(unit, pos, pathfinder.AVOID_ENEMIES);
 		
 		unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
-		if (path.size() > 2){
-			path.poll();
-			path.poll();
+		while (!path.isEmpty()) {
+			if (path.size() > 1) path.poll();
+			if (!path.isEmpty()) unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 		}
-		
-		if (path.isEmpty()) {
-			return; // pathing failed
-		} else {
-			unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // immediately move to first waypoint
-			
-			int pathSize = Math.min(5, path.size());
-			int i = 0;
-			while (!path.isEmpty()) {
-				unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
-				i++;
-				// skip every two of three waypoints except the last, since they're not very far apart.
-				if (path.size() > 2) {
-					path.poll();
-					path.poll();
-				}
-			}
-		}
+	}
+
+	public float getShields(){
+		if (!hasShields) return 1f;
+		return shield.getShieldPower()/shield.getDef().getShield().getPower();
 	}
 
 	@Override

@@ -9,10 +9,14 @@ import java.util.List;
 public class WorkerTask {
 	public List<Worker> assignedWorkers;
 	protected AIFloat3 position;
+	protected static int rootID = 0;
+	public int taskID;
 
 	public WorkerTask() {
-		this.assignedWorkers = new ArrayList<Worker>();
+		this.assignedWorkers = new ArrayList<>();
 		this.position = new AIFloat3();
+		this.taskID = rootID;
+		rootID++;
 	}
 
 	public AIFloat3 getPos(){
@@ -29,7 +33,7 @@ public class WorkerTask {
 
 	public List<Worker> stopWorkers(){
 		for (Worker w: assignedWorkers){
-			w.clearTask();
+			w.endTask();
 		}
 		return assignedWorkers;
 	}

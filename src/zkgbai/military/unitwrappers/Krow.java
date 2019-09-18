@@ -4,7 +4,7 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.Weapon;
 
-import java.util.Deque;
+import java.util.Queue;
 
 import static zkgbai.kgbutil.KgbUtil.*;
 
@@ -30,30 +30,12 @@ public class Krow extends Strider {
 
 	public void flyTo(AIFloat3 pos, int frame){
 		if (distance(pos, getPos()) > 1200f) {
-			Deque<AIFloat3> path = pathfinder.findPath(unit, pos, pathfinder.ASSAULT_PATH);
+			Queue<AIFloat3> path = pathfinder.findPath(unit, pos, pathfinder.ASSAULT_PATH);
+			if (path.size() > 1) path.poll(); // skip the first waypoint since flying units move pretty quick and the waypoints are close together.
 			unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
-			if (path.size() > 2) {
-				path.poll();
-				path.poll();
-			}
-			
-			if (path.isEmpty()) {
-				return; // pathing failed
-			} else {
-				unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // immediately move to first waypoint
-				
-				int pathSize = Math.min(5, path.size());
-				int i = 0;
-				while (i < pathSize && !path.isEmpty()) { // queue up to the first 5 waypoints
-					unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
-					i++;
-					// skip every two of three waypoints except the last, since they're not very far apart.
-					if (path.size() > 2) {
-						path.poll();
-						path.poll();
-					}
-				}
-			}
+			if (path.size() > 1) path.poll();
+			if (path.size() > 1) path.poll();
+			if (!path.isEmpty()) unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 		}else{
 			AIFloat3 target;
 			if (isDgunReadyOrFiring(frame)) {

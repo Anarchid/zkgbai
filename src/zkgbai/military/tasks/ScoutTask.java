@@ -30,9 +30,9 @@ public class ScoutTask extends FighterTask {
         assignedRaiders.remove(r);
     }
 
-    public void endTask(int frame){
+    public void endTask(){
         for (Raider r:assignedRaiders){
-            r.clearTask();
+            r.endTask();
         }
     }
     

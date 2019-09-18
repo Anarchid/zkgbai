@@ -12,6 +12,7 @@ public class RepairTask extends WorkerTask{
 	public Boolean isTank = false;
 
 	public RepairTask(Unit target) {
+		super();
 		this.target = target;
 		String defName = target.getDef().getName();
 

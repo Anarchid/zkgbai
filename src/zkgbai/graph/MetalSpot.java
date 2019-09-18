@@ -11,6 +11,7 @@ public class MetalSpot {
 	public boolean visible = false;
 
 	public boolean owned = false;
+	public boolean touched = false;
 	public boolean hostile = false;
 	public boolean enemyShadowed = false;
 	public boolean allyShadowed = false;

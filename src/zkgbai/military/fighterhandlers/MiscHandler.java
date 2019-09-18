@@ -1,10 +1,7 @@
 package zkgbai.military.fighterhandlers;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.OOAICallback;
-import com.springrts.ai.oo.clb.Resource;
-import com.springrts.ai.oo.clb.Unit;
-import com.springrts.ai.oo.clb.Weapon;
+import com.springrts.ai.oo.clb.*;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
@@ -70,13 +67,13 @@ public class MiscHandler {
     public void update(int frame) {
         this.frame = frame;
 
-        if(frame%15 == 0) {
+        if(frame % 15 == 10) {
             cleanUnits();
             updateSupports();
             updateSappers();
             updateSwifts();
 
-            if (frame % 30 == 0) {
+            if (frame % 30 == 10) {
                 for (Raider ulti: ultis.values()){
                     if (!retreatHandler.isRetreating(ulti.getUnit())) {
                         Enemy target = warManager.getUltiTarget(ulti.getPos());
@@ -84,16 +81,15 @@ public class MiscHandler {
                             if (distance(ulti.getPos(), target.position) > 300f) {
                                 ulti.sneak(target.position, frame);
                             } else {
-                                ulti.getUnit().attack(target.unit, (short) 0, frame + 30);
+                                ulti.getUnit().attack(target.unit, (short) 0, Integer.MAX_VALUE);
                             }
                         } else {
                             try {
-                                AIFloat3 tgt = graphManager.getClosestHaven(graphManager.getClosestFrontLineSpot(ulti.getPos()).getPos());
+                                AIFloat3 tgt = graphManager.getClosestHaven(graphManager.getClosestEnemySpot(ulti.getPos()).getPos());
                                 if (distance(tgt, ulti.getPos()) > 300f) {
                                     ulti.sneak(tgt, frame);
                                 }
-                            } catch (Exception e) {
-                            } // because unpacking all the nulls that can occur here is incredibly stupid.
+                            } catch (Exception e) {} // because unpacking all the nulls that can occur here is incredibly stupid.
                         }
                     }
                 }
@@ -105,7 +101,7 @@ public class MiscHandler {
                         if (u.getRulesParamFloat("disarmed", 0f) > 0 || warManager.getEffectiveThreat(st.getPos()) > 0){
                             target = graphManager.getClosestHaven(u.getPos());
                         }else {
-                            target = warManager.getTarget(u.getPos(), false);
+                            target = warManager.getTarget(u, false);
                         }
                         st.fightTo(target);
                     }
@@ -115,7 +111,7 @@ public class MiscHandler {
             dgunStriders();
             dgunKrows();
             
-            if (frame % 90 == 0){
+            if (frame % 90 == 10){
                 // assign krows
                 for (Krow st:krows.values()){
                     Unit u = st.getUnit();
@@ -129,30 +125,7 @@ public class MiscHandler {
                         st.flyTo(target, frame);
                     }
                 }
-            }
-            
-            if (frame % 150 == 0){
-                // assign berthas
-                for (Unit b: berthas.values()){
-                    AIFloat3 target = warManager.getBerthaTarget(b.getPos());
-                    if (target != null) {
-                        b.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
-                    }else{
-                        b.stop((short) 0, Integer.MAX_VALUE);
-                    }
-                }
-            }
-            
-            if (frame % 300 == 0){
-                // use nukes
-                if (nuke != null && !warManager.enemyHasAntiNuke && nuke.getStockpile() > 0 && frame - lastNukeFrame > 1800){
-                    AIFloat3 target = warManager.getSuperWepTarget(nuke, true);
-                    if (target != null){
-                        nuke.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
-                        lastNukeFrame = frame;
-                    }
-                }
-        
+    
                 // assign loners
                 for (Fighter l:loners.values()){
                     Unit u = l.getUnit();
@@ -162,29 +135,57 @@ public class MiscHandler {
                             target = graphManager.getClosestHaven(u.getPos());
                             l.moveTo(target);
                         }else {
-                            target = warManager.getTarget(u.getPos(), false);
+                            target = warManager.getTarget(u, false);
                             l.fightTo(target);
                         }
                     }
                 }
-        
+    
                 // assign arties
                 for (Fighter a:arties.values()){
                     Unit u = a.getUnit();
                     if (!retreatHandler.isRetreating(u)){
                         AIFloat3 target;
-                        if (u.getRulesParamFloat("disarmed", 0f) > 0 || (warManager.getEffectiveThreat(a.getPos()) > 0 && a.getUnit().getDef().getName().equals("amphassault"))){
+                        if (u.getRulesParamFloat("disarmed", 0f) > 0 || (warManager.getEffectiveThreat(a.getPos()) > 0 && u.getDef().getName().equals("amphassault"))){
                             target = graphManager.getClosestHaven(u.getPos());
                             a.moveTo(target);
-                        }else {
+                        }else if (u.getDef().getName().equals("vehheavyarty")){
+                            target = warManager.getArtyTarget(u.getPos(), false);
+                            target = getRadialPoint(graphManager.getClosestHaven(target), 350f);
+                            a.moveTo(target);
+                        } else {
                             target = warManager.getArtyTarget(u.getPos(), false);
                             a.fightTo(target);
                         }
                     }
                 }
             }
+            
+            if (frame % 200 == 10){
+                // assign berthas
+                for (Unit b: berthas.values()){
+                    //AIFloat3 target = warManager.getBerthaTarget(b.getPos());
+                    AIFloat3 target = warManager.getSuperWepTarget(b, false);
+                    if (target != null) {
+                        b.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
+                    }else{
+                        b.stop((short) 0, Integer.MAX_VALUE);
+                    }
+                }
+            }
+            
+            if (frame % 300 == 10){
+                // use nukes
+                if (nuke != null && !warManager.enemyHasAntiNuke && nuke.getStockpile() > 0 && frame - lastNukeFrame > 1800){
+                    AIFloat3 target = warManager.getSuperWepTarget(nuke, true);
+                    if (target != null){
+                        nuke.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
+                        lastNukeFrame = frame;
+                    }
+                }
+            }
     
-            if (frame % 450 == 0){
+            if (frame % 450 == 10){
                 if (zenith != null){
                     int meteors = (int) zenith.getRulesParamFloat("meteorsControlled", 0f);
                     if (meteors > 150) {
@@ -200,7 +201,7 @@ public class MiscHandler {
                 }
             }
     
-            if (frame % 900 == 0){
+            if (frame % 900 == 10){
                 if (derp != null){
                     AIFloat3 target = warManager.getSuperWepTarget(derp, false);
                     if (target != null){
@@ -243,7 +244,7 @@ public class MiscHandler {
 
     public void addBertha(Unit u){
         berthas.put(u.getUnitId(), u);
-        u.setFireState(0, (short) 0, frame + 10);
+        u.setFireState(0, (short) 0, Integer.MAX_VALUE);
     }
     
     public void addNuke(Unit u){
@@ -252,19 +253,19 @@ public class MiscHandler {
     
     public void addZenith(Unit u){
         zenith = u;
-        u.setFireState(0, (short) 0, frame + 10);
+        u.setFireState(0, (short) 0, Integer.MAX_VALUE);
     }
     
     public void addDRP(Unit u){
         derp = u;
-        u.setFireState(0, (short) 0, frame + 10);
-        u.setTrajectory(1, (short) 0, frame + 10);
+        u.setFireState(0, (short) 0, Integer.MAX_VALUE);
+        u.setTrajectory(1, (short) 0, Integer.MAX_VALUE);
     
         AIFloat3 target = warManager.getSuperWepTarget(derp, true);
         if (target != null){
-            derp.attackArea(target, 0f, (short) 0, frame + 300);
+            derp.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
         }else{
-            derp.stop((short) 0, frame+30);
+            derp.stop((short) 0, Integer.MAX_VALUE);
         }
     }
 
@@ -295,6 +296,14 @@ public class MiscHandler {
         }
 
         if (supports.containsKey(unit.getUnitId())){
+            Fighter f = supports.get(unit.getUnitId());
+            if (f.getUnit().getDef().getName().equals("shieldshield")){
+                // decrement aspis count
+                if (f.squad != null){
+                    ShieldSquad sq = (ShieldSquad) f.squad;
+                    sq.numAspis--;
+                }
+            }
             supports.remove(unit.getUnitId());
         }
 
@@ -434,44 +443,41 @@ public class MiscHandler {
 
     private void updateSupports() {
         for (Fighter s : supports.values()) {
-            if (!retreatHandler.isRetreating(s.getUnit())) {
-                if (s.squad != null) {
-                    if (!s.squad.isDead()) {
-                        s.moveTo(s.squad.getPos());
-                    } else {
-                        s.squad = null;
-                    }
+            if (retreatHandler.isRetreating(s.getUnit())) continue;
+
+	        if (s.squad != null && s.squad.isDead()) s.squad = null;
+
+            if (s.squad == null) {
+                if (!squadHandler.squads.isEmpty()) {
+                	float maxValue = 0;
+                	Squad best = null;
+                	for (Squad sq: squadHandler.squads){
+                		if (sq.isAirSquad) continue;
+                		if (sq.metalValue > maxValue){
+                			maxValue = sq.metalValue;
+                			best = sq;
+		                }
+	                }
+                    s.squad = best;
                 }
-
-                if (s.squad == null) {
-
-                    if (s.getUnit().getDef().getName().equals("cloakjammer") && !squadHandler.squads.isEmpty()) {
-                        int rand = (int) (Math.random() * (squadHandler.squads.size() - 1));
-                        Squad randomSquad = squadHandler.squads.get(rand);
-                        if (!randomSquad.isAirSquad) {
-                            s.squad = randomSquad;
-                        }
-                    }else if (s.getUnit().getDef().getName().equals("shieldshield") && squadHandler.nextShieldSquad != null && squadHandler.nextShieldSquad.getPos() != null) {
-                        s.squad = squadHandler.nextShieldSquad;
-                    }
-
-                    if (s.squad != null) {
-                        if (s.squad.status == 'f') {
-                            s.moveTo(s.squad.target);
-                        } else if (s.squad.getPos() != null) {
-                            s.moveTo(s.squad.getPos());
-                        }
-                    }else {
-                        s.moveTo(warManager.getRallyPoint(s.getPos()));
-                    }
+                // if we still haven't found a squad, assign it to nextSquad.
+                if (s.squad == null && squadHandler.nextSquad != null && !squadHandler.nextSquad.isDead()){
+	                s.squad = squadHandler.nextSquad;
                 }
             }
+
+	        if (s.squad != null) {
+	            AIFloat3 spos = s.squad.getPos();
+	            s.moveTo(getDirectionalPoint(s.squad.target, spos, distance(spos, s.squad.target) + 125f));
+	        }else{
+		        s.moveTo(graphManager.getClosestHaven(s.getPos()));
+	        }
         }
     }
 
     void updateSappers(){
         for (Unit s : sappers.values()) {
-            if (s.getHealth() <= 0 || !s.getCurrentCommands().isEmpty()){continue;}
+            if (s.getHealth() <= 0 || !s.getCurrentCommands().isEmpty()) continue;
 
             List<Unit> enemies = callback.getEnemyUnitsIn(s.getPos(), 350f);
             Unit enemy = null;
@@ -486,11 +492,11 @@ public class MiscHandler {
                 continue;
             }
 
-            MetalSpot ms = null;
+            MetalSpot ms;
             if (s.getDef().getName().equals("gunshipbomb")){
                 ms = graphManager.getClosestEnemySpot(s.getPos());
                 if (ms != null) {
-                    s.fight(ms.getPos(), (short) 0, frame + 300);
+                    s.fight(ms.getPos(), (short) 0, Integer.MAX_VALUE);
                 }
                 continue;
             }else {
@@ -502,7 +508,7 @@ public class MiscHandler {
             }
 
             if (ms != null && distance(s.getPos(), ms.getPos()) > 500) {
-                s.fight(getDirectionalPoint(ms.getPos(), graphManager.getEnemyCenter(), 350f), (short) 0, frame + 300);
+                s.fight(getAngularPoint(ms.getPos(), graphManager.getEnemyCenter(), 350f), (short) 0, Integer.MAX_VALUE);
             }
         }
     }
@@ -522,10 +528,10 @@ public class MiscHandler {
             }
 
             if (best != null){
-                u.moveTo(best.getPos(), (short) 0, frame + 300);
+                u.moveTo(best.getPos(), (short) 0, Integer.MAX_VALUE);
                 if (distance(u.getPos(), graphManager.getEnemyCenter()) < distance(u.getPos(), graphManager.getAllyCenter())){
                     List<Float> params = new ArrayList<>();
-                    u.executeCustomCommand(CMD_ONECLICK_WEAPON, params, (short) 0, frame + 300);
+                    u.executeCustomCommand(CMD_ONECLICK_WEAPON, params, (short) 0, Integer.MAX_VALUE);
                 }
                 spots.remove(best);
             }
@@ -542,7 +548,7 @@ public class MiscHandler {
             if (s.isDgunReady(frame)) {
                 Unit target = getDgunTarget(s);
                 if (target != null) {
-                    s.getUnit().dGun(target, (short) 0, frame + 3000);
+                    s.getUnit().dGun(target, (short) 0, Integer.MAX_VALUE);
                 }
             }
         }
@@ -606,7 +612,7 @@ public class MiscHandler {
                             cost += e.getDef().getCost(m) * (e.isBeingBuilt() ? e.getHealth()/e.getMaxHealth() : 1f);
                         }
                         if (cost > 300f) {
-                            s.getUnit().executeCustomCommand(CMD_ONECLICK_WEAPON, params, (short) 0, frame + 300);
+                            s.getUnit().executeCustomCommand(CMD_ONECLICK_WEAPON, params, (short) 0, Integer.MAX_VALUE);
                             break;
                         }
                     }

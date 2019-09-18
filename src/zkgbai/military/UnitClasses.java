@@ -1,7 +1,11 @@
 package zkgbai.military;
 
+import com.springrts.ai.AICallback;
+
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by aeonios on 11/14/2015.
@@ -21,10 +25,11 @@ public class UnitClasses {
     public List<String> planes = new ArrayList<String>();
     public List<String> bombers = new ArrayList<String>();
     public List<String> sappers = new ArrayList<String>();
+    public List<String> heavies = new ArrayList<String>();
 
     public List<String> noRetreat = new ArrayList<String>();
     
-    public List<String> porcWeps = new ArrayList<String>();
+    public Set<Integer> porcWeps = new HashSet<>();
 
     private static UnitClasses instance = null;
 
@@ -33,19 +38,16 @@ public class UnitClasses {
         smallRaiders.add("cloakraid");
         smallRaiders.add("shieldraid");
         smallRaiders.add("amphraid");
-        smallRaiders.add("amphimpulse");
         smallRaiders.add("hoverraid");
 
         mediumRaiders.add("vehraid");
         mediumRaiders.add("gunshipraid");
         mediumRaiders.add("cloakheavyraid");
-        mediumRaiders.add("hoverassault");
-        mediumRaiders.add("tankheavyraid");
-        
-        soloRaiders.add("tankraid");
+	    mediumRaiders.add("hoverassault");
+	    mediumRaiders.add("tankheavyraid");
+
         soloRaiders.add("spiderscout");
         soloRaiders.add("vehscout");
-        soloRaiders.add("shieldskirm");
         soloRaiders.add("shieldscout");
         soloRaiders.add("gunshipbomb");
 
@@ -55,6 +57,7 @@ public class UnitClasses {
         assaults.add("cloakskirm");
         assaults.add("amphfloater");
         assaults.add("amphriot");
+	    assaults.add("amphimpulse");
         assaults.add("vehriot");
         assaults.add("vehassault");
         assaults.add("hoverskirm");
@@ -65,7 +68,7 @@ public class UnitClasses {
         assaults.add("spiderriot");
         assaults.add("tankriot");
         assaults.add("tankassault");
-
+        assaults.add("shieldskirm");
 
         // Air mobs
         airMobs.add("gunshipskirm");
@@ -73,16 +76,17 @@ public class UnitClasses {
         airMobs.add("gunshipassault");
 
         // Shield mobs
+
+        shieldMobs.add("shieldassault");
         shieldMobs.add("shieldriot");
         shieldMobs.add("shieldarty");
-        shieldMobs.add("shieldassault");
         shieldMobs.add("shieldfelon");
-        shieldMobs.add("striderfunnelweb");
         shieldMobs.add("vehcapture");
+        shieldMobs.add("shieldshield");
 
         // mobSupport: things that increase the strength of mobs
         mobSupports.add("cloakjammer");
-        mobSupports.add("shieldshield");
+
 
         // striders; stuff that can dgun
         striders.add("striderdante");
@@ -141,6 +145,7 @@ public class UnitClasses {
         sappers.add("cloakbomb");
         sappers.add("shieldbomb");
         sappers.add("jumpbomb");
+        sappers.add("amphbomb");
 
         // Things that should not retreat
         noRetreat.add("spidercrabe");
@@ -148,16 +153,14 @@ public class UnitClasses {
         noRetreat.add("bomberprec");
         noRetreat.add("gunshipbomb");
         noRetreat.add("planefighter");
-        
-        // a list of porc weapon def names, for identifying when things get attacked by porc that's out of los
-        porcWeps.add("corllt_laser");
-        porcWeps.add("corrl_armrl_missile");
-        porcWeps.add("armpb_gauss");
-        porcWeps.add("armdeva_armdeva_weapon");
-        porcWeps.add("corhlt_laser");
-        porcWeps.add("cordoom_plasma");
-        porcWeps.add("armanni_ata");
-        porcWeps.add("corbhmth_plasma");
+
+        // List of things which can count higher towards fighter value.
+        heavies.add("tankassault");
+        heavies.add("tankheavyassault");
+        heavies.add("spidercrabe");
+        heavies.add("amphassault");
+
+        // porc weps are set in root.
     }
 
     public static UnitClasses getInstance(){
@@ -165,5 +168,9 @@ public class UnitClasses {
             instance = new UnitClasses();
         }
         return instance;
+    }
+
+    public static void release(){
+    	instance = null;
     }
 }

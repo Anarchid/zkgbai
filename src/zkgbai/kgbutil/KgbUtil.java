@@ -1,6 +1,8 @@
 package zkgbai.kgbutil;
 
+import com.springrts.ai.AI;
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.Unit;
 
 /**
  * Created by haplo on 1/4/2016.
@@ -49,6 +51,22 @@ public class KgbUtil {
         radir.x = (float) (start.x + radius*vx);
         radir.z = (float) (start.z + radius*vz);
         return radir;
+    }
+    
+    public static AIFloat3 getFormationPoint(AIFloat3 start, AIFloat3 compare, AIFloat3 dest){
+        float x = start.x - compare.x;
+        float z = start.z - compare.z;
+        return new AIFloat3(dest.x + x, dest. y, dest.z + z);
+    }
+    
+    public static float getSpeed(Unit u){
+	    AIFloat3 vel = u.getVel();
+	    return (float) (Math.sqrt((vel.x * vel.x) + (vel.z * vel.z)) * 30d);
+    }
+    
+    public static float lerp(float start, float end, double scale){
+        float amount = (float) scale;
+        return (end * amount) + (start * (1f - amount));
     }
 
     public static float distance(AIFloat3 v0, AIFloat3 v1){
