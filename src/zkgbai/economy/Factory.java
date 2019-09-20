@@ -52,6 +52,7 @@ public class Factory extends Worker {
 			}
 
 			if (defName.equals("factoryveh")) {
+				scoutAllowance--;
 				raiderSpam = -4;
 			}
 

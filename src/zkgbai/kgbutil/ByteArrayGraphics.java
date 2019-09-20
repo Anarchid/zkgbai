@@ -1,4 +1,4 @@
-package zkgbai.military;
+package zkgbai.kgbutil;
 
 /**
  * Created by haplo on 12/22/2015.

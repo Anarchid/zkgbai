@@ -25,7 +25,7 @@ import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.Worker;
 import zkgbai.los.LosManager;
-import zkgbai.military.ByteArrayGraphics;
+import zkgbai.kgbutil.ByteArrayGraphics;
 import zkgbai.military.MilitaryManager;
 
 import static zkgbai.kgbutil.KgbUtil.*;
@@ -64,7 +64,7 @@ public class GraphManager extends Module {
 	public boolean isWaterMap = false;
 	public MetalSpot nullspot;
 	
-	public HashMap<String, Integer> pylonDefs; 
+	public HashMap<String, Integer> pylonDefs;
 	int pylonCounter;
 	//private Image graphImage;
 	//private Graphics graphGraphics;
@@ -450,7 +450,7 @@ public class GraphManager extends Module {
     	
     	edges = new ArrayList<TriangulationEdge>(set);
     	for(TriangulationEdge edge:edges){
-    		MetalSpot m0 = mexes.get(edge.v0); 
+    		MetalSpot m0 = mexes.get(edge.v0);
     		MetalSpot m1 = mexes.get(edge.v1);
     		
     		Link l = new Link(m0,m1);
@@ -701,6 +701,24 @@ public class GraphManager extends Module {
 			closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
 		}else{
 			return getAllyCenter();
+		}
+		return closest;
+	}
+	
+	public AIFloat3 getClosestRaiderHaven(AIFloat3 position){
+		AIFloat3 closest = null;
+		float distance = Float.MAX_VALUE;
+		for(MetalSpot ms: metalSpots){
+			if (warManager.getThreat(ms.getPos()) == 0){
+				float tempdist = distance(position, ms.getPos());
+				if (tempdist < distance){
+					distance = tempdist;
+					closest = ms.getPos();
+				}
+			}
+		}
+		if (closest == null) {
+			return mapCenter;
 		}
 		return closest;
 	}

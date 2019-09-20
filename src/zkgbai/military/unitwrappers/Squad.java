@@ -7,6 +7,7 @@ import static zkgbai.kgbutil.KgbUtil.*;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
+import zkgbai.ZKGraphBasedAI;
 
 public class Squad {
 	List<Fighter> fighters = new ArrayList<Fighter>();
@@ -16,13 +17,13 @@ public class Squad {
 	// r = rallying
 	// a = attacking
 	public float income;
-	public boolean assigned = false;
 	public boolean isAirSquad = false;
 	Fighter leader;
-	private int index = 0;
+	int index = 0;
 	public AIFloat3 target;
 	int firstRallyFrame = 0;
 	static final short OPTION_SHIFT_KEY = 32;
+	int team = ZKGraphBasedAI.getInstance().teamID;
 	
 	public Squad(){}
 
@@ -33,7 +34,6 @@ public class Squad {
 		index++;
 		metalValue = metalValue + f.metalValue;
 		f.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
-		f.fightTo(target);
 
 		if (leader == null) leader = f;
 	}
@@ -44,13 +44,16 @@ public class Squad {
 			leader = getNewLeader();
 		}
 		metalValue -= f.metalValue;
+		f.squad = null;
+	}
+	
+	public int getSize(){
+		return fighters.size();
 	}
 
 	public void setTarget(AIFloat3 pos){
 		// set a target for the squad to attack.
 		target = pos;
-		leader = getBestLeader();
-		if (leader == null) return;
 		
 		float maxdist = 200f;
 		float waydist = 100f;
@@ -63,7 +66,6 @@ public class Squad {
 		if (isAirSquad && path.size() > 1) path.poll();
 		AIFloat3 waypoint = path.poll();
 		for (Fighter f:fighters){
-			if (f.getUnit().getHealth() <= 0) continue;
 			f.target = target;
 			float fdist = distance(f.getPos(), leader.getPos());
 			if (fdist > maxdist){
@@ -95,19 +97,12 @@ public class Squad {
 		// set a target for the squad to attack.
 		target = pos;
 		for (Fighter f:fighters){
-			if (f.getUnit().getHealth() > 0){
-				f.moveTo(target);
-				f.target = target;
-			}
+			f.moveTo(target);
+			f.target = target;
 		}
 	}
 
 	public AIFloat3 getPos(){
-		if (leader == null || leader.getUnit().getHealth() <= 0){
-			leader = getNewLeader();
-		}
-		if (leader == null) return new AIFloat3(0, 0,0);
-		
 		float maxdist = isAirSquad ? 300f: 200f;
 
 		if (fighters.size() > 0){
@@ -115,7 +110,7 @@ public class Squad {
 			float x = 0;
 			float z = 0;
 			for (Fighter f:fighters){
-				if (f.getUnit().getHealth() <= 0 || distance(f.getPos(), leader.getPos()) > maxdist) continue;
+				if (distance(f.getPos(), leader.getPos()) > maxdist) continue;
 				x += f.getPos().x;
 				z += f.getPos().z;
 				count++;
@@ -142,7 +137,6 @@ public class Squad {
 		setTarget(target);
 		
 		for (Fighter f: fighters){
-			if (f.getUnit().getHealth() <= 0) continue;
 			if (f.outOfRange){
 				return false;
 			}
@@ -151,11 +145,22 @@ public class Squad {
 	}
 
 	public boolean isDead(){
-		return fighters.isEmpty();
+		List<Fighter> invalidFighters = new ArrayList<>();
+		for (Fighter f: fighters){
+			if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != team){
+				invalidFighters.add(f);
+				f.squad = null;
+			}
+		}
+		fighters.removeAll(invalidFighters);
+		if (status != 'f') cutoff();
+		
+		leader = getBestLeader();
+		return (leader == null);
 	}
 
-	public void cutoff(){
-		if (fighters.size() < 4 && metalValue < 1000f){
+	private void cutoff(){
+		if (fighters.size() < 2 || metalValue < 1000f){
 			for (Fighter f:fighters){
 				f.squad = null;
 			}
@@ -169,13 +174,21 @@ public class Squad {
 		return leader.getUnit();
 	}
 	
+	public int getThreat(){
+		float threat = 0;
+		for (Fighter f: fighters){
+			threat += f.getUnit().getPower() + f.getUnit().getMaxHealth();
+		}
+		return (int) (threat/8f);
+	}
+	
 	private Fighter getBestLeader(){
-		if (leader == null || leader.getUnit().getHealth() <= 0) leader = getNewLeader();
+		if (leader == null || leader.getUnit().getHealth() <= 0 || leader.getUnit().getTeam() != team) leader = getNewLeader();
+		if (leader == null) return null;
 		Fighter newLeader = leader;
-		if (leader == null) return newLeader;
 		float minspeed = leader.getUnit().getDef().getSpeed();
 		for (Fighter f:fighters){
-			if (f.getUnit().getHealth() <= 0 || distance(f.getPos(), leader.getPos()) > 300f) continue;
+			if (distance(f.getPos(), leader.getPos()) > 300f) continue;
 			float tmpspeed = f.getUnit().getSpeed();
 			if (tmpspeed < minspeed){
 				minspeed = tmpspeed;
@@ -189,7 +202,6 @@ public class Squad {
 		Fighter newLeader = null;
 		int tmpindex = Integer.MAX_VALUE;
 		for (Fighter f:fighters){
-			if (f.getUnit().getHealth() <= 0) continue;
 			if (f.index < tmpindex){
 				newLeader = f;
 				tmpindex = f.index;

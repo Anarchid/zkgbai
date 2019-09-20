@@ -3,6 +3,7 @@ package zkgbai.military.unitwrappers;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.Weapon;
+import zkgbai.ZKGraphBasedAI;
 import zkgbai.kgbutil.Pathfinder;
 
 import java.util.Queue;

@@ -11,6 +11,7 @@ public class ConstructionTask extends WorkerTask {
 	public Unit ctTarget = null;
 	public int frameIssued = 0;
 	public boolean facPlop = false;
+	public int assignedPlop;
 	public boolean facDef = false;
 
 	public ConstructionTask(UnitDef def, AIFloat3 pos, int h) {

@@ -164,8 +164,7 @@ public class MiscHandler {
             if (frame % 200 == 10){
                 // assign berthas
                 for (Unit b: berthas.values()){
-                    //AIFloat3 target = warManager.getBerthaTarget(b.getPos());
-                    AIFloat3 target = warManager.getSuperWepTarget(b, false);
+                    AIFloat3 target = warManager.getBerthaTarget(b.getPos());
                     if (target != null) {
                         b.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);
                     }else{
@@ -452,7 +451,7 @@ public class MiscHandler {
                 	float maxValue = 0;
                 	Squad best = null;
                 	for (Squad sq: squadHandler.squads){
-                		if (sq.isAirSquad) continue;
+                		if (sq.isAirSquad || sq.isDead()) continue;
                 		if (sq.metalValue > maxValue){
                 			maxValue = sq.metalValue;
                 			best = sq;
@@ -460,15 +459,15 @@ public class MiscHandler {
 	                }
                     s.squad = best;
                 }
-                // if we still haven't found a squad, assign it to nextSquad.
-                if (s.squad == null && squadHandler.nextSquad != null && !squadHandler.nextSquad.isDead()){
-	                s.squad = squadHandler.nextSquad;
-                }
             }
 
 	        if (s.squad != null) {
 	            AIFloat3 spos = s.squad.getPos();
-	            s.moveTo(getDirectionalPoint(s.squad.target, spos, distance(spos, s.squad.target) + 125f));
+	            if (s.squad.target != null) {
+		            s.moveTo(getDirectionalPoint(s.squad.target, spos, distance(spos, s.squad.target) + 125f));
+	            }else{
+		            s.moveTo(spos);
+	            }
 	        }else{
 		        s.moveTo(graphManager.getClosestHaven(s.getPos()));
 	        }

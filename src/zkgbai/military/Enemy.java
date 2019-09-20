@@ -19,7 +19,7 @@ public class Enemy {
 	public boolean isPainted = false;
 	boolean visible = false;
 	public boolean isStatic = false;
-	public boolean isFac = false;
+	public boolean isImportant = false;
 	boolean isRadarOnly = true;
 	boolean isRadarVisible = false;
 	public boolean identified = false;
@@ -110,8 +110,7 @@ public class Enemy {
 		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
-			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("turretemp") || u.getName().equals("turretheavy") || u.getName().equals("turretaaheavy") || u.getName().equals("turretaaflak"))
-					&& !defName.equals("striderdante")){
+			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("shieldfelon") || u.getName().equals("turretemp") || u.getName().equals("turretheavy") || u.getName().equals("turretaaheavy") || u.getName().equals("turretaaflak"))){
 				// identify riots
 				this.isRiot = true;
 			}
@@ -130,8 +129,8 @@ public class Enemy {
 				}
 			}
 			
-			if (ud.getName().contains("factory") || ud.getName().contains("hub")){
-				this.isFac = true;
+			if (ud.getName().contains("factory") || ud.getName().contains("hub") || ud.getName().equals("energyfusion") || ud.getName().equals("energysingu")){
+				this.isImportant = true;
 			}
 
 			if (u.getTooltip().contains("aider") || u.getTooltip().contains("cout")){
@@ -161,7 +160,7 @@ public class Enemy {
 			if (isStatic && !isAA && getDanger() > 0f){
 				isPorc = true;
 			}
-		}		
+		}
 		this.speed = u.getSpeed()/30;
 	}
 	
@@ -198,7 +197,7 @@ public class Enemy {
 				danger += 100f;
 			}
 			if (ud.getName().equals("turretemp")){
-				danger += 250f;
+				danger += 200f;
 			}
 			if ((isRiot && isPorc) || isStrong){
 				danger *= 2f;

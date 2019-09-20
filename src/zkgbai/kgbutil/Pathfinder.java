@@ -537,7 +537,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return -1;
             }
-            return 1f + (slope/maxSlope) + (10f * warManager.getThreat(pos));
+            return 1f + (slope/maxSlope) + (5f * warManager.getThreat(pos));
         }
     };
     /**
@@ -591,7 +591,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope || threat > maxThreat) {
                 return -1;
             }else {
-                return 1f + (slope/maxSlope) + (10f * threat);
+                return 1f + (slope/maxSlope) + (5f * threat);
             }
         }
     };

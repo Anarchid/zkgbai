@@ -41,9 +41,9 @@ public class KgbUtil {
         float z = dest.z - start.z;
         double angle = Math.atan2(z, x);
         if (Math.random() > 0.5){
-            angle -= Math.random()*0.3*Math.PI;
+            angle -= Math.random()*0.25*Math.PI;
         }else{
-            angle += Math.random()*0.3*Math.PI;
+            angle += Math.random()*0.25*Math.PI;
         }
     
         double vx = Math.cos(angle);

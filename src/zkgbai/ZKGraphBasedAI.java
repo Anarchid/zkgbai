@@ -38,7 +38,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     private List<Module> modules = new LinkedList<Module>();
 	HashSet<Integer> enemyTeams = new HashSet<Integer>();
 	HashSet<Integer> enemyAllyTeams = new HashSet<Integer>();
-	public List<Integer> allies;
+	public List<Integer> allies = new ArrayList<>();
+	public Set<Integer> comrades = new HashSet<>();
     public int teamID;
     public int allyTeamID;
     public int currentFrame = 0;
@@ -86,7 +87,6 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         this.callback = callback;
         this.teamID = callback.getGame().getMyTeam();
         this.allyTeamID = callback.getGame().getMyAllyTeam();
-		this.allies = new ArrayList<Integer>();
 		
 		try {
 			identifyEnemyTeams();
@@ -293,8 +293,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-	    	for (ConstructionTask ct:ecoManager.constructionTasks){
-	    		callback.getMap().getDrawer().addPoint(ct.getPos(), ct.buildType.getHumanName() + ": " + callback.getMap().isPossibleToBuildAt(ct.buildType, ct.getPos(), ct.facing));
+	    	for (Worker w:ecoManager.commanders){
+	    		callback.getMap().getDrawer().addPoint(w.getPos(), "Com level: " + w.getUnit().getRulesParamFloat("comm_level", 0f));
 		    }
 	    	/*if (warManager.squadHandler.nextSquad != null){
 	    		callback.getMap().getDrawer().addPoint(warManager.squadHandler.nextSquad.getPos(), "nextSquad");
@@ -401,10 +401,16 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
     @Override
     public int unitGiven(Unit unit, int oldTeamId, int newTeamId) {
-		if (slave){
-			List<Unit> l = new ArrayList();
-			l.add(unit);
-			callback.getEconomy().sendUnits(l, mergeTarget);
+		if (slave && newTeamId == teamID){
+			if (comrades.contains(oldTeamId)) {
+				// Because now every damned AI has to resign by self-d individually until the team is exhausted.
+				unit.selfDestruct((short) 0, Integer.MAX_VALUE);
+			}else{
+				// if we got the unit from somewhere else, give it to the leader.
+				List<Unit> units = new ArrayList<>();
+				units.add(unit);
+				callback.getEconomy().sendUnits(units, mergeTarget);
+			}
 			return 0;
 		}
 
@@ -685,8 +691,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 					}
 				}
 
-				callback.getGame().sendStartPosition(false, best.getPos());
-				graphManager.setStartPos(best.getPos());
+				AIFloat3 startpos = getDirectionalPoint(best.getPos(), graphManager.getMapCenter(), 75f);
+				callback.getGame().sendStartPosition(false, startpos);
+				graphManager.setStartPos(startpos);
 				log("Solo Mode: Start Position Selected!");
 			}else{ // when playing on teams, generate a position based on relative teamID
 				AIFloat3 startPos;
@@ -771,6 +778,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 				}
 
 				if (best != null) {
+					startPos = getDirectionalPoint(startPos, graphManager.getMapCenter(), 75f);
 					callback.getGame().sendStartPosition(false, startPos);
 					graphManager.setStartPos(startPos);
 					log("Teams Mode: Start Position Selected!");
@@ -785,13 +793,15 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
 	private void checkTeamsMerging(){
 		for (int tID : allies){
-			if (isIngroup(tID) && tID < teamID){
+			boolean inGroup = isIngroup(tID);
+			if (inGroup) comrades.add(tID);
+			if (inGroup && tID < teamID){
 				slave = true;
 				mergedAllies++;
 				if (tID < mergeTarget){
 					mergeTarget = tID;
 				}
-			}else if (isIngroup(tID)) {
+			}else if (inGroup) {
 				mergedAllies++;
 				mergedAllyID = tID;
 			}else{

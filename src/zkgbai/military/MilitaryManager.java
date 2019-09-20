@@ -10,6 +10,8 @@ import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.Worker;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
+import zkgbai.kgbutil.ArrayGraphics;
+import zkgbai.kgbutil.ByteArrayGraphics;
 import zkgbai.kgbutil.Pathfinder;
 import zkgbai.los.LosManager;
 import zkgbai.military.fighterhandlers.*;
@@ -69,6 +71,8 @@ public class MilitaryManager extends Module {
 	int frame = 0;
 	int lastDefenseFrame = 0;
 	int lastValueRedrawFrame = 0;
+	
+	public int availableMobileThreat;
 
 	public float enemyPorcValue = 0f;
 	public float enemyLightPorcValue = 0f;
@@ -335,15 +339,9 @@ public class MilitaryManager extends Module {
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiderHandler.addSmallRaider(r);
 		}else if (unitTypes.mediumRaiders.contains(defName)) {
-			if ((defName.equals("hoverassault") || defName.equals("tankheavyraid")) && graphManager.eminentTerritory){
-				unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
-				Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-				squadHandler.addRaidAssault(f);
-			}else{
 			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiderHandler.addMediumRaider(r);
-			}
 		}else if (unitTypes.soloRaiders.contains(defName)) {
 			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
@@ -356,9 +354,6 @@ public class MilitaryManager extends Module {
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			f.shieldMob = true;
 			squadHandler.addShieldMob(f);
-		}else if (unitTypes.airMobs.contains(defName)){
-			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-			squadHandler.addAirMob(f);
 		}else if(unitTypes.mobSupports.contains(defName)){
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
 			miscHandler.addSupport(f);
@@ -490,34 +485,6 @@ public class MilitaryManager extends Module {
 			// rally units to fight if a tick/roach etc dies.
 			DefenseTarget dt = new DefenseTarget(unit.getPos(), 1500f, frame);
 			defenseTargets.add(dt);
-		}
-		
-		// create a defense task, if appropriate.
-		if ((!unit.getDef().isAbleToAttack() || unit.getDef().getSpeed() == 0 || unit.getDef().isBuilder() || graphManager.isAllyTerritory(unit.getPos()))
-			      && frame - lastDefenseFrame > 150){
-			lastDefenseFrame = frame;
-			DefenseTarget dt = null;
-			
-			float udmg = (unit.getDef().getName().equals("staticmex") && graphManager.isFrontLine(unit.getPos())) ? 1500f : unit.getMaxHealth();
-			if (attacker != null){
-				if (attacker.getPos() != null && attacker.getDef() != null && !attacker.getDef().isAbleToFly()) {
-					dt = new DefenseTarget(attacker.getPos(), udmg + attacker.getMaxHealth(), frame);
-				}
-			}else {
-				dt = new DefenseTarget(unit.getPos(), udmg, frame);
-			}
-			if (dt != null) {
-				defenseTargets.add(dt);
-			}
-			
-			if (attacker != null) {
-				if (attacker.getDef() != null) {
-					if (attacker.getDef().isAbleToFly()) {
-						DefenseTarget adt = new DefenseTarget(unit.getPos(), udmg + attacker.getMaxHealth(), frame);
-						airDefenseTargets.add(adt);
-					}
-				}
-			}
 		}
 		
 		// Unpaint ally threat for porc
@@ -779,7 +746,6 @@ public class MilitaryManager extends Module {
 	
 	private void paintThreatMap(){
 		threatGraphics.clear();
-		allyThreatGraphics.clear();
 		aaThreatGraphics.clear();
 		riotGraphics.clear();
 		scytheGraphics.clear();
@@ -794,9 +760,11 @@ public class MilitaryManager extends Module {
 		Thread thread = new Thread(new Runnable() {
 			@Override
 			public void run() {
+				allyThreatGraphics.clear();
 				// paint allythreat for raiders
 				for (Raider r : raiderHandler.soloRaiders) {
-					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 16f);
+					if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID) continue;
+					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 14f);
 					AIFloat3 pos = r.getPos();
 					int x = Math.round(pos.x / 32f);
 					int y = Math.round(pos.z / 32f);
@@ -804,38 +772,59 @@ public class MilitaryManager extends Module {
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 
-				for (Raider r : raiderHandler.smallRaiders.values()) {
-					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 16f);
-					AIFloat3 pos = r.getPos();
+				for (RaiderSquad rs: raiderHandler.raiderSquads) {
+					if (rs.isDead()) continue;
+					int power = rs.getThreat();
+					if (rs.status == 'f') availableMobileThreat += power;
+					AIFloat3 pos = rs.getPos();
 					int x = Math.round(pos.x / 32f);
 					int y = Math.round(pos.z / 32f);
-					int rad = 13;
-					allyThreatGraphics.paintCircle(x, y, rad, power);
-				}
-
-				for (Raider r : raiderHandler.mediumRaiders.values()) {
-					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 12f);
-					AIFloat3 pos = r.getPos();
-					int x = Math.round(pos.x / 32f);
-					int y = Math.round(pos.z / 32f);
-					int rad = 13;
+					int rad = 15;
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 
 				// paint allythreat for fighters
-				for (Fighter f : squadHandler.fighters.values()) {
-					int power = (int) ((f.getUnit().getPower() + f.getUnit().getMaxHealth()) / 8f);
-					AIFloat3 pos = f.getPos();
+				for (Squad s: squadHandler.squads) {
+					if (s.isDead()) continue;
+					int power = s.getThreat();
+					availableMobileThreat += power;
+					AIFloat3 pos = s.getPos();
 					int x = Math.round(pos.x / 32f);
 					int y = Math.round(pos.z / 32f);
-					int rad = 40;
+					int rad = 25;
 
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
+				
+				for (Squad s: squadHandler.airSquads) {
+					if (s.isDead()) continue;
+					int power = s.getThreat();
+					availableMobileThreat += power;
+					AIFloat3 pos = s.getPos();
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
+					int rad = 25;
+					
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
+				
+				for (ShieldSquad s: squadHandler.shieldSquads) {
+					if (s.isDead()) continue;
+					int power = s.getThreat();
+					availableMobileThreat += power;
+					AIFloat3 pos = s.getPos();
+					int x = Math.round(pos.x / 32f);
+					int y = Math.round(pos.z / 32f);
+					int rad = 25;
+					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 
 				// paint allythreat for striders
 				for (Strider s : miscHandler.striders.values()) {
+					if (s.getUnit().getHealth() <= 0 || s.getUnit().getTeam() != ai.teamID) continue;
 					int power = (int) ((s.getUnit().getPower() + s.getUnit().getMaxHealth()) / 6f);
+					if (!retreatHandler.isRetreating(s.getUnit())) availableMobileThreat += power;
 					AIFloat3 pos = s.getPos();
 					int x = Math.round(pos.x / 32f);
 					int y = Math.round(pos.z / 32f);
@@ -846,7 +835,9 @@ public class MilitaryManager extends Module {
 				
 				// paint allythreat for krows
 				for (Strider s : miscHandler.krows.values()) {
+					if (s.getUnit().getHealth() <= 0 || s.getUnit().getTeam() != ai.teamID) continue;
 					int power = (int) ((s.getUnit().getPower() + s.getUnit().getMaxHealth()) / 6f);
+					if (!retreatHandler.isRetreating(s.getUnit())) availableMobileThreat += power;
 					AIFloat3 pos = s.getPos();
 					int x = Math.round(pos.x / 32f);
 					int y = Math.round(pos.z / 32f);
@@ -857,6 +848,7 @@ public class MilitaryManager extends Module {
 
 				// paint allythreat for commanders
 				for (Worker w: ai.ecoManager.commanders){
+					if (w.getUnit().getHealth() <= 0 || w.getUnit().getTeam() != ai.teamID) continue;
 					int power = (int) ((w.getUnit().getPower() + w.getUnit().getMaxHealth()) / 10f);
 					AIFloat3 pos = w.getPos();
 					int x = Math.round(pos.x / 32f);
@@ -868,6 +860,7 @@ public class MilitaryManager extends Module {
 
 				//paint buildpower
 				for (Worker w: ai.ecoManager.workers.values()){
+					if (w.getUnit().getHealth() <= 0 || w.getUnit().getTeam() != ai.teamID) continue;
 					AIFloat3 pos = w.getPos();
 					int x = Math.round(pos.x / 32f);
 					int y = Math.round(pos.z / 32f);
@@ -905,13 +898,13 @@ public class MilitaryManager extends Module {
 				
 				if (!t.isStatic) {
 					if (!t.ud.isAbleToFly()) {
-						effectivePower = (int) ((float) effectivePower * Math.max(0, (1f - (((float) (frame - t.lastSeen)) / 900f))));
+						effectivePower = (int) (effectivePower * Math.max(0, (1f - (((frame - t.lastSeen)) / 900f))));
 					}
 					// paint enemy threat for mobiles
 					if (t.isAA || t.isFlexAA){
 						aaThreatGraphics.paintCircle(x, y, (int) Math.ceil(r * 1.25f), effectivePower);
 					}else{
-						if (t.isRiot) riotGraphics.paintCircle(x, y, r, 1);
+						if (t.isRiot) riotGraphics.paintCircle(x, y, r + 1, 1);
 						threatGraphics.paintCircle(x, y, r + 2, effectivePower);
 					}
 				}else if (!t.isAA){
@@ -1106,6 +1099,13 @@ public class MilitaryManager extends Module {
 
 		return ((threatGraphics.getValue(x, y)) - (allyThreatGraphics.getValue(x, y) + allyPorcGraphics.getValue(x, y)))/500f;
 	}
+	
+	public float getTacticalThreat(AIFloat3 position){
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
+		
+		return ((threatGraphics.getValue(x, y)) - allyPorcGraphics.getValue(x, y))/500f;
+	}
 
 	public float getFriendlyThreat(AIFloat3 position){
 		int x = Math.round(position.x / 32f);
@@ -1159,9 +1159,8 @@ public class MilitaryManager extends Module {
 		if (defend) {
 			// check for defense targets first
 			for (DefenseTarget d : defenseTargets) {
-				float ethreat = getEffectiveThreat(d.position);
-				if (ethreat > fthreat * 2f) continue;
-				float tmpcost = distance(origin, d.position) - (d.damage * (1f + ethreat));
+				if (getTacticalThreat(d.position) > availableMobileThreat) continue;
+				float tmpcost = distance(origin, d.position) - (d.damage * (1f + getEffectiveThreat(d.position)));
 
 				if (tmpcost < cost) {
 					cost = tmpcost;
@@ -1191,24 +1190,23 @@ public class MilitaryManager extends Module {
 			boolean allyTerritory = graphManager.isAllyTerritory(e.position);
 			float ethreat = getEffectiveThreat(e.position);
 			if ((ethreat > fthreat && (!allyTerritory || getPorcThreat(e.position) > 0))
-					  || ethreat > fthreat * 2f
-					|| (e.identified && e.ud.isAbleToFly())){
+					  || getTacticalThreat(e.position) > availableMobileThreat
+					|| (e.identified && e.ud.isAbleToFly())
+				      || ((!e.identified || e.isRaider) && distance(origin, e.position) > 1250f)){
 				continue;
 			}
 			float tmpcost = distance(origin, e.position);
 			if (!e.isAA){
-				if (e.identified && !e.isRaider && allyTerritory){
-					tmpcost /= (1f + Math.max(0, ethreat));
+				if (e.identified && !e.isImportant && !e.isRaider && allyTerritory){
+					tmpcost /= 2;
 					tmpcost -= e.getDanger() * (1f + getThreat(e.position));
-				}else if (e.isFac && pathfinder.isAssaultReachable(u, e.position, fthreat)){
+				}else if (e.isImportant && pathfinder.isAssaultReachable(u, e.position, fthreat)){
 					tmpcost /= 4f;
 					tmpcost -= 750f;
 				}else {
 					tmpcost -= e.getDanger();
 				}
 			}
-			
-			//if (allyTerritory) cost -= 1000f;
 
 			if (tmpcost < cost) {
 				cost = tmpcost;
@@ -1670,11 +1668,11 @@ public class MilitaryManager extends Module {
 			if (!e.identified || e.position == null || e.position.equals(nullpos) || e.isNanoSpam || distance(e.position, origin) > maxrange || e.ud.isAbleToFly() || (e.ud.getName().equals("staticantinuke") && !hasNuke)
 				|| (e.ud.getSpeed() > 0 && e.ud.getBuildSpeed() > 8f)){
 				// berthas can't target things outside their range, and are not good vs air.
-				// we also ignore antinukes because kgb doesn't build nukes anyway.
+				// we also ignore antinuke unless we actually have nukes.
 				continue;
 			}
 
-			float tmpcost = e.ud.getCost(m) - ((frame - e.lastSeen)/2f);
+			float tmpcost = (e.ud.getCost(m) * getScytheThreat(e.position)) - ((frame - e.lastSeen)/2f);
 			if (e.ud.getName().contains("factory") || e.ud.getName().contains("hub") || e.ud.getName().contains("felon")){
 				tmpcost += 800;
 				if (e.ud.getName().contains("hub")){
@@ -1786,7 +1784,7 @@ public class MilitaryManager extends Module {
 
 		// check for defense targets first
 		for (DefenseTarget d : defenseTargets) {
-			if (getPorcThreat(d.position) > 0 || getEffectiveThreat(d.position) > fthreat * 2f){
+			if (getPorcThreat(d.position) > 0 || getTacticalThreat(d.position) > availableMobileThreat){
 				continue;
 			}
 			float tmpcost = distance(pos, d.position) - d.damage;
@@ -1803,17 +1801,19 @@ public class MilitaryManager extends Module {
 			float ethreat = getEffectiveThreat(e.position);
 			float pthreat = getPorcThreat(e.position);
 			if ((ethreat > fthreat && (!allyTerritory || pthreat > 0))
-					  || ethreat > fthreat * 2f
+					  || getTacticalThreat(e.position) > availableMobileThreat
 					|| (e.identified && e.ud.isAbleToFly())
 					|| (!allyTerritory || pthreat > 0)){
 				continue;
 			}
 			float tmpcost = distance(pos, e.position);
 			if (!e.isAA){
-				if (!e.isRaider){
-					tmpcost /= (1f + Math.max(0, getEffectiveThreat(e.position)));
+				if (e.identified && !e.isRaider){
+					tmpcost /= 2;
+					tmpcost -= e.getDanger() * (1f + getThreat(e.position));
+				}else {
+					tmpcost -= e.getDanger();
 				}
-				tmpcost -= e.getDanger();
 			}
 
 			if (tmpcost < cost) {
@@ -1918,7 +1918,9 @@ public class MilitaryManager extends Module {
 		}
 		
 		//if there aren't any, then rally near the front line.
-		AIFloat3 position = null;
+		AIFloat3 position = getWorkerEscort(pos);
+		if (position != null) return position;
+		
 		try {
 			position = graphManager.getClosestFrontLineSpot(pos).getPos();
 		}catch (Exception e){}
@@ -2044,7 +2046,7 @@ public class MilitaryManager extends Module {
 				mindist = dist;
 			}
 		}
-		return target;
+		return callback.getMap().findClosestBuildSite(callback.getUnitDefByName("mahlazer"), getAngularPoint(target, graphManager.getMapCenter(), 250f), 600f, 3, 0);
 	}
 
 	public Collection<Enemy> getTargets(){

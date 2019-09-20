@@ -69,14 +69,11 @@ public class UnitClasses {
         assaults.add("tankriot");
         assaults.add("tankassault");
         assaults.add("shieldskirm");
-
-        // Air mobs
-        airMobs.add("gunshipskirm");
-        airMobs.add("gunshipheavyskirm");
-        airMobs.add("gunshipassault");
+	    assaults.add("gunshipskirm");
+	    assaults.add("gunshipheavyskirm");
+	    assaults.add("gunshipassault");
 
         // Shield mobs
-
         shieldMobs.add("shieldassault");
         shieldMobs.add("shieldriot");
         shieldMobs.add("shieldarty");

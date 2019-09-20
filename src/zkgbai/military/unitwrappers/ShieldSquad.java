@@ -1,13 +1,16 @@
 package zkgbai.military.unitwrappers;
 
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Weapon;
 import com.springrts.ai.oo.clb.WeaponDef;
+import zkgbai.ZKGraphBasedAI;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import static zkgbai.kgbutil.KgbUtil.*;
 
 /**
  * Created by aeonios on 11/29/2015.
@@ -23,21 +26,36 @@ public class ShieldSquad extends Squad {
     public int numAspis = 0;
     private float maxShieldPower = 0f;
     private Map<Integer, Weapon> shields = new HashMap<>();
+    
+    private static int felonID;
+    private static int aspisID;
+    private static int domiID;
+    private static boolean initialized = false;
 
     public ShieldSquad(){
         super();
         this.leader = null;
         this.leaderWeight = 0;
+        if (!initialized) {
+	        OOAICallback callback = ZKGraphBasedAI.getInstance().getCallback();
+	        felonID = callback.getUnitDefByName("shieldfelon").getUnitDefId();
+	        aspisID = callback.getUnitDefByName("shieldshield").getUnitDefId();
+	        domiID = callback.getUnitDefByName("vehcapture").getUnitDefId();
+        }
+	    
     }
 
     @Override
     public void addUnit(Fighter f){
         f.squad = this;
+        f.index = index;
+        index++;
         metalValue += f.metalValue;
+        int defID = f.getUnit().getDef().getUnitDefId();
 
-        if (f.getUnit().getDef().getName().equals("shieldfelon")) numFelons++;
+        if (defID == felonID) numFelons++;
 
-        if (!f.getUnit().getDef().getName().equals("shieldshield")) {
+        if (defID != aspisID) {
             for (Weapon w : f.getUnit().getWeapons()) {
                 if (w.getDef().getShield() != null && w.getDef().getShield().getPower() > 0) {
                     maxShieldPower += w.getDef().getShield().getPower();
@@ -54,8 +72,7 @@ public class ShieldSquad extends Squad {
 	        List<Float> moveparams = new ArrayList<>();
 	        moveparams.add(45f);
 	        f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
-            f.fightTo(target);
-        }else if (getUnitWeight(f) > leaderWeight){
+        }else if (getUnitWeight(f) < leaderWeight){
             f.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
             leader.getUnit().setMoveState(0, (short) 0, Integer.MAX_VALUE);
 	        // Set the wanted max speed for the new leader and remove the speed limit from the old leader.
@@ -71,22 +88,7 @@ public class ShieldSquad extends Squad {
             if (target != null) {
                 leader.fightTo(target);
             }
-            List<Float> params = new ArrayList<>();
-            List<Float> drawParams = new ArrayList<>();
-            drawParams.add((float)leader.id);
-            for (Fighter fi: fighters){
-                params.add((float)leader.id);
-                if (fi.getUnit().getDef().getName().equals("vehcapture")){
-                    params.add(175f);
-                }else if (fi.getUnit().getDef().getName().equals("shieldshield")){
-                    params.add(40f);
-                }else {
-                    params.add(75f);
-                }
-                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
-                fi.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
-                params.clear();
-            }
+            collectStragglers();
         }else{
             f.getUnit().setMoveState(0, (short) 0, Integer.MAX_VALUE);
             fighters.add(f);
@@ -94,9 +96,9 @@ public class ShieldSquad extends Squad {
             List<Float> drawParams = new ArrayList<>();
             params.add((float)leader.id);
             drawParams.add((float)leader.id);
-            if (f.getUnit().getDef().getName().equals("vehcapture")){
+            if (f.getUnit().getDef().getUnitDefId() == domiID){
                 params.add(175f);
-            }else if (f.getUnit().getDef().getName().equals("shieldshield")){
+            }else if (f.getUnit().getDef().getUnitDefId() == aspisID){
                 params.add(40f);
             }else {
                 params.add(75f);
@@ -108,7 +110,7 @@ public class ShieldSquad extends Squad {
 
     @Override
     public void removeUnit(Fighter f){
-        if (f.getUnit().getDef().getName().equals("shieldfelon")) numFelons--;
+        if (f.getUnit().getDef().getUnitDefId() == felonID) numFelons--;
 
         if (shields.containsKey(f.id)){
             WeaponDef w = shields.get(f.getUnit().getUnitId()).getDef();
@@ -124,30 +126,15 @@ public class ShieldSquad extends Squad {
                 leaderWeight = 0;
                 return;
             }
-
-            fighters.remove(leader);
+	
+	        fighters.remove(leader);
             leaderWeight = getUnitWeight(leader);
             leader.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
 	        List<Float> moveparams = new ArrayList<>();
 	        moveparams.add(45f);
 	        leader.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
             target = null;
-            List<Float> params = new ArrayList<>();
-            List<Float> drawParams = new ArrayList<>();
-            drawParams.add((float)leader.id);
-            for (Fighter fi:fighters){
-                params.add((float)leader.id);
-                if (fi.getUnit().getDef().getName().equals("vehcapture")){
-                    params.add(175f);
-                }else if (fi.getUnit().getDef().getName().equals("shieldshield")){
-                    params.add(40f);
-                }else {
-                    params.add(75f);
-                }
-                fi.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
-                fi.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
-                params.clear();
-            }
+            collectStragglers();
         }else{
             fighters.remove(f);
         }
@@ -157,9 +144,8 @@ public class ShieldSquad extends Squad {
     public void setTarget(AIFloat3 pos){
         // set a target for the squad to attack.
         target = pos;
-        if (leader != null && leader.getUnit().getHealth() > 0) {
-            leader.fightTo(target);
-        }
+        collectStragglers();
+        leader.fightTo(target);
     }
 
     @Override
@@ -167,8 +153,30 @@ public class ShieldSquad extends Squad {
         // set a target for the squad to attack.
         target = pos;
         if (leader != null && leader.getUnit().getHealth() > 0) {
+        	collectStragglers();
             leader.moveTo(target);
         }
+    }
+    
+    private void collectStragglers(){
+    	for (Fighter f:fighters){
+    		if (distance(leader.getPos(), f.getPos()) > 600f){
+    			f.moveTo(getAngularPoint(leader.getPos(), f.getPos(), 400f)); // have units that haven't rallied yet avoid enemies.
+			    List<Float> params = new ArrayList<>();
+			    List<Float> drawParams = new ArrayList<>();
+			    params.add((float)leader.id);
+			    drawParams.add((float)leader.id);
+			    if (f.getUnit().getDef().getName().equals("vehcapture")){
+				    params.add(175f);
+			    }else if (f.getUnit().getDef().getName().equals("shieldshield")){
+				    params.add(40f);
+			    }else {
+				    params.add(75f);
+			    }
+			    f.getUnit().executeCustomCommand(CMD_ORBIT, params, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
+			    f.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
+		    }
+	    }
     }
 
     public AIFloat3 getAvgPos(){
@@ -185,7 +193,39 @@ public class ShieldSquad extends Squad {
 
     @Override
     public boolean isDead(){
-        return (fighters.isEmpty() && leader == null);
+    	numFelons = 0;
+    	if (leader != null && leader.getUnit().getHealth() <= 0 || leader.getUnit().getTeam() != team){
+    		leader.squad = null;
+    		leader = null;
+	    }else if (leader.getUnit().getDef().getUnitDefId() == felonID){
+    		numFelons++;
+	    }
+	
+	    List<Fighter> invalidFighters = new ArrayList<>();
+	    for (Fighter f: fighters){
+		    if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != team){
+			    invalidFighters.add(f);
+			    shields.remove(f.id);
+			    f.squad = null;
+		    }else if (f.getUnit().getDef().getUnitDefId() == felonID){
+		    	numFelons++;
+		    }
+	    }
+	    fighters.removeAll(invalidFighters);
+	    if (leader == null) leader = getNewLeader();
+    	return (fighters.isEmpty() && leader == null);
+    }
+    
+    @Override
+    public int getThreat(){
+	    float threat = leader.getUnit().getPower() + leader.getUnit().getMaxHealth();
+	    for (Fighter f: fighters){
+		    threat += f.getUnit().getPower() + f.getUnit().getMaxHealth();
+	    }
+	    for (Weapon w:shields.values()){
+	        threat += w.getDef().getShield().getPower();
+	    }
+	    return (int) (threat/8f);
     }
 
     public float getHealth(){
@@ -215,10 +255,10 @@ public class ShieldSquad extends Squad {
 
     Fighter getNewLeader(){
         Fighter bestFighter = null;
-        int score = 0;
+        int score = Integer.MAX_VALUE;
         for (Fighter f: fighters){
             int tmpscore = getUnitWeight(f);
-            if (tmpscore > score){
+            if (tmpscore < score){
                 score = tmpscore;
                 bestFighter = f;
             }
@@ -227,16 +267,8 @@ public class ShieldSquad extends Squad {
     }
 
     int getUnitWeight(Fighter f){
-        String type = f.getUnit().getDef().getName();
-        switch (type){
-            case "shieldshield": return 0;
-            case "vehcapture": return 1;
-            case "shieldarty": return 2;
-            case "shieldassault": return 3;
-            case "shieldriot": return 4;
-            case "shieldfelon": return 5;
-        }
-        return 0;
+        if (f.getUnit().getDef().getUnitDefId() == felonID) return f.index;
+        return index + f.index;
     }
 
     public List<Fighter> disband(){

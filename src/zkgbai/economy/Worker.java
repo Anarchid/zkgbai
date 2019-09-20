@@ -16,6 +16,7 @@ public class Worker {
 	private WorkerTask task;
 	public int id;
 	public boolean isCom = false;
+	public boolean assignedPlop = false;
 	public float bp;
 	public int buildRange;
 	public boolean hasShields = false;
@@ -126,6 +127,10 @@ public class Worker {
 	public float getShields(){
 		if (!hasShields) return 1f;
 		return shield.getShieldPower()/shield.getDef().getShield().getPower();
+	}
+	
+	public boolean hasPlop(){
+		return unit.getRulesParamFloat("facplop", 0f) == 1f;
 	}
 
 	@Override
