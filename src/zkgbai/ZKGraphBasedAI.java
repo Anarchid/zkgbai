@@ -293,21 +293,11 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-	    	for (Worker w:ecoManager.commanders){
-	    		callback.getMap().getDrawer().addPoint(w.getPos(), "Com level: " + w.getUnit().getRulesParamFloat("comm_level", 0f));
+	    	say("NumWorkers: " + ecoManager.workers.size());
+	    	say("NumGreedy: " + ecoManager.greed);
+	    	for (Worker w:ecoManager.workers.values()){
+	    		if (w.isGreedy) callback.getMap().getDrawer().addPoint(w.getPos(), "greedy");
 		    }
-	    	/*if (warManager.squadHandler.nextSquad != null){
-	    		callback.getMap().getDrawer().addPoint(warManager.squadHandler.nextSquad.getPos(), "nextSquad");
-			    callback.getMap().getDrawer().addPoint(warManager.squadHandler.nextSquad.target, "nextSquad target");
-	    		callback.getMap().getDrawer().addLine(warManager.squadHandler.nextSquad.getPos(), warManager.squadHandler.nextSquad.target);
-		    }
-	    	int i = 1;
-	    	for (Squad s:warManager.squadHandler.squads){
-			    callback.getMap().getDrawer().addPoint(s.getPos(), "Squad " + i);
-			    callback.getMap().getDrawer().addPoint(s.target, "Squad " + i + " target");
-			    callback.getMap().getDrawer().addLine(s.getPos(), s.target);
-			    i++;
-		    }*/
 		}
 
 		for (Module module : modules) {

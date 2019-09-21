@@ -17,6 +17,7 @@ public class Worker {
 	public int id;
 	public boolean isCom = false;
 	public boolean assignedPlop = false;
+	public boolean isGreedy = false;
 	public float bp;
 	public int buildRange;
 	public boolean hasShields = false;

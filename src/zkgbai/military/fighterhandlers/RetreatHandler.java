@@ -83,6 +83,7 @@ public class RetreatHandler {
 	    lowManeuverability.add(callback.getUnitDefByName("hoverriot").getUnitDefId());
         lowManeuverability.add(callback.getUnitDefByName("vehriot").getUnitDefId());
         lowManeuverability.add(callback.getUnitDefByName("vehassault").getUnitDefId());
+	    lowManeuverability.add(callback.getUnitDefByName("shieldriot").getUnitDefId());
     }
 
     public void init(){

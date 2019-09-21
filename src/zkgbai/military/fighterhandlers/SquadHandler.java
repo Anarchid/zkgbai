@@ -243,12 +243,28 @@ public class SquadHandler {
 		    shieldSquads.add(s);
 		    s.addUnit(f);
 		    callShieldMobs(s);
-	    }else{
+	    }else if (f.getUnit().getDef().getName().equals("shieldshield") && !shieldSquads.isEmpty()) {
+		    // Assign aspis to the squad with the fewest aspis, giving preference to higher metal value shieldballs
+		    // where they do the most good and are more likely to survive.
+		    retreatHandler.removeUnit(f.getUnit());
+		    ShieldSquad needed = null;
+		    float metalv = Float.MAX_VALUE;
+		    int minAspis = Integer.MAX_VALUE;
+		    for (ShieldSquad s: shieldSquads){
+			    if (s.numAspis < minAspis
+			    || (s.numAspis == minAspis && s.metalValue > metalv)){
+				    needed = s;
+				    metalv = s.metalValue;
+				    minAspis = s.numAspis;
+			    }
+		    }
+		    needed.addUnit(f);
+	    }else {
 		    // For other units.
 		    if (shieldSquads.isEmpty()) {
 			    // If there's no felon, treat shield mobs as regular assaults.
-			    addAssault(f);
 			    retreatHandler.addCoward(f.getUnit());
+			    addAssault(f);
 		    }else{
 			    // Add the unit to the squad with the lowest value.
 			    retreatHandler.removeUnit(f.getUnit());
@@ -424,7 +440,7 @@ public class SquadHandler {
 			    AIFloat3 target = warManager.getTarget(shieldSquad.leader.getUnit(), true);
 			    shieldSquad.setTarget(target);
 		    } else if (warManager.getEffectiveThreat(shieldSquad.getPos()) > 0f || warManager.getPorcThreat(shieldSquad.getPos()) > 0f) {
-			    shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getAvgPos()));
+			    shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getPos()));
 		    } else {
 			    shieldSquad.setTarget(warManager.getRallyPoint(shieldSquad.getPos()));
 		    }

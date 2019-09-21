@@ -28,7 +28,7 @@ public class MiscHandler {
     RetreatHandler retreatHandler;
     SquadHandler squadHandler;
 
-    java.util.Map<Integer, Fighter> supports = new HashMap<Integer, Fighter>();
+    public java.util.Map<Integer, Fighter> supports = new HashMap<Integer, Fighter>();
     java.util.Map<Integer, Unit> sappers = new HashMap<Integer, Unit>();
     java.util.Map<Integer, Unit> berthas = new HashMap<Integer, Unit>();
     java.util.Map<Integer, Unit> swifts = new HashMap<Integer, Unit>();
@@ -444,14 +444,14 @@ public class MiscHandler {
         for (Fighter s : supports.values()) {
             if (retreatHandler.isRetreating(s.getUnit())) continue;
 
-	        if (s.squad != null && s.squad.isDead()) s.squad = null;
+	        if (s.squad != null && (s.squad.isDead() /*|| s.squad.getPos().equals(s.squad.target)*/)) s.squad = null;
 
             if (s.squad == null) {
                 if (!squadHandler.squads.isEmpty()) {
                 	float maxValue = 0;
                 	Squad best = null;
                 	for (Squad sq: squadHandler.squads){
-                		if (sq.isAirSquad || sq.isDead()) continue;
+                		if (sq.isDead()) continue;
                 		if (sq.metalValue > maxValue){
                 			maxValue = sq.metalValue;
                 			best = sq;
@@ -463,8 +463,13 @@ public class MiscHandler {
 
 	        if (s.squad != null) {
 	            AIFloat3 spos = s.squad.getPos();
+	            if (spos.equals(s.squad.target)) ai.say("Iris's squad's pos equals its target!");
 	            if (s.squad.target != null) {
-		            s.moveTo(getDirectionalPoint(s.squad.target, spos, distance(spos, s.squad.target) + 125f));
+	            	if (warManager.getThreat(s.squad.target) > 0 || warManager.getBP(s.squad.target) == 0){
+			            s.moveTo(getDirectionalPoint(s.squad.target, spos, distance(spos, s.squad.target) + 125f));
+		            }else{
+			            s.moveTo(getDirectionalPoint(spos, s.squad.target, 125f));
+		            }
 	            }else{
 		            s.moveTo(spos);
 	            }

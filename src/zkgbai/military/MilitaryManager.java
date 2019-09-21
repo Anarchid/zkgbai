@@ -2,6 +2,7 @@ package zkgbai.military;
 
 import java.util.*;
 
+import com.springrts.ai.AI;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.*;
 
@@ -761,6 +762,7 @@ public class MilitaryManager extends Module {
 			@Override
 			public void run() {
 				allyThreatGraphics.clear();
+				availableMobileThreat = 0;
 				// paint allythreat for raiders
 				for (Raider r : raiderHandler.soloRaiders) {
 					if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID) continue;
@@ -845,6 +847,9 @@ public class MilitaryManager extends Module {
 					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
+				
+				availableMobileThreat /= 500f;
+				availableMobileThreat *= 1.5f;
 
 				// paint allythreat for commanders
 				for (Worker w: ai.ecoManager.commanders){
@@ -1112,6 +1117,13 @@ public class MilitaryManager extends Module {
 		int y = Math.round(position.z / 32f);
 
 		return allyThreatGraphics.getValue(x, y)/500f;
+	}
+	
+	public float getFriendlyPorcThreat(AIFloat3 position){
+		int x = Math.round(position.x / 32f);
+		int y = Math.round(position.z / 32f);
+		
+		return allyPorcGraphics.getValue(x, y);
 	}
 	
 	public float getTotalFriendlyThreat(AIFloat3 position){

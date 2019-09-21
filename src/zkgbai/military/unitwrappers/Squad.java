@@ -32,7 +32,7 @@ public class Squad {
 		f.squad = this;
 		f.index = index;
 		index++;
-		metalValue = metalValue + f.metalValue;
+		metalValue += f.metalValue;
 		f.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
 
 		if (leader == null) leader = f;
@@ -104,8 +104,8 @@ public class Squad {
 
 	public AIFloat3 getPos(){
 		float maxdist = isAirSquad ? 300f: 200f;
-
-		if (fighters.size() > 0){
+		
+		if (!fighters.isEmpty()){
 			int count = 0;
 			float x = 0;
 			float z = 0;
@@ -121,9 +121,11 @@ public class Squad {
 			pos.x = x;
 			pos.z = z;
 			return pos; // otherwise return the average position of all its units
+		}else if (target != null){
+			return target; // otherwise if the squad has no units, return its target
+		}else{
+			return new AIFloat3();
 		}
-
-		return target; // otherwise if the squad has no units, return its target
 	}
 
 	public boolean isRallied(int frame){
@@ -146,17 +148,21 @@ public class Squad {
 
 	public boolean isDead(){
 		List<Fighter> invalidFighters = new ArrayList<>();
+		metalValue = 0;
 		for (Fighter f: fighters){
 			if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != team){
 				invalidFighters.add(f);
 				f.squad = null;
+				if (f.equals(leader)) leader = null;
+			}else{
+				metalValue += f.metalValue;
 			}
 		}
 		fighters.removeAll(invalidFighters);
 		if (status != 'f') cutoff();
 		
 		leader = getBestLeader();
-		return (leader == null);
+		return fighters.isEmpty();
 	}
 
 	private void cutoff(){

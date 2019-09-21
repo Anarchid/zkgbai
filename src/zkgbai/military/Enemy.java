@@ -129,7 +129,7 @@ public class Enemy {
 				}
 			}
 			
-			if (ud.getName().contains("factory") || ud.getName().contains("hub") || ud.getName().equals("energyfusion") || ud.getName().equals("energysingu")){
+			if (ud.getName().contains("factory") || ud.getName().contains("hub") || ud.getName().equals("energyfusion") || ud.getName().equals("energysingu") || ud.getName().contains("_") /* commanders */){
 				this.isImportant = true;
 			}
 

@@ -46,7 +46,7 @@ public class FactoryManager extends Module {
 	boolean enemyHasHeavyPorc = false;
 	
 	public int numWorkers = 0;
-	float mobileBP = 0;
+	public float mobileBP = 0;
 	public float workerValue = 0;
 	public float fighterValue = 0;
 	public float armyValue = 0;
@@ -724,7 +724,7 @@ public class FactoryManager extends Module {
 		
 		float reclaimValue = economyManager.getReclaimValue();
 		
-		float territoryMod = Math.min(0.26f, graphManager.territoryFraction/1.9f);
+		float territoryMod = Math.min(0.25f, graphManager.territoryFraction/2f);
 		float fv = (fighterValue * Math.min(0.5f, graphManager.territoryFraction)) + Math.min(fighterValue * territoryMod, reclaimValue/2f);
 		float income = economyManager.effectiveIncomeMetal + (reclaimValue/(2f * fac.costPerBP));
 		int workerDeficit = Math.round((income - mobileBP)/fac.workerBP);
@@ -776,12 +776,13 @@ public class FactoryManager extends Module {
 			return "cloakbomb";
 		}
 		
-		if (hasFusion && warManager.enemyHeavyPorcValue > heavyArtyValue && Math.random() > 0.85) {
+		if (hasFusion && Math.random() < (graphManager.territoryFraction/4f) * (1f - heavyArtyValue/warManager.enemyHeavyPorcValue)) {
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
 			return "cloaksnipe";
 		}
 		
-		if (graphManager.eminentTerritory && warManager.enemyLightPorcValue > lightArtyValue && Math.random() > 0.85){
+		if (economyManager.adjustedIncome > 20
+			      && Math.random() < (graphManager.territoryFraction/5f) * (1f - lightArtyValue/warManager.enemyLightPorcValue)){
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 1);
 			return "cloakarty";
 		}
@@ -957,7 +958,7 @@ public class FactoryManager extends Module {
 		}
 		
 		if (graphManager.eminentTerritory
-			      && Math.random() < graphManager.territoryFraction/10f * (1f - heavyArtyValue/warManager.enemyHeavyPorcValue)){
+			      && Math.random() < (graphManager.territoryFraction/10f) * (1f - heavyArtyValue/warManager.enemyHeavyPorcValue)){
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 3);
 			return "vehheavyarty";
 		}

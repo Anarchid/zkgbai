@@ -574,7 +574,7 @@ public class Pathfinder extends Object {
     public final CostSupplier SCYTHE_CHECK = new CostSupplier() {
         @Override
         public float getCost(float slope, float maxSlope, AIFloat3 pos) {
-            if (slope > maxSlope || warManager.getRiotThreat(pos) > 0 || warManager.getScytheThreat(pos) > 0) {
+            if (slope > maxSlope || warManager.getRiotThreat(pos) > 0 || (warManager.getScytheThreat(pos) > 0 && warManager.getThreat(pos) > maxThreat)) {
                 return -1;
             }else {
                 return 1f + (slope/maxSlope);

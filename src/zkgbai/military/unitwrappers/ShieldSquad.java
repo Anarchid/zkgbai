@@ -63,6 +63,8 @@ public class ShieldSquad extends Squad {
                     break;
                 }
             }
+        }else{
+        	numAspis++;
         }
 
         if (leader == null){
@@ -179,27 +181,20 @@ public class ShieldSquad extends Squad {
 	    }
     }
 
-    public AIFloat3 getAvgPos(){
-        return super.getPos();
-    }
-
-    @Override
-    public AIFloat3 getPos(){
-        if (leader != null){
-            return leader.getPos();
-        }
-        return target;
-    }
-
     @Override
     public boolean isDead(){
     	numFelons = 0;
+    	numAspis = 0;
+    	metalValue = 0;
     	if (leader != null && leader.getUnit().getHealth() <= 0 || leader.getUnit().getTeam() != team){
     		leader.squad = null;
     		leader = null;
 	    }else if (leader.getUnit().getDef().getUnitDefId() == felonID){
     		numFelons++;
+	    }else if (leader.getUnit().getDef().getUnitDefId() == aspisID){
+    		numAspis++;
 	    }
+    	if (leader != null) metalValue += leader.metalValue;
 	
 	    List<Fighter> invalidFighters = new ArrayList<>();
 	    for (Fighter f: fighters){
@@ -207,12 +202,29 @@ public class ShieldSquad extends Squad {
 			    invalidFighters.add(f);
 			    shields.remove(f.id);
 			    f.squad = null;
-		    }else if (f.getUnit().getDef().getUnitDefId() == felonID){
-		    	numFelons++;
+		    }else{
+		    	int defID = f.getUnit().getDef().getUnitDefId();
+		    	if (defID == felonID) {
+				    numFelons++;
+			    }else if (defID == aspisID){
+		    		numAspis++;
+			    }
+		    	metalValue += f.metalValue;
 		    }
 	    }
 	    fighters.removeAll(invalidFighters);
-	    if (leader == null) leader = getNewLeader();
+	    if (leader == null) {
+		    leader = getNewLeader();
+		    if (leader != null){
+		    	fighters.remove(leader);
+		    	leader.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			    leaderWeight = getUnitWeight(leader);
+			    List<Float> moveparams = new ArrayList<>();
+			    moveparams.add(45f);
+			    leader.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
+			    collectStragglers();
+		    }
+	    }
     	return (fighters.isEmpty() && leader == null);
     }
     
@@ -269,6 +281,13 @@ public class ShieldSquad extends Squad {
     int getUnitWeight(Fighter f){
         if (f.getUnit().getDef().getUnitDefId() == felonID) return f.index;
         return index + f.index;
+    }
+    
+    @Override
+    public AIFloat3 getPos(){
+	    if (leader != null && leader.getUnit().getHealth() > 0 && leader.getUnit().getTeam() == team) return leader.getPos();
+	    if (target != null) return target; // otherwise if the squad has no units, return its target
+	    return new AIFloat3();
     }
 
     public List<Fighter> disband(){

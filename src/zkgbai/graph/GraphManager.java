@@ -698,11 +698,10 @@ public class GraphManager extends Module {
 			}
 		}
 		if (closest != null) {
-			closest = callback.getMap().findClosestBuildSite(building, closest, 600f, 3, 0);
+			return closest;
 		}else{
 			return getAllyCenter();
 		}
-		return closest;
 	}
 	
 	public AIFloat3 getClosestRaiderHaven(AIFloat3 position){

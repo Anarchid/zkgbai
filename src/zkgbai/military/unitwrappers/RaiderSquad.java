@@ -189,7 +189,7 @@ public class RaiderSquad {
 		raiders.removeAll(invalidRaiders);
 		
 		leader = getNewLeader();
-		return (leader == null);
+		return raiders.isEmpty();
 	}
 
     private Raider getNewLeader(){
