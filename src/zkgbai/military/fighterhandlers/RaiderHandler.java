@@ -288,6 +288,9 @@ public class RaiderHandler {
 			for (Raider r : soloRaiders) {
 				if (r.getUnit().getHealth() > 0 && !retreatHandler.isRetreating(r.getUnit())) r.unstick(frame);
 			}
+			for (Raider r : kodachis) {
+				if (r.getUnit().getHealth() > 0 && !retreatHandler.isRetreating(r.getUnit())) r.unstick(frame);
+			}
 		}
 	}
 
