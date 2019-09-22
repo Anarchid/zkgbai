@@ -64,10 +64,10 @@ public class Factory extends Worker {
 				raiderSpam = -9;
 			}
 
-			if (callback.getMap().getHeight() + callback.getMap().getWidth() < 1280){
+			/*if (callback.getMap().getHeight() + callback.getMap().getWidth() < 1280){
 				raiderSpam /= 2;
 				this.scoutAllowance = 1;
-			}
+			}*/
 
 			if (defName.equals("factoryplane")){
 				raiderSpam = -1;

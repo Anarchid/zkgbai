@@ -11,6 +11,7 @@ import zkgbai.economy.tasks.RepairTask;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.Link;
 import zkgbai.graph.MetalSpot;
+import zkgbai.kgbutil.HeightMap;
 import zkgbai.los.LosManager;
 import zkgbai.military.Enemy;
 import zkgbai.military.MilitaryManager;
@@ -125,6 +126,7 @@ public class EconomyManager extends Module {
 	
 	private UnitClasses unitTypes;
 	private BuildIDs buildIDs;
+	private HeightMap heightMap;
 	
 	String userFac = null;
 
@@ -144,6 +146,7 @@ public class EconomyManager extends Module {
 		this.bigMap = (callback.getMap().getHeight() + callback.getMap().getWidth() > 1536);
 		
 		this.unitTypes = UnitClasses.getInstance();
+		this.heightMap = new HeightMap(callback);
 	}
 
 	@Override
@@ -508,19 +511,29 @@ public class EconomyManager extends Module {
     
     @Override
     public int unitDestroyed(Unit unit, Unit attacker) {
-		radars.remove(unit);
-    	porcs.remove(unit);
-    	nanos.remove(unit.getUnitId());
-		airpads.remove(unit);
-		fusions.remove(unit);
-		mexes.remove(unit);
-		solars.remove(unit);
-		windgens.remove(unit);
-		pylons.remove(unit);
-		AAs.remove(unit);
-		superWeps.remove(unit);
-		storages.remove(unit);
-		screamers.remove(unit);
+		if (unit.getDef().getSpeed() == 0f) {
+			radars.remove(unit);
+			porcs.remove(unit);
+			nanos.remove(unit.getUnitId());
+			airpads.remove(unit);
+			fusions.remove(unit);
+			mexes.remove(unit);
+			solars.remove(unit);
+			windgens.remove(unit);
+			pylons.remove(unit);
+			AAs.remove(unit);
+			superWeps.remove(unit);
+			storages.remove(unit);
+			screamers.remove(unit);
+			
+			for (ConstructionTask ct:constructionTasks){
+				if (ct.target != null && ct.target.getUnitId() == unit.getUnitId()) {
+					// if a building was killed while under construction, reset its target.
+					ct.target = null;
+					break;
+				}
+			}
+		}
 
 		newWorkers.remove(unit.getUnitId());
 		
@@ -538,24 +551,18 @@ public class EconomyManager extends Module {
 		RepairTask rt = new RepairTask(unit);
 		repairTasks.remove(rt);
 	
-	    Worker deadWorker = workers.get(unit.getUnitId());
-	    if (deadWorker != null){
-	    	if (deadWorker.isGreedy) greed--;
-		    deadWorker.clearTask();
-	    	workers.remove(deadWorker.id);
-		    commanders.remove(deadWorker);
-		    seeders.remove(deadWorker);
-			idlers.remove(deadWorker);
-			assigned.remove(deadWorker);
-	    }
-	    
-	    for (ConstructionTask ct:constructionTasks){
-		    if (ct.target != null && ct.target.getUnitId() == unit.getUnitId()) {
-			    // if a building was killed while under construction, reset its target.
-			    ct.target = null;
-			    break;
-		    }
-	    }
+		if (unit.getDef().getSpeed() > 0 && unit.getDef().getBuildSpeed() > 0) {
+			Worker deadWorker = workers.get(unit.getUnitId());
+			if (deadWorker != null) {
+				if (deadWorker.isGreedy) greed--;
+				deadWorker.clearTask();
+				workers.remove(deadWorker.id);
+				commanders.remove(deadWorker);
+				seeders.remove(deadWorker);
+				idlers.remove(deadWorker);
+				assigned.remove(deadWorker);
+			}
+		}
 	    
         return 0; // signaling: OK
     }
@@ -827,7 +834,7 @@ public class EconomyManager extends Module {
 	void assignWorkers(){
 		if (frame < 8) return;
 		// if greedy workers make up too much of the workforce, convert them.
-		if (greed >= workers.size()/3){
+		if (greed > workers.size()/3){
 			for (Worker w:workers.values()) w.isGreedy = false;
 			greed = 0;
 		}
@@ -922,7 +929,7 @@ public class EconomyManager extends Module {
 				w.setTask(task, frame);
 			}
 			
-			boolean outOfRange = distance(w.getPos(), task.getPos()) > w.getUnit().getDef().getBuildDistance() * 2f;
+			boolean outOfRange = distance(w.getPos(), task.getPos()) > w.getUnit().getDef().getBuildDistance() * 1.5f;
 			if (task instanceof ConstructionTask) {
 				ConstructionTask ctask = (ConstructionTask) task;
 				try {
@@ -1178,10 +1185,9 @@ public class EconomyManager extends Module {
 		}
 
 		if (task instanceof RepairTask){
-			if (worker.isGreedy) return dist + (10000 * costMod);
 			RepairTask rptask = (RepairTask) task;
 			if (rptask.target.getHealth() > 0) {
-				if (rptask.target.getDef().getSpeed() > 0 && rptask.target.getDef().isAbleToAttack() && !rptask.target.getDef().isBuilder()) {
+				if (!worker.isGreedy && rptask.target.getDef().getSpeed() > 0 && rptask.target.getDef().isAbleToAttack() && !rptask.target.getDef().isBuilder()) {
 					// for mobile combat units
 					if (warManager.getPorcThreat(rptask.getPos()) > 0) return Float.MAX_VALUE;
 					
@@ -1202,7 +1208,7 @@ public class EconomyManager extends Module {
 					}
 
 					return dist + (100 * (costMod - 1)) - 250 - rptask.target.getMaxHealth() / (5 * costMod);
-				}else if (rptask.target.getDef().isAbleToAttack() && !rptask.target.getDef().isBuilder() && !rptask.target.getDef().getName().equals("turretaalaser")){
+				}else if (!worker.isGreedy && rptask.target.getDef().isAbleToAttack() && !rptask.target.getDef().isBuilder() && !rptask.target.getDef().getName().equals("turretaalaser")){
 					// for static defenses
 					return dist + (100 * (costMod - 1)) - (rptask.target.getMaxHealth() * 2) / costMod;
 				}else{
@@ -1686,7 +1692,7 @@ public class EconomyManager extends Module {
 				// don't let factories get blocked by random crap, nor build them on top of mexes
 				while (callback.getFriendlyUnitsIn(position, 100f).size() > 1 || distance(graphManager.getClosestSpot(position).getPos(), position) < 100 || !buildCheck(new ConstructionTask(factory, position, 0))) {
 					if (i++ > 10) return;
-					position = getRadialPoint(position, 25f);
+					position = getAngularPoint(worker.getPos(), graphManager.getMapCenter(), 100f);
 					position = callback.getMap().findClosestBuildSite(factory,position,600f, 3, facing);
 				}
 				
@@ -1736,19 +1742,7 @@ public class EconomyManager extends Module {
     void createRadarTask(Worker worker){
     	UnitDef radar = callback.getUnitDefByName("staticradar");
     	AIFloat3 position = worker.getUnit().getPos();
-    	
-    	MetalSpot closest = graphManager.getClosestNeutralSpot(position);
-
-		if (closest != null && distance(closest.getPos(),position)<100){
-    		AIFloat3 mexpos = closest.getPos();
-			float distance = distance(mexpos, position);
-			float extraDistance = 125;
-			float vx = (position.x - mexpos.x)/distance;
-			float vz = (position.z - mexpos.z)/distance;
-			position.x = position.x+vx*extraDistance;
-			position.z = position.z+vz*extraDistance;
-    	}
-    	
+    	position = heightMap.getHighestPointInRadius(position, 800f);
     	position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
 
     	 ConstructionTask ct =  new ConstructionTask(radar, position, 0);
@@ -1813,6 +1807,7 @@ public class EconomyManager extends Module {
 				return;
 			}
 			position = getAngularPoint(graphManager.getAllyBase(), graphManager.getMapCenter(), distance(graphManager.getAllyBase(), graphManager.getMapCenter()) * 0.65f);
+			position = heightMap.getHighestPointInRadius(position, 800f);
 			position = callback.getMap().findClosestBuildSite(bertha, position, 600f, 3, 0);
 			int j = 0;
 			while (!good) {

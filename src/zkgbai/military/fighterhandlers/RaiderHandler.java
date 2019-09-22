@@ -500,8 +500,8 @@ public class RaiderHandler {
 			}else{
 				// Get targets for actively raiding squads.
 				float threat = rs.getThreat()/500f;
-				boolean overThreat = (warManager.getThreat(pos) > threat || warManager.getRiotThreat(pos) > 0
-					                        || warManager.getRiotThreat(rs.target) > 0 || warManager.getThreat(rs.target) > threat);
+				boolean overThreat = (!rs.leader.getUnit().isCloaked()
+					                        && (warManager.getThreat(pos) > threat || warManager.getRiotThreat(pos) > 0 || warManager.getRiotThreat(rs.target) > 0 || warManager.getThreat(rs.target) > threat));
 				if (overThreat){
 					// try to keep raider squads from suiciding.
 					rs.sneak(graphManager.getClosestRaiderHaven(pos), frame);

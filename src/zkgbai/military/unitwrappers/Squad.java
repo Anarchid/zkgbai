@@ -166,7 +166,7 @@ public class Squad {
 	}
 
 	private void cutoff(){
-		if (fighters.size() < 2 || metalValue < 1000f){
+		if (fighters.size() < 3 && metalValue < 1000f){
 			for (Fighter f:fighters){
 				f.squad = null;
 			}

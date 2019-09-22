@@ -1109,24 +1109,23 @@ public class FactoryManager extends Module {
 		}
 		
 		double rand = Math.random();
-		if (economyManager.adjustedIncome < 35) {
-			if (numBanishers * 3 > numReapers){
+		if (economyManager.adjustedIncome < 35 && !graphManager.eminentTerritory) {
+			if (numBanishers > numReapers){
 				fac.expensiveRaiderSpam--;
 				return "tankassault";
 			}else {
 				return "tankriot";
 			}
 		}else{
-			if (rand > 0.1) {
-				if (numBanishers * 4 > numReapers){
-					return "tankassault";
-				}else {
-					return "tankriot";
-				}
-			}else {
-				fac.expensiveRaiderSpam -= 4;
+			if (warManager.squadHandler.squads.size() > 1 && Math.random() > 0.9){
+				fac.expensiveRaiderSpam--;
 				fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 1);
 				return "tankheavyassault";
+			}
+			if (rand > 0.25){
+				return "tankassault";
+			}else {
+				return "tankriot";
 			}
 		}
 	}
