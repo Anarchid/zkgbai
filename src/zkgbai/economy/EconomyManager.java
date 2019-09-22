@@ -1630,8 +1630,8 @@ public class EconomyManager extends Module {
 		
 		// Uncomment this to set the intial fac for debugging purposes.
 		/*if (facManager.factories.size() == 0){
-			factory = callback.getUnitDefByName("factorytank");
-			potentialFacList.remove("factorytank");
+			factory = callback.getUnitDefByName("factoryveh");
+			potentialFacList.remove("factoryveh");
 		}else*/ if (userFac != null && facManager.factories.size() == 0){
 			factory = callback.getUnitDefByName(userFac);
 			potentialFacList.remove(userFac);
@@ -1745,6 +1745,9 @@ public class EconomyManager extends Module {
     	position = heightMap.getHighestPointInRadius(position, 800f);
     	position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
     	if (!needRadar(position)) return;
+    	/*if (!worker.getUnit().getDef().isAbleToFly() && callback.getPathing().getApproximateLength(worker.getPos(), position, worker.getUnit().getDef().getMoveData().getPathType(), worker.buildRange - 10f) < distance(worker.getPos(), position) - (worker.buildRange - 10f)){
+    	
+	    }*/
 
     	 ConstructionTask ct =  new ConstructionTask(radar, position, 0);
     	if (buildCheck(ct) && !radarTasks.contains(ct)){

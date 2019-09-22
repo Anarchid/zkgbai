@@ -32,9 +32,9 @@ public class Pathfinder extends Object {
     float[] minCosts;
     float[] cachedCosts;
     int[] pathTo;
-    private final static int mapCompression = 8;
+    private final static int mapCompression = 4;//8;
     private final static int originalMapRes = 16;
-    private final static int mapRes = 128;
+    private final static int mapRes = mapCompression * originalMapRes;
 
     private int scytheID;
     private float maxThreat;
@@ -76,7 +76,7 @@ public class Pathfinder extends Object {
             for (int y = 0; y < mheight / originalMapRes; y++) {
                 int cx = x / mapCompression;
                 int cy = y / mapCompression;
-                slopeMap[cy * smwidth + cx] = Math.max(slopeMap[cy * smwidth + cx], map.get(y * (smwidth * mapCompression) + x));
+                slopeMap[cy * smwidth + cx] = Math.max(slopeMap[cy * smwidth + cx], map.get(y * (smwidth * (int) mapCompression) + x));
             }
         }
     }
@@ -243,17 +243,21 @@ public class Pathfinder extends Object {
         }
         
         pos = targetPos;
+        int i = 0;
         while (pos != startPos) {
-            if (flyer) {
-                result.add(toAIFloat3(pos, flyheight));
-            }else{
-                result.add(toAIFloat3(pos));
-            }
+        	if (i % 4 == 0){
+	            if (flyer) {
+	                result.add(toAIFloat3(pos, flyheight));
+	            }else{
+	                result.add(toAIFloat3(pos));
+	            }
+        	}
+        	i++;
             pos = pathTo[pos];
         }
         result.add(target);
         if (result.size() > 1) result.poll(); // remove the unit's current location
-        if (result.size() > 1) result.poll(); // remove the first waypoint because it causes stuttering.
+        //if (result.size() > 1) result.poll(); // remove the first waypoint because it causes stuttering.
         
         return result;
         

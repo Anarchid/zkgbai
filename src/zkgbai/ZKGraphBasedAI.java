@@ -18,6 +18,7 @@ import zkgbai.economy.Worker;
 import zkgbai.economy.tasks.CombatReclaimTask;
 import zkgbai.economy.tasks.ConstructionTask;
 import zkgbai.graph.GraphManager;
+import zkgbai.graph.Link;
 import zkgbai.graph.MetalSpot;
 import zkgbai.kgbutil.Pathfinder;
 import zkgbai.los.LosManager;
@@ -293,11 +294,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-	    	say("NumWorkers: " + ecoManager.workers.size());
-	    	say("NumGreedy: " + ecoManager.greed);
-	    	for (Worker w:ecoManager.workers.values()){
-	    		if (w.isGreedy) callback.getMap().getDrawer().addPoint(w.getPos(), "greedy");
-		    }
+	    
 		}
 
 		for (Module module : modules) {

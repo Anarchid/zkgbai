@@ -50,12 +50,14 @@ public class Raider extends Fighter {
 	public void raid(AIFloat3 target, int frame) {
 		Queue<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(target, 100f), unit.isCloaked() ? pathfinder.SCYTHE_PATH : pathfinder.RAIDER_PATH);
 		unit.fight(path.poll(), (short) 0, Integer.MAX_VALUE);
+		
 		this.target = target;
 	}
 
 	public void sneak(AIFloat3 target, int frame) {
 		Queue<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(target, 100f), unit.isCloaked() ? pathfinder.SCYTHE_PATH : pathfinder.RAIDER_PATH);
 		unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE);
+		
 		this.target = target;
 	}
 	

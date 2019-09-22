@@ -416,7 +416,7 @@ public class MilitaryManager extends Module {
 		
 		retreatHandler.checkUnit(h, on_fire);
 		// retreat scouting raiders so that they don't suicide into enemy raiders
-		if (!on_fire && !retreatHandler.isRetreating(h)) {
+		if (!on_fire /*&& !retreatHandler.isRetreating(h)*/) {
 			raiderHandler.avoidEnemies(h, attacker, dir);
 		}
 		
@@ -909,13 +909,13 @@ public class MilitaryManager extends Module {
 					if (t.isAA || t.isFlexAA){
 						aaThreatGraphics.paintCircle(x, y, (int) Math.ceil(r * 1.25f), effectivePower);
 					}else{
-						if (t.isRiot) riotGraphics.paintCircle(x, y, r + 1, 1);
+						if (t.isRiot) riotGraphics.paintCircle(x, y, r + 2, 1);
 						threatGraphics.paintCircle(x, y, r + 2, effectivePower);
 					}
 				}else if (!t.isAA){
 					// for statics
-					if (t.isRiot) riotGraphics.paintCircle(x, y, r, 1);
-					threatGraphics.paintCircle(x, y, r, effectivePower);
+					if (t.isRiot) riotGraphics.paintCircle(x, y, r + 2, 1);
+					threatGraphics.paintCircle(x, y, r + 2, effectivePower);
 					if (updatePorc){
 						enemyPorcGraphics.paintCircle(x, y, r - 1, effectivePower);
 					}

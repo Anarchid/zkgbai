@@ -1,13 +1,11 @@
 package zkgbai.economy;
 
-import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Pathing;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.Link;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,68 +45,68 @@ public class TerrainAnalyzer {
     }
 
     private void populateFacList(){
-        debug(taMsg + "Checking Veh Pathability..");
+        log(taMsg + "Checking Veh Pathability..");
         PathResult veh = checkPathing(vehPath, 1.35f);
         if (veh.result){
-            debug(taMsg + "Veh path check succeeded, enabling veh!");
+            log(taMsg + "Veh path check succeeded, enabling veh!");
             initialFacList.add("factoryveh");
             initialFacList.add("factorytank");
             initialFacList.add("factoryhover");
         }
 
         if (!veh.result){
-            debug(taMsg + "Checking Hover Pathability..");
+            log(taMsg + "Checking Hover Pathability..");
             PathResult hover = checkPathing(hoverPath, 1.35f);
             if (hover.result){
-                debug(taMsg + "Hover path check succeeded, enabling hovers!");
+                log(taMsg + "Hover path check succeeded, enabling hovers!");
                 initialFacList.add("factoryhover");
             }
         }
 
-        debug(taMsg + "Checking Bot Pathability..");
+        log(taMsg + "Checking Bot Pathability..");
         PathResult bot = checkPathing(botPath, 1.4f);
         if ((bot.avgCostRatio < veh.avgCostRatio - 0.05f || !veh.result || ai.mergedAllies > 3) && bot.result){
-            debug(taMsg + "Bot path check succeeded, enabling bots!");
+            log(taMsg + "Bot path check succeeded, enabling bots!");
             initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");
             initialFacList.add("factoryamph");
         }else if (veh.result && bot.avgCostRatio >= veh.avgCostRatio - 0.05f) {
-            debug(taMsg + "Bots not cost competitive, skipping!");
+            log(taMsg + "Bots not cost competitive, skipping!");
         }
 
-        debug(taMsg + "Checking Spider Pathability..");
+        log(taMsg + "Checking Spider Pathability..");
         PathResult spider = checkPathing(spiderPath, 5f);
         if (((spider.avgCostRatio < bot.avgCostRatio - 0.02f && spider.avgCostRatio < veh.avgCostRatio - 0.05f) || ai.mergedAllies > 7) && spider.result){
-            debug(taMsg + "Spider path check succeeded, enabling spiders and jumps!");
+            log(taMsg + "Spider path check succeeded, enabling spiders and jumps!");
             initialFacList.add("factoryspider");
             if (!initialFacList.contains("factoryjump")) {
                 //initialFacList.add("factoryjump");
             }
         } else if (spider.avgCostRatio >= bot.avgCostRatio - 0.02f || spider.avgCostRatio >= veh.avgCostRatio - 0.05f) {
-            debug(taMsg + "Spiders not cost competitive, skipping!");
+            log(taMsg + "Spiders not cost competitive, skipping!");
         }
 
-        debug(taMsg + "Checking Boat Pathability..");
+        log(taMsg + "Checking Boat Pathability..");
         PathResult boat = checkPathing(boatPath, 5f);
         if (boat.result){
-            debug(taMsg + "Boat path check succeeded, enabling boats!");
+            log(taMsg + "Boat path check succeeded, enabling boats!");
             //initialFacList.add("factoryship");
         }
 
-        debug(taMsg + "Checking Amph Pathability..");
+        log(taMsg + "Checking Amph Pathability..");
         PathResult amph = checkPathing(amphPath, 5f);
         if (amph.result && !bot.result){
-            debug(taMsg + "Amph path check succeeded, stopping!");
+            log(taMsg + "Amph path check succeeded, stopping!");
             initialFacList.add("factoryamph");
         }
 
         if (ai.allies.size() > 2){
-            debug(taMsg + "Allies detected, enabling air starts!");
+            log(taMsg + "Allies detected, enabling air starts!");
             initialFacList.add("factorygunship");
         }
 
         if (initialFacList.size() < 3 || initialFacList.size() < ai.mergedAllies + 1) {
-            debug(taMsg + "Terrain Analysis Failed (or team was too big)! Enabling random factories.");
+            log(taMsg + "Terrain Analysis Failed (or team was too big)! Enabling random factories.");
             if (!initialFacList.contains("factorycloak")) {
                 initialFacList.add("factorycloak");
                 initialFacList.add("factoryshield");
@@ -146,11 +144,11 @@ public class TerrainAnalyzer {
             avgRelCost += linkCost/links.size();
         }
         if (!success){
-            debug(taMsg + "Path Check Failed: unreachable mexes.");
+            log(taMsg + "Path Check Failed: unreachable mexes.");
         }
-        debug(taMsg + "Average Relative Path Cost: " + avgRelCost);
+        log(taMsg + "Average Relative Path Cost: " + avgRelCost);
         if (success && avgRelCost > maxRelCost){
-            debug(taMsg + "Path Check Failed: high path costs.");
+            log(taMsg + "Path Check Failed: high path costs.");
             success = false;
         }
         return new PathResult(success, avgRelCost);
@@ -165,8 +163,8 @@ public class TerrainAnalyzer {
         return facList;
     }
 
-    private void debug(String s) {
-        callback.getGame().sendTextMessage(s, 0);
+    private void log(String s) {
+        callback.getLog().log(s);
     }
 
 }

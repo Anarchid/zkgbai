@@ -631,22 +631,23 @@ public class RaiderHandler {
 				
 				boolean porc = false;
 				for (Enemy e: warManager.getTargets()){
-					if (e.isRiot || warManager.getRiotThreat(e.position) > 0 || warManager.getThreat(e.position) > threat || !e.identified){
+					float ethreat = warManager.getThreat(e.position);
+					if (e.isRiot || warManager.getRiotThreat(e.position) > 0 || ethreat > threat || !e.identified){
 						continue;
 					}
 
 					float tmpcost = distance(pos, e.position);
 					if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
-						tmpcost += 1000;
+						tmpcost += 1250f;
 					}
 					if (e.isWorker){
 						tmpcost = (tmpcost/4)-100;
-						tmpcost += 750f * warManager.getThreat(e.position);
+						tmpcost += 1000f * Math.ceil(ethreat);
 					}
 
 					if (e.isStatic && e.getDanger() > 0f){
 						tmpcost = (tmpcost/4)-100;
-						tmpcost += 500f * warManager.getThreat(e.position);
+						tmpcost += 500f * Math.ceil(ethreat);
 					}
 
 					if (tmpcost < cost){
@@ -683,12 +684,13 @@ public class RaiderHandler {
 	}
 
 	public void avoidEnemies(Unit h, Unit attacker, AIFloat3 dir){
-		if (smallRaiders.containsKey(h.getUnitId())) {
-			Raider r = smallRaiders.get(h.getUnitId());
-			if (h.getHealth() / h.getMaxHealth() < 0.8 && attacker != null && attacker.getMaxSpeed() > 0 && warManager.getEffectiveThreat(h.getPos()) <= 0) {
-				float movdist = -100;
-				if (r.getUnit().getDef().getName().equals("hoverraid")) {
-					movdist = -450;
+			if (h.getHealth() > 0 && h.getHealth() / h.getMaxHealth() < 0.8f && attacker != null && attacker.getMaxSpeed() > 0) {
+				Raider r = smallRaiders.get(h.getUnitId());
+				if (r == null) return;
+				float movdist = -100f;
+				if (h.getDef().getName().charAt(0) == 'h') {
+					// for daggers
+					movdist = -450f;
 				}
 				float x = movdist * dir.x;
 				float z = movdist * dir.z;
@@ -696,9 +698,8 @@ public class RaiderHandler {
 				AIFloat3 target = new AIFloat3();
 				target.x = pos.x + x;
 				target.z = pos.z + z;
-				h.moveTo(target, (short) 0, frame);
+				h.moveTo(target, (short) 0, Integer.MAX_VALUE);
 			}
-		}
 	}
 
 	private void cleanUnits(){
