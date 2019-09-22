@@ -59,6 +59,15 @@ public class Raider extends Fighter {
 		this.target = target;
 	}
 	
+	public boolean isReloading(int frame){
+		int lastWepFrame = 0;
+		for (Weapon w:unit.getWeapons()){
+			int reload = w.getReloadFrame();
+			if (reload > lastWepFrame) lastWepFrame = reload;
+		}
+		return lastWepFrame > frame;
+	}
+	
 	public void unstick(int frame) {
 		if (unit.getHealth() <= 0) return;
 		

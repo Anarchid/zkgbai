@@ -31,6 +31,7 @@ public class Enemy {
 	public boolean isAA = false;
 	public boolean isFlexAA = false;
 	public boolean isPorc = false;
+	public boolean isMex = false;
 	boolean isSuperWep = false;
 	boolean isMinorCancer = false;
 	boolean isMajorCancer = false;
@@ -160,6 +161,8 @@ public class Enemy {
 			if (isStatic && !isAA && getDanger() > 0f){
 				isPorc = true;
 			}
+			
+			if (ud.getName().equals("staticmex")) isMex = true;
 		}
 		this.speed = u.getSpeed()/30;
 	}

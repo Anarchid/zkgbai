@@ -669,7 +669,11 @@ public class FactoryManager extends Module {
 		
 		scoutsNeeded = 0;
 		for (Factory f:factories.values()) scoutsNeeded += f.maxScoutAllowance;
-		scoutsNeeded -= warManager.raiderHandler.soloRaiders.size();
+		if (defName.equals("factorytank")){
+			scoutsNeeded -= warManager.raiderHandler.kodachis.size();
+		}else {
+			scoutsNeeded -= warManager.raiderHandler.soloRaiders.size();
+		}
 		scoutBudget = Math.max(0, Math.min(scoutsNeeded, fac.scoutAllowance));
 		
 		hasFusion = (!economyManager.fusions.isEmpty() &&
@@ -1100,7 +1104,7 @@ public class FactoryManager extends Module {
 			fac.expensiveRaiderSpam--;
 		}
 		
-		if (economyManager.adjustedIncome > 30f && warManager.enemyPorcValue > artyValue && warManager.squadHandler.squads.size() > 1 && Math.random() > 0.5){
+		if (economyManager.adjustedIncome > 30f && warManager.squadHandler.squads.size() > 1 && Math.random() < (graphManager.territoryFraction) * (1f - artyValue/warManager.enemyPorcValue)){
 			return "tankarty";
 		}
 		

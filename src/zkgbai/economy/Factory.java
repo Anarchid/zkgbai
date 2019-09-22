@@ -44,7 +44,7 @@ public class Factory extends Worker {
 
 			if (defName.equals("factorytank")){
 				scoutAllowance = 2;
-				expensiveRaiderSpam = -4;
+				expensiveRaiderSpam = -5;
 			}
 
 			if (defName.equals("factorygunship")){

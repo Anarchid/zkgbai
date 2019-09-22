@@ -1139,7 +1139,7 @@ public class EconomyManager extends Module {
 				// for radar
 				if (worker.isCom && ai.mergedAllies == 0 && morphedComs) return Float.MAX_VALUE;
 				if (worker.isGreedy) return dist + (10000f * costMod);
-				return dist - 300 + (1500 * (costMod - 1));
+				return (dist/2f) - 300 + (1500 * (costMod - 1));
 			}
 			
 			if (buildIDs.facIDs.contains(ctask.buildType.getUnitDefId())) {
@@ -1535,7 +1535,7 @@ public class EconomyManager extends Module {
 		}
 
 		// do we need radar?
-		if (!worker.isGreedy && (!worker.isCom || !morphedComs || ai.mergedAllies > 0) && needRadar(position) && adjustedIncome > 20 && energy > 100 && !tooCloseToFac){
+		if (!worker.isGreedy && (!worker.isCom || !morphedComs || ai.mergedAllies > 0) && adjustedIncome > 20 && energy > 100 && !tooCloseToFac){
     		createRadarTask(worker);
     	}
     	
@@ -1630,8 +1630,8 @@ public class EconomyManager extends Module {
 		
 		// Uncomment this to set the intial fac for debugging purposes.
 		/*if (facManager.factories.size() == 0){
-			factory = callback.getUnitDefByName("factorycloak");
-			potentialFacList.remove("factorycloak");
+			factory = callback.getUnitDefByName("factorytank");
+			potentialFacList.remove("factorytank");
 		}else*/ if (userFac != null && facManager.factories.size() == 0){
 			factory = callback.getUnitDefByName(userFac);
 			potentialFacList.remove(userFac);
@@ -1744,6 +1744,7 @@ public class EconomyManager extends Module {
     	AIFloat3 position = worker.getUnit().getPos();
     	position = heightMap.getHighestPointInRadius(position, 800f);
     	position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
+    	if (!needRadar(position)) return;
 
     	 ConstructionTask ct =  new ConstructionTask(radar, position, 0);
     	if (buildCheck(ct) && !radarTasks.contains(ct)){
@@ -2216,7 +2217,7 @@ public class EconomyManager extends Module {
 	void porcPush(AIFloat3 position){
 		UnitDef porc;
 		double rand = Math.random();
-		if (rand > 0.25 * Math.min(graphManager.territoryFraction * 2f, 1f)) {
+		if (rand > 0.15 * Math.min(graphManager.territoryFraction * 2f, 1f)) {
 			porc = callback.getUnitDefByName("turretmissile");
 		}else {
 			rand = Math.random();
@@ -2307,20 +2308,20 @@ public class EconomyManager extends Module {
 	
 	Boolean needRadar(AIFloat3 position){
 		float closestRadarDistance = Float.MAX_VALUE;
-		for( Unit r:radars){
+		for( Unit r: radars){
 			float distance = distance(r.getPos(),position);
 			if(distance < closestRadarDistance){
 				closestRadarDistance = distance;
 			}
 		}
-		for( ConstructionTask r:radarTasks){
+		for(ConstructionTask r: radarTasks){
 			float distance = distance(r.getPos(),position);
 			if(distance < closestRadarDistance){
 				closestRadarDistance = distance;
 			}
 		}
 
-		if(closestRadarDistance > 1500){
+		if(closestRadarDistance > 1250f){
 			return true;
 		}
 		return false;

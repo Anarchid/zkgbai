@@ -1815,6 +1815,7 @@ public class MilitaryManager extends Module {
 			if ((ethreat > fthreat && (!allyTerritory || pthreat > 0))
 					  || getTacticalThreat(e.position) > availableMobileThreat
 					|| (e.identified && e.ud.isAbleToFly())
+					  || ((!e.identified || e.isRaider) && distance(pos, e.position) > 800f)
 					|| (!allyTerritory || pthreat > 0)){
 				continue;
 			}
