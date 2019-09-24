@@ -16,10 +16,10 @@ import static zkgbai.kgbutil.KgbUtil.*;
  * Created by aeonios on 11/29/2015.
  */
 public class ShieldSquad extends Squad {
-    static int CMD_ORBIT = 13923;
-    static int CMD_ORBIT_DRAW = 13924;
-    static int CMD_WANTED_SPEED = 38825;
-    static short OPTION_SHIFT_KEY = (1 << 5);
+    static final int CMD_ORBIT = 13923;
+    static final int CMD_ORBIT_DRAW = 13924;
+    static final int CMD_WANTED_SPEED = 38825;
+    static final short OPTION_SHIFT_KEY = 32;
     public Fighter leader;
     private int leaderWeight;
     public int numFelons = 0;
@@ -186,7 +186,7 @@ public class ShieldSquad extends Squad {
     	numFelons = 0;
     	numAspis = 0;
     	metalValue = 0;
-    	if (leader != null && leader.getUnit().getHealth() <= 0 || leader.getUnit().getTeam() != team){
+    	if (leader != null && leader.isDead()){
     		leader.squad = null;
     		leader = null;
 	    }else if (leader.getUnit().getDef().getUnitDefId() == felonID){
@@ -198,7 +198,7 @@ public class ShieldSquad extends Squad {
 	
 	    List<Fighter> invalidFighters = new ArrayList<>();
 	    for (Fighter f: fighters){
-		    if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != team){
+		    if (f.isDead()){
 			    invalidFighters.add(f);
 			    shields.remove(f.id);
 			    f.squad = null;

@@ -22,6 +22,7 @@ public class Squad {
 	int index = 0;
 	public AIFloat3 target;
 	int firstRallyFrame = 0;
+	public int lastAssignmentFrame = 0;
 	static final short OPTION_SHIFT_KEY = 32;
 	int team = ZKGraphBasedAI.getInstance().teamID;
 	
@@ -150,7 +151,7 @@ public class Squad {
 		List<Fighter> invalidFighters = new ArrayList<>();
 		metalValue = 0;
 		for (Fighter f: fighters){
-			if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != team){
+			if (f.isDead()){
 				invalidFighters.add(f);
 				f.squad = null;
 				if (f.equals(leader)) leader = null;

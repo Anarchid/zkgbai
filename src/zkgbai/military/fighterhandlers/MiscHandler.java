@@ -67,13 +67,13 @@ public class MiscHandler {
     public void update(int frame) {
         this.frame = frame;
 
-        if(frame % 15 == 10) {
+        if(frame % 15 == (ai.offset + 10) % 15) {
             cleanUnits();
             updateSupports();
             updateSappers();
             updateSwifts();
 
-            if (frame % 30 == 10) {
+            if (frame % 30 == (ai.offset + 10) % 30) {
                 for (Raider ulti: ultis.values()){
                     if (!retreatHandler.isRetreating(ulti.getUnit())) {
                         Enemy target = warManager.getUltiTarget(ulti.getPos());
@@ -111,7 +111,7 @@ public class MiscHandler {
             dgunStriders();
             dgunKrows();
             
-            if (frame % 90 == 10){
+            if (frame % 90 == (ai.offset + 10) % 90){
                 // assign krows
                 for (Krow st:krows.values()){
                     Unit u = st.getUnit();
@@ -161,7 +161,7 @@ public class MiscHandler {
                 }
             }
             
-            if (frame % 200 == 10){
+            if (frame % 200 == (ai.offset + 10) % 200){
                 // assign berthas
                 for (Unit b: berthas.values()){
                     AIFloat3 target = warManager.getBerthaTarget(b.getPos());
@@ -173,7 +173,7 @@ public class MiscHandler {
                 }
             }
             
-            if (frame % 300 == 10){
+            if (frame % 300 == (ai.offset + 10) % 300){
                 // use nukes
                 if (nuke != null && !warManager.enemyHasAntiNuke && nuke.getStockpile() > 0 && frame - lastNukeFrame > 1800){
                     AIFloat3 target = warManager.getSuperWepTarget(nuke, true);
@@ -184,7 +184,7 @@ public class MiscHandler {
                 }
             }
     
-            if (frame % 450 == 10){
+            if (frame % 450 == (ai.offset + 10) % 450){
                 if (zenith != null){
                     int meteors = (int) zenith.getRulesParamFloat("meteorsControlled", 0f);
                     if (meteors > 150) {
@@ -200,7 +200,7 @@ public class MiscHandler {
                 }
             }
     
-            if (frame % 900 == 10){
+            if (frame % 900 == (ai.offset + 10) % 900){
                 if (derp != null){
                     AIFloat3 target = warManager.getSuperWepTarget(derp, false);
                     if (target != null){

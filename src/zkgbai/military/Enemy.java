@@ -32,6 +32,7 @@ public class Enemy {
 	public boolean isFlexAA = false;
 	public boolean isPorc = false;
 	public boolean isMex = false;
+	public boolean isCom = false;
 	boolean isSuperWep = false;
 	boolean isMinorCancer = false;
 	boolean isMajorCancer = false;
@@ -92,8 +93,12 @@ public class Enemy {
 		this.isStatic = (u.getSpeed() == 0);
 		this.ud = u;
 
-		if (ud.isBuilder()){
+		if (ud.getBuildSpeed() > 0){
 			this.isWorker = true;
+		}
+		
+		if (ud.getName().contains("_")){
+			this.isCom = true;
 		}
 
 		String defName = ud.getName();

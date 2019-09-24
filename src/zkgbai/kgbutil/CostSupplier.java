@@ -1,4 +1,4 @@
-package zkgbai.graph;
+package zkgbai.kgbutil;
 
 /*
  * Abducted from CSI

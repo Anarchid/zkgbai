@@ -23,8 +23,8 @@ public class RaiderSquad {
     public Raider leader;
     private int index = 0;
     int firstRallyFrame = 0;
+    public int lastAssignmentFrame = 0;
     public char type;
-    int team = ZKGraphBasedAI.getInstance().teamID;
 
     public RaiderSquad(){
         this.raiders = new ArrayList<Raider>();
@@ -60,7 +60,6 @@ public class RaiderSquad {
             // Small raiders get independent paths, but if they're out of range of the group then they move to the leader
             // instead of the target. This works surprisingly well.
             for (Raider r : raiders) {
-                if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != team) continue;
                 float fdist = distance(leader.getPos(), r.getPos());
                 if (fdist > maxdist) {
                     r.outOfRange = true;
@@ -82,7 +81,6 @@ public class RaiderSquad {
             AIFloat3 waypoint = path.poll();
     
             for (Raider r : raiders) {
-                if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != team) continue;
                 float fdist = distance(leader.getPos(), r.getPos());
                 if (fdist > maxdist) {
                     r.outOfRange = true;
@@ -110,7 +108,6 @@ public class RaiderSquad {
             // Small raiders get independent paths, but if they're out of range of the group then they move to the leader
             // instead of the target. This works surprisingly well.
             for (Raider r : raiders) {
-                if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != team) continue;
                 float fdist = distance(leader.getPos(), r.getPos());
                 if (fdist > maxdist) {
                     r.outOfRange = true;
@@ -132,7 +129,6 @@ public class RaiderSquad {
             AIFloat3 waypoint = path.poll();
     
             for (Raider r : raiders) {
-                if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != team) continue;
                 float fdist = distance(leader.getPos(), r.getPos());
                 if (fdist > maxdist) {
                     r.outOfRange = true;
@@ -162,7 +158,6 @@ public class RaiderSquad {
         }
         
         for (Raider r: raiders){
-            if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != team) continue;
             if (r.outOfRange){
                 return false;
             }
@@ -181,7 +176,7 @@ public class RaiderSquad {
 	public boolean isDead(){
 		List<Raider> invalidRaiders = new ArrayList<>();
 		for (Raider r: raiders){
-			if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != team){
+			if (r.isDead()){
 				invalidRaiders.add(r);
 				r.squad = null;
 			}

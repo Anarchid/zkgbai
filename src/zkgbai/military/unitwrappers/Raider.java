@@ -15,9 +15,10 @@ import static zkgbai.kgbutil.KgbUtil.*;
 public class Raider extends Fighter {
 	private ScoutTask task;
 	public int index = 0;
-	public boolean assigned = false;
+	public int lastTaskFrame = 0;
+	public int lastRotationFrame = 0;
+	int stuck = 0;
 	public RaiderSquad squad;
-	ZKGraphBasedAI ai = ZKGraphBasedAI.getInstance();
 
 	public Raider(Unit u, float metal) {
 		super(u, metal);
@@ -30,12 +31,12 @@ public class Raider extends Fighter {
 
 	public void clearTask() {
 		if (task != null) task.removeRaider(this);
-		if (unit.getHealth() > 0 && unit.getTeam() == ai.teamID) unit.stop((short) 0, Integer.MAX_VALUE);
+		if (unit.getHealth() > 0 && unit.getTeam() == team) unit.stop((short) 0, Integer.MAX_VALUE);
 		task = null;
 	}
 
 	public void endTask() {
-		if (unit.getHealth() > 0 && unit.getTeam() == ai.teamID) unit.stop((short) 0, Integer.MAX_VALUE);
+		if (unit.getHealth() > 0 && unit.getTeam() == team) unit.stop((short) 0, Integer.MAX_VALUE);
 		task = null;
 	}
 
@@ -70,8 +71,8 @@ public class Raider extends Fighter {
 		return lastWepFrame > frame;
 	}
 	
-	public void unstick(int frame) {
-		if (unit.getHealth() <= 0) return;
+	public boolean unstick(int frame) {
+		if (unit.getHealth() <= 0) return false;
 		
 		float speed = getSpeed(unit);
 		int lastWepFrame = 0;
@@ -81,8 +82,13 @@ public class Raider extends Fighter {
 		}
 		
 		if (lastWepFrame < frame - 30 && speed < unit.getDef().getSpeed()/10f && !unit.isParalyzed()) {
+			stuck++;
+			if (stuck == 15) return true;
 			clearTask();
 			unit.moveTo(getRadialPoint(unit.getPos(), 100f), (short) 0, Integer.MAX_VALUE);
+		}else{
+			stuck = Math.max(0, stuck - 2);
 		}
+		return false;
 	}
 }

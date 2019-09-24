@@ -24,11 +24,11 @@ public class WorkerTask {
 	}
 
 	public void addWorker(Worker w){
-		this.assignedWorkers.add(w);
+		if (!assignedWorkers.contains(w)) assignedWorkers.add(w);
 	}
 
 	public void removeWorker(Worker w){
-		this.assignedWorkers.remove(w);
+		assignedWorkers.remove(w);
 	}
 
 	public List<Worker> stopWorkers(){

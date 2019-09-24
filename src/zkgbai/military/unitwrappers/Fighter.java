@@ -22,6 +22,7 @@ public class Fighter {
     public boolean outOfRange = false;
     protected Unit unit;
     static Pathfinder pathfinder = null;
+    static int team;
     protected static final short OPTION_SHIFT_KEY = 32; //  32
 
     public Fighter(Unit u, float metal){
@@ -31,6 +32,7 @@ public class Fighter {
 
         if (pathfinder == null){
             pathfinder = Pathfinder.getInstance();
+            team = ZKGraphBasedAI.getInstance().teamID;
         }
     }
 
@@ -82,9 +84,13 @@ public class Fighter {
             if (stuck >= 10) unit.moveTo(getAngularPoint(target, unit.getPos(), distance(target, unit.getPos()) + 100f), (short) 0, Integer.MAX_VALUE);
             if (stuck == 15) return true;
         }else{
-            stuck = Math.max(0, stuck - 1);
+            stuck = Math.max(0, stuck - 2);
         }
         return false;
+    }
+    
+    public boolean isDead(){
+    	return unit.getHealth() <= 0 || unit.getTeam() != team;
     }
 
     @Override

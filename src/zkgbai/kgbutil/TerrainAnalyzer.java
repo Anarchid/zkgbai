@@ -1,7 +1,7 @@
-package zkgbai.economy;
+package zkgbai.kgbutil;
 
 import com.springrts.ai.oo.clb.OOAICallback;
-import com.springrts.ai.oo.clb.Pathing;
+import com.springrts.ai.oo.clb.UnitDef;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.Link;
@@ -17,14 +17,14 @@ public class TerrainAnalyzer {
     OOAICallback callback;
     GraphManager graphManager;
     List<String> initialFacList;
-    Pathing path;
+    Pathfinder path;
 
-    int vehPath;
-    int botPath;
-    int spiderPath;
-    int hoverPath;
-    int amphPath;
-    int boatPath;
+    UnitDef vehPath;
+	UnitDef botPath;
+	UnitDef spiderPath;
+	UnitDef hoverPath;
+	UnitDef amphPath;
+	UnitDef boatPath;
     static String taMsg = "Terrain Analysis: ";
 
     public TerrainAnalyzer(){
@@ -32,14 +32,14 @@ public class TerrainAnalyzer {
         this.callback = ai.getCallback();
         this.graphManager = ai.graphManager;
         this.initialFacList = new ArrayList<String>();
-        this.path = callback.getPathing();
+        this.path = Pathfinder.getInstance();
 
-        vehPath = callback.getUnitDefByName("vehcon").getMoveData().getPathType();
-        botPath = callback.getUnitDefByName("cloakcon").getMoveData().getPathType();
-        spiderPath = callback.getUnitDefByName("spidercon").getMoveData().getPathType();
-        hoverPath = callback.getUnitDefByName("hovercon").getMoveData().getPathType();
-        amphPath = callback.getUnitDefByName("amphcon").getMoveData().getPathType();
-        boatPath = callback.getUnitDefByName("shipcon").getMoveData().getPathType();
+        vehPath = callback.getUnitDefByName("vehcon");
+        botPath = callback.getUnitDefByName("cloakcon");
+        spiderPath = callback.getUnitDefByName("spidercon");
+        hoverPath = callback.getUnitDefByName("hovercon");
+        amphPath = callback.getUnitDefByName("amphcon");
+        boatPath = callback.getUnitDefByName("shipcon");
 
         populateFacList();
     }
@@ -65,18 +65,23 @@ public class TerrainAnalyzer {
 
         log(taMsg + "Checking Bot Pathability..");
         PathResult bot = checkPathing(botPath, 1.4f);
-        if ((bot.avgCostRatio < veh.avgCostRatio - 0.05f || !veh.result || ai.mergedAllies > 3) && bot.result){
+        if (bot.result
+	              && (!veh.result || bot.avgCostRatio < veh.avgCostRatio - 0.05f)
+	              || ai.mergedAllies > 3){
             log(taMsg + "Bot path check succeeded, enabling bots!");
             initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");
             initialFacList.add("factoryamph");
+	        //initialFacList.add("factoryjump");
         }else if (veh.result && bot.avgCostRatio >= veh.avgCostRatio - 0.05f) {
             log(taMsg + "Bots not cost competitive, skipping!");
         }
 
         log(taMsg + "Checking Spider Pathability..");
         PathResult spider = checkPathing(spiderPath, 5f);
-        if (((spider.avgCostRatio < bot.avgCostRatio - 0.02f && spider.avgCostRatio < veh.avgCostRatio - 0.05f) || ai.mergedAllies > 7) && spider.result){
+        if (spider.result &&
+	              (((!bot.result || (spider.avgCostRatio < bot.avgCostRatio - 0.02f)) && (!veh.result || (spider.avgCostRatio < veh.avgCostRatio - 0.05f)))
+		                 || ai.mergedAllies > 7)){
             log(taMsg + "Spider path check succeeded, enabling spiders and jumps!");
             initialFacList.add("factoryspider");
             if (!initialFacList.contains("factoryjump")) {
@@ -93,11 +98,13 @@ public class TerrainAnalyzer {
             //initialFacList.add("factoryship");
         }
 
-        log(taMsg + "Checking Amph Pathability..");
-        PathResult amph = checkPathing(amphPath, 5f);
-        if (amph.result && !bot.result){
-            log(taMsg + "Amph path check succeeded, stopping!");
-            initialFacList.add("factoryamph");
+        if (!bot.result && !veh.result) {
+	        log(taMsg + "Checking Amph Pathability..");
+	        PathResult amph = checkPathing(amphPath, 5f);
+	        if (amph.result) {
+		        log(taMsg + "Amph path check succeeded, stopping!");
+		        initialFacList.add("factoryamph");
+	        }
         }
 
         if (ai.allies.size() > 2){
@@ -126,23 +133,28 @@ public class TerrainAnalyzer {
             }
             if (initialFacList.size() < ai.mergedAllies + 1 && !initialFacList.contains("factoryspider")) {
                 initialFacList.add("factoryspider");
+	            //initialFacList.add("factoryjump");
             }
         }
     }
 
-    private PathResult checkPathing(int pathType, float maxRelCost){
+    private PathResult checkPathing(UnitDef pathType, float maxRelCost){
         float avgRelCost = 0.0f;
         boolean success = true;
         List<Link> links = graphManager.getLinks();
+        float fail = 0;
         for (Link l:links){
-            float linkCost = path.getApproximateLength(l.v0.getPos(), l.v1.getPos(), pathType, 0f)/l.length;
-            if (linkCost < 1.0f){
+            float linkCost = path.getPathCost(l.v0.getPos(), l.v1.getPos(), pathType);
+            if (linkCost < 0f) linkCost = path.getPathCost(l.v1.getPos(), l.v0.getPos(), pathType);
+            if (linkCost < 0f){
                 success = false;
-                linkCost = 5;
+                fail++;
+            }else{
+            	linkCost /= l.length;
+	            avgRelCost += linkCost;
             }
-
-            avgRelCost += linkCost/links.size();
         }
+        avgRelCost /= links.size() - fail;
         if (!success){
             log(taMsg + "Path Check Failed: unreachable mexes.");
         }

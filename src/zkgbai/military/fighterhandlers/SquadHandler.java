@@ -34,15 +34,16 @@ public class SquadHandler {
     public Squad nextCloakySquad = null;
 	public Squad nextShieldSquad = null;
     public Squad nextAmphSquad = null;
+	public Squad nextRecluseSquad = null;
     public Squad nextSpiderSquad = null;
     public Squad nextVehSquad = null;
     public Squad nextHoverSquad = null;
     public Squad nextTankSquad = null;
     public Squad nextAirSquad = null;
     public Squad nextBrawlerSquad = null;
-    public Queue<ShieldSquad> shieldSquads = new LinkedList<>();
-    public List<Squad> squads = new ArrayList<>();
-	public List<Squad> airSquads = new ArrayList<>();
+    public Deque<ShieldSquad> shieldSquads = new LinkedList<>();
+    public Deque<Squad> squads = new LinkedList<>();
+	public Deque<Squad> airSquads = new LinkedList<>();
 
     int frame = 0;
     int squadCounter = 0;
@@ -60,24 +61,34 @@ public class SquadHandler {
     public void update(int frame){
         this.frame = frame;
 
-        if (frame % 30 == 7){
-            cleanUnits();
+        if (frame % 30 == (ai.offset + 7) % 30){
+	        List<Integer> invalidFighters = new ArrayList<Integer>();
             for (Fighter f:fighters.values()){
-                Unit u = f.getUnit();
-                String defName = u.getDef().getName();
-                if (f.squad == null && !retreatHandler.isRetreating(u)) {
-                    if (unitTypes.assaults.contains(defName)){
-                    	addAssault(f);
-                    }else{
-                        addShieldMob(f);
-                    }
+                if (f.isDead()){
+	                invalidFighters.add(f.id);
+                }else{
+                	boolean retreating = retreatHandler.isRetreating(f.getUnit());
+	                if (!retreating && !f.getUnit().getDef().isAbleToFly() && f.isStuck(frame)){
+		                if (f.squad != null) f.squad.removeUnit(f);
+		                invalidFighters.add(f.id);
+		                ai.ecoManager.combatReclaimTasks.add(new CombatReclaimTask(f.getUnit()));
+		                warManager.retreatHandler.removeUnit(f.getUnit());
+	                }else if (f.squad == null && !retreating) {
+		                if (unitTypes.assaults.contains(f.getUnit().getDef().getName())){
+			                addAssault(f);
+		                }else{
+			                addShieldMob(f);
+		                }
+	                }
                 }
             }
-            updateSquads();
-            updateShieldSquads();
-            
-            if (frame % 60 == 7) updateAirSquads();
+	        for (Integer key:invalidFighters){
+		        fighters.remove(key);
+	        }
         }
+	    if (frame % 7 == ai.offset % 7) assignSquads();
+	    if (frame % 7 == (ai.offset + 4) % 7) assignShieldSquads();
+	    if (frame % 14 == (ai.offset + 9) % 14) assignAirSquads();
     }
 
     public void addAssault(Fighter f){
@@ -125,6 +136,20 @@ public class SquadHandler {
 	        if (((nextAmphSquad.metalValue > nextAmphSquad.income * 45f && nextAmphSquad.metalValue > 1000f) || nextAmphSquad.metalValue > 2500f) && nextAmphSquad.getSize() > 2) {
 		        nextAmphSquad.status = 'r';
 		        nextAmphSquad = null;
+	        }
+        }else if (defName.equals("spiderskirm")){
+	        // create a new squad if there isn't one
+	        if (nextRecluseSquad == null) {
+		        nextRecluseSquad = new Squad();
+		        nextRecluseSquad.income = ecoManager.effectiveIncome / (1f + (ai.mergedAllies * graphManager.territoryFraction * graphManager.territoryFraction));
+		        squads.add(nextRecluseSquad);
+	        }
+	
+	        nextRecluseSquad.addUnit(f);
+	
+	        if (((nextRecluseSquad.metalValue > nextRecluseSquad.income * 45f && nextRecluseSquad.metalValue > 1000f) || nextRecluseSquad.metalValue > 2500f) && nextRecluseSquad.getSize() > 2) {
+		        nextRecluseSquad.status = 'r';
+		        nextRecluseSquad = null;
 	        }
         }else if (defName.startsWith("spider")){
 	        // create a new squad if there isn't one
@@ -306,131 +331,131 @@ public class SquadHandler {
 	    Fighter f = fighters.get(u.getUnitId());
         if (f != null && f.squad != null) f.squad.removeUnit(f);
     }
+	
+	private void assignSquads(){
+		// Assign up to one squad at a time, up to four per second.
+		while (!squads.isEmpty()){
+			Squad s = squads.poll();
+			if (s.isDead()){
+				if (s.status == 'f'){
+					squads.add(s);
+					return;
+				}
+				continue;
+			}else if (frame - s.lastAssignmentFrame < 30){
+				squads.push(s);
+				return;
+			}else{
+				assignSquad(s);
+				s.lastAssignmentFrame = frame;
+				squads.add(s);
+				return;
+			}
+		}
+	}
+	
+	private void assignAirSquads(){
+		// Assign up to one air squad at a time, up to two per second.
+		while (!airSquads.isEmpty()){
+			Squad s = airSquads.poll();
+			if (s.isDead()){
+				if (s.status == 'f'){
+					airSquads.add(s);
+					return;
+				}
+				continue;
+			}else if (frame - s.lastAssignmentFrame < 60){
+				airSquads.push(s);
+				return;
+			}else{
+				assignAirSquad(s);
+				s.lastAssignmentFrame = frame;
+				airSquads.add(s);
+				return;
+			}
+		}
+	}
 
-    void cleanUnits(){
-        List<Integer> invalidFighters = new ArrayList<Integer>();
-        for (Fighter f:fighters.values()){
-            if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != ai.teamID){
-                invalidFighters.add(f.id);
-            }else if (!retreatHandler.isRetreating(f.getUnit()) && !f.getUnit().getDef().isAbleToFly() && f.isStuck(frame)){
-                if (f.squad != null) f.squad.removeUnit(f);
-                invalidFighters.add(f.id);
-                ai.ecoManager.combatReclaimTasks.add(new CombatReclaimTask(f.getUnit()));
-                warManager.retreatHandler.removeUnit(f.getUnit());
+    private void assignSquad(Squad s){
+        AIFloat3 pos = s.getPos();
+
+        if (s.status == 'f'){
+            if (warManager.getThreat(pos) > 2f * warManager.getTotalFriendlyThreat(pos) || warManager.getPorcThreat(pos) > 0 || (s.target != null && warManager.getPorcThreat(s.target) > 0)) {
+	            s.retreatTo(graphManager.getClosestHaven(pos));
+            }else {
+	            s.setTarget(warManager.getRallyPoint(pos));
             }
-        }
-        for (Integer key:invalidFighters){
-            fighters.remove(key);
-        }
-    }
-
-    private void updateSquads(){
-        List<Squad> deadSquads = new ArrayList<Squad>();
-        for (Squad s: squads){
-	        if (s.isDead()) {
-		        if (s.status != 'f') deadSquads.add(s);
-		        continue;
-	        }
-	        
+        }else if (s.status == 'r'){
+            // set rallying for squads that are finished forming and gathering to attack
+            s.setTarget(warManager.getRallyPoint(pos));
+            if (s.isRallied(frame)){
+                s.status = 'a';
+            }
+        }else if (s.status == 'a'){
+            if (warManager.getEffectiveThreat(pos) > 0 && (!graphManager.isAllyTerritory(pos) || warManager.getPorcThreat(pos) > 0)){
+                s.retreatTo(graphManager.getClosestHaven(pos));
+            }
             
-            AIFloat3 pos = s.getPos();
+            Unit leader = s.getLeader();
 
-            if (s.status == 'f'){
-	            if (warManager.getThreat(pos) > 2f * warManager.getTotalFriendlyThreat(pos) || warManager.getPorcThreat(pos) > 0 || (s.target != null && warManager.getPorcThreat(s.target) > 0)) {
-		            s.retreatTo(graphManager.getClosestHaven(pos));
-	            }else {
-		            s.setTarget(warManager.getRallyPoint(pos));
-	            }
-            }else if (s.status == 'r'){
-	            // set rallying for squads that are finished forming and gathering to attack
-                s.setTarget(warManager.getRallyPoint(pos));
-                if (s.isRallied(frame)){
-                    s.status = 'a';
-                }
-            }else if (s.status == 'a'){
-                if (warManager.getEffectiveThreat(pos) > 0 && (!graphManager.isAllyTerritory(pos) || warManager.getPorcThreat(pos) > 0)){
-                    s.retreatTo(graphManager.getClosestHaven(pos));
-                }
-                
-                Unit leader = s.getLeader();
-                if (leader == null){
-                    deadSquads.add(s);
-                    continue;
-                }
-
-                AIFloat3 target = warManager.getTarget(leader, true);
-                s.setTarget(target);
-            }
+            AIFloat3 target = warManager.getTarget(leader, true);
+            s.setTarget(target);
         }
-        squads.removeAll(deadSquads);
     }
     
-    private void updateAirSquads(){
-	    List<Squad> deadSquads = new ArrayList<Squad>();
-	    for (Squad s: airSquads){
-		    if (s.isDead()) {
-			    if (s.status != 'f') deadSquads.add(s);
+    private void assignAirSquad(Squad s){
+	    AIFloat3 pos = s.getPos();
+	
+	    if (s.status == 'f'){
+		    AIFloat3 target = warManager.getAirRallyPoint(pos);
+		    if (distance(pos, target) > 1800f){
+			    s.retreatTo(target);
+		    }else {
+			    s.setTarget(target);
+		    }
+	    }else if (s.status == 'r'){
+		    // set rallying for squads that are finished forming and gathering to attack
+		    s.setTarget(warManager.getAirRallyPoint(pos));
+		    if (s.isRallied(frame)){
+			    s.status = 'a';
+		    }
+	    }else if (s.status == 'a'){
+		    if (warManager.getEffectiveAAThreat(pos) > 0){
+			    s.retreatTo(graphManager.getClosestAirHaven(pos));
+		    }
+		
+		    Unit leader = s.getLeader();
+		
+		    AIFloat3 target = warManager.getAirTarget(leader, true);
+		    
+		    if (distance(target, pos) > 1800f){
+			    s.retreatTo(target);
+		    }else {
+			    s.setTarget(target);
+		    }
+	    }
+    }
+    
+    private void assignShieldSquads(){
+	    // Process up to one shield squad at a time, four per second.
+	    while (!shieldSquads.isEmpty()) {
+		    ShieldSquad shieldSquad = shieldSquads.poll();
+		    
+		    if (shieldSquad.isDead() || shieldSquad.numFelons == 0){
+			    // disband felonless squads and repurpose the units as regular mobs until a new felon appears.
+			    List<Fighter> fit = new ArrayList<>();
+			    fit.addAll(shieldSquad.disband());
+			    for (Fighter fi: fit){
+				    assignShieldMob(fi);
+			    }
 			    continue;
 		    }
-		
-		    AIFloat3 pos = s.getPos();
-		
-		    if (s.status == 'f'){
-			    AIFloat3 target = warManager.getAirRallyPoint(pos);
-			    if (distance(pos, target) > 1800f){
-				    s.retreatTo(target);
-			    }else {
-				    s.setTarget(target);
-			    }
-		    }else if (s.status == 'r'){
-			    // set rallying for squads that are finished forming and gathering to attack
-			    s.setTarget(warManager.getAirRallyPoint(pos));
-			    if (s.isRallied(frame)){
-				    s.status = 'a';
-			    }
-		    }else if (s.status == 'a'){
-			    if (warManager.getEffectiveAAThreat(pos) > 0){
-				    s.retreatTo(graphManager.getClosestAirHaven(pos));
-			    }
-			
-			    Unit leader = s.getLeader();
-			    if (leader == null){
-				    deadSquads.add(s);
-				    continue;
-			    }
-			
-			    AIFloat3 target = warManager.getAirTarget(leader, true);
-			    
-			    if (distance(target, pos) > 1800f){
-				    s.retreatTo(target);
-			    }else {
-				    s.setTarget(target);
-			    }
+		    
+		    if (frame - shieldSquad.lastAssignmentFrame < 30){
+		        shieldSquads.push(shieldSquad);
+		        return;
 		    }
-	    }
-	    airSquads.removeAll(deadSquads);
-    }
-    
-    private void updateShieldSquads(){
-	    // shields require special handling.
-	    //First kill off any dead shield squads.
-	    List<ShieldSquad> dead = new ArrayList<>();
-	    List<Fighter> fit = new ArrayList<>();
-	    for (ShieldSquad s:shieldSquads){
-		    if (s.isDead() || s.numFelons == 0){
-			    // disband felonless squads and repurpose the units as regular mobs until a new felon appears.
-			    fit.addAll(s.disband());
-			    dead.add(s);
-		    }
-	    }
-	    shieldSquads.removeAll(dead);
-	    for (Fighter fi: fit){
-		    assignShieldMob(fi);
-	    }
-	
-	    // Then process any living squads, of which there are only ever at most 4.
-	    if (!shieldSquads.isEmpty()) {
-		    ShieldSquad shieldSquad = shieldSquads.poll();
+		    
 		    if (shieldSquad.getHealth() < 0.85
 			          || shieldSquad.getShields() < 0.35f
 			          || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getRulesParamFloat("disarmed", 0) > 0)
@@ -444,7 +469,9 @@ public class SquadHandler {
 		    } else {
 			    shieldSquad.setTarget(warManager.getRallyPoint(shieldSquad.getPos()));
 		    }
+		    shieldSquad.lastAssignmentFrame = frame;
 		    shieldSquads.add(shieldSquad);
+		    return;
 	    }
     }
 }

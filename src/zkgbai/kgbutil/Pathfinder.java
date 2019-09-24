@@ -6,17 +6,17 @@
 package zkgbai.kgbutil;
 
 import com.springrts.ai.oo.AIFloat3;
+import com.springrts.ai.oo.clb.Map;
 import com.springrts.ai.oo.clb.OOAICallback;
 
 import java.util.*;
 
 import com.springrts.ai.oo.clb.Unit;
-import com.sun.org.apache.xpath.internal.operations.Bool;
-import org.poly2tri.triangulation.point.FloatBufferPoint;
+import com.springrts.ai.oo.clb.UnitDef;
 import zkgbai.ZKGraphBasedAI;
-import zkgbai.graph.CostSupplier;
 import zkgbai.military.MilitaryManager;
-import static zkgbai.kgbutil.KgbUtil.*;
+
+import static zkgbai.kgbutil.KgbUtil.distance;
 
 /**
  *
@@ -26,18 +26,24 @@ public class Pathfinder extends Object {
     ZKGraphBasedAI ai;
     MilitaryManager warManager;
     OOAICallback callback;
+    Map maputil;
     float mwidth, mheight;
     int smwidth;
     float[] slopeMap;
     float[] minCosts;
     float[] cachedCosts;
     int[] pathTo;
-    private final static int mapCompression = 4;//8;
+    private final static int mapCompression = 4;
     private final static int originalMapRes = 16;
     private final static int mapRes = mapCompression * originalMapRes;
 
     private int scytheID;
+    
+    // Uniforms
     private float maxThreat;
+    private float minDepth;
+    private float maxDepth;
+    private float maxSlope;
     
     private static Pathfinder instance = null;
     
@@ -46,6 +52,7 @@ public class Pathfinder extends Object {
         this.ai = ZKGraphBasedAI.getInstance();
         this.callback = ai.getCallback();
         this.warManager = ai.warManager;
+        this.maputil = callback.getMap();
         mwidth = callback.getMap().getWidth() * 8;
         mheight = callback.getMap().getHeight() * 8;
         smwidth = (int) (mwidth / mapRes);
@@ -111,9 +118,11 @@ public class Pathfinder extends Object {
         
         boolean flyer = true;
         float flyheight = 0;
-        float maxSlope = 1;
+        maxSlope = 1;
         if (u.getDef().getMoveData() != null) {
             maxSlope = u.getDef().getMoveData().getMaxSlope();
+            maxDepth = -u.getDef().getMaxWaterDepth();
+	        minDepth = (u.getDef().getMinWaterDepth() > 0 ? -u.getDef().getMinWaterDepth() : Float.MAX_VALUE);
             flyer = false;
             if (costs != AVOID_ENEMIES && maxSlope == callback.getUnitDefByName("spidercon").getMoveData().getMaxSlope()){
                 // use special pathing for spiders, since they favor hills.
@@ -131,7 +140,7 @@ public class Pathfinder extends Object {
             }else {
                 costs = AIR_PATH;
             }
-            flyheight = u.getDef().getHeight() - callback.getMap().getElevationAt(u.getPos().x, u.getPos().y);
+            flyheight = u.getPos().y - getElev(u.getPos());
         }
         
         int startPos = (int) (target.z / mapRes) * smwidth + (int) (target.x / mapRes); //reverse to return in right order when traversing backwards
@@ -299,9 +308,11 @@ public class Pathfinder extends Object {
             return false;
         }
         
-        float maxSlope = 1f;
+        maxSlope = 1f;
         if (u.getDef().getMoveData() != null) {
             maxSlope = u.getDef().getMoveData().getMaxSlope();
+	        maxDepth = -u.getDef().getMaxWaterDepth();
+	        minDepth = (u.getDef().getMinWaterDepth() > 0 ? -u.getDef().getMinWaterDepth() : Float.MAX_VALUE);
         }
 
         int startPos = (int) (target.z / mapRes) * smwidth + (int) (target.x / mapRes); //reverse to return in right order when traversing backwards
@@ -395,7 +406,6 @@ public class Pathfinder extends Object {
                 float templength = current.pathLength + (offsetCostMod[i] * costMod);
 
                 if (templength < minCosts[neighbor]) {
-                    pathTo[neighbor] = pos;
                     minCosts[neighbor] = templength;
                     pqIndex++;
                     PathNode newNode = new PathNode(neighbor, templength + getHeuristic(neighbor, targetPos), templength, pqIndex);
@@ -411,11 +421,281 @@ public class Pathfinder extends Object {
             }
         }
     }
+	
+	public boolean isWorkerReachable(Unit u, AIFloat3 target) {
+		AIFloat3 start = u.getPos();
+		CostSupplier costs = TEST_PATH;
+		
+		if (start == null){
+			return false;
+		}
+		
+		// bounds check, needed because unit positions can sometimes be nonsensical for various reasons.
+		if (start.x < 0 || start.x > mwidth || start.z < 0 || start.z > mheight || target.x < 0 || target.x > mwidth || target.z < 0 || target.z > mheight){
+			return false;
+		}
+		
+		maxSlope = 1f;
+		if (u.getDef().getMoveData() != null) {
+			maxSlope = u.getDef().getMoveData().getMaxSlope();
+			maxDepth = -u.getDef().getMaxWaterDepth();
+			minDepth = (u.getDef().getMinWaterDepth() > 0 ? -u.getDef().getMinWaterDepth() : Float.MAX_VALUE);
+		}else {
+			return true;
+		}
+		
+		int startPos = (int) (start.z / mapRes) * smwidth + (int) (start.x / mapRes); // DON'T reverse start and target since we're getting the closest reachable point.
+		int targetPos = (int) (target.z / mapRes) * smwidth + (int) (target.x / mapRes);
+		int[] offset = new int[]{-1, 1, smwidth, -smwidth, smwidth + 1, smwidth - 1, -smwidth + 1, -smwidth - 1};
+		float[] offsetCostMod = new float[]{1, 1, 1, 1, 1.42f, 1.42f, 1.42f, 1.42f};
+		
+		Comparator<PathNode> pnComp = new Comparator<PathNode>() {
+			@Override
+			public int compare(PathNode t, PathNode t1) {
+				if (t == null && t1 == null) {
+					return 0;
+				}
+				if (t == null) {
+					return -1;
+				}
+				if (t1 == null) {
+					return 1;
+				}
+				
+				if (t.totalCost == t1.totalCost){
+					return (int) Math.signum(-(t.index - t1.index));
+				}
+				return (int) Math.signum(t.totalCost - t1.totalCost);
+			}
+		};
+		
+		int pqIndex = 0;
+		PriorityQueue<PathNode> openSet = new PriorityQueue<PathNode>(1, pnComp);
+		Set<Integer> openRecord = new HashSet<Integer>(); // needed because 'contains' checks on priority queues are O(n)
+		Set<Integer> closedSet = new HashSet<Integer>();
+		openSet.add(new PathNode(startPos, getHeuristic(startPos, targetPos), 0, pqIndex));
+		openRecord.add(startPos);
+		
+		
+		for (int i = 0; i < minCosts.length; i++) {
+			minCosts[i] = Float.MAX_VALUE;
+			cachedCosts[i] = Float.MAX_VALUE;
+		}
+		minCosts[startPos] = 0;
+		
+		int bestPos = 0;
+		float bestDist = Float.MAX_VALUE;
+		
+		int pos;
+		
+		while (true) {
+			// if the open set is empty and we haven't reached targetPos, it indicates that the target is unreachable.
+			if (openSet.isEmpty()) {
+				// take the closest reachable point and see if it's within build range.
+				return distance(toAIFloat3(bestPos), target) < u.getDef().getBuildDistance();
+			}
+			
+			PathNode current = openSet.poll();
+			pos = current.pos;
+			
+			closedSet.add(pos);
+			
+			// if we reach target pos, we have a complete path.
+			if (pos == targetPos){
+				return true;
+			}
+			
+			
+			for (int i = 0; i < offset.length; i++) {
+				if (!inBounds(pos, offset[i])){
+					continue;
+				}
+				
+				int neighbor = pos + offset[i];
+				
+				// don't explore the same node twice
+				if (closedSet.contains(neighbor)){
+					continue;
+				}
+				
+				float costMod = cachedCosts[neighbor];
+				if (costMod == Float.MAX_VALUE){
+					// calculate the cost if it isn't cached already
+					costMod = costs.getCost(slopeMap[neighbor], maxSlope, toAIFloat3(neighbor));
+					cachedCosts[neighbor] = costMod;
+				}
+				
+				// don't explore unpathable nodes, as they do not form valid paths
+				if (costMod == -1){
+					continue;
+				}
+				
+				float templength = current.pathLength + (offsetCostMod[i] * costMod);
+				float dist = getHeuristic(neighbor, targetPos);
+				
+				if (dist < bestDist){
+					bestDist = dist;
+					bestPos = neighbor;
+				}
+				
+				if (templength < minCosts[neighbor]) {
+					minCosts[neighbor] = templength;
+					pqIndex++;
+					PathNode newNode = new PathNode(neighbor, templength + dist, templength, pqIndex);
+					
+					// if a node is already in the open set, replace it with the new, lower cost node.
+					if (openRecord.contains(neighbor)){
+						openSet.remove(newNode);
+					}else{
+						openRecord.add(neighbor);
+					}
+					openSet.add(newNode);
+				}
+			}
+		}
+	}
+	
+	public float getPathCost(AIFloat3 start, AIFloat3 target, UnitDef ud) {
+		// bounds check, needed because unit positions can sometimes be nonsensical for various reasons.
+		CostSupplier costs = TEST_PATH;
+		if (start.x < 0 || start.x > mwidth || start.z < 0 || start.z > mheight || target.x < 0 || target.x > mwidth || target.z < 0 || target.z > mheight){
+			return -1f;
+		}
+		
+		maxSlope = 1f;
+		if (ud.getMoveData() != null) {
+			maxSlope = ud.getMoveData().getMaxSlope();
+			maxDepth = -ud.getMaxWaterDepth();
+			minDepth = (ud.getMinWaterDepth() > 0 ? -ud.getMinWaterDepth() : Float.MAX_VALUE);
+		}
+		
+		int startPos = (int) (target.z / mapRes) * smwidth + (int) (target.x / mapRes); //reverse to return in right order when traversing backwards
+		int targetPos = (int) (start.z / mapRes) * smwidth + (int) (start.x / mapRes);
+		int[] offset = new int[]{-1, 1, smwidth, -smwidth, smwidth + 1, smwidth - 1, -smwidth + 1, -smwidth - 1};
+		float[] offsetCostMod = new float[]{1, 1, 1, 1, 1.42f, 1.42f, 1.42f, 1.42f};
+		
+		Comparator<PathNode> pnComp = new Comparator<PathNode>() {
+			@Override
+			public int compare(PathNode t, PathNode t1) {
+				if (t == null && t1 == null) {
+					return 0;
+				}
+				if (t == null) {
+					return -1;
+				}
+				if (t1 == null) {
+					return 1;
+				}
+				
+				if (t.totalCost == t1.totalCost){
+					return (int) Math.signum(-(t.index - t1.index));
+				}
+				return (int) Math.signum(t.totalCost - t1.totalCost);
+			}
+		};
+		
+		int pqIndex = 0;
+		PriorityQueue<PathNode> openSet = new PriorityQueue<PathNode>(1, pnComp);
+		Set<Integer> openRecord = new HashSet<Integer>(); // needed because 'contains' checks on priority queues are O(n)
+		Set<Integer> closedSet = new HashSet<Integer>();
+		openSet.add(new PathNode(startPos, getHeuristic(startPos, targetPos), 0, pqIndex));
+		openRecord.add(startPos);
+		
+		
+		for (int i = 0; i < minCosts.length; i++) {
+			minCosts[i] = Float.MAX_VALUE;
+			cachedCosts[i] = Float.MAX_VALUE;
+		}
+		minCosts[startPos] = 0;
+		
+		int bestPos = 0;
+		float bestDist = Float.MAX_VALUE;
+		
+		int pos;
+		
+		while (true) {
+			// if the open set is empty and we haven't reached targetPos, it indicates that the target is unreachable.
+			if (openSet.isEmpty()) {
+				if (distance(toAIFloat3(bestPos), target) < ud.getBuildDistance()){
+					return (minCosts[bestPos] * mapRes) + ud.getBuildDistance();
+				}
+				return -1f;
+			}
+			
+			PathNode current = openSet.poll();
+			pos = current.pos;
+			
+			closedSet.add(pos);
+			
+			// if we reach target pos, we have a complete path.
+			if (pos == targetPos){
+				return minCosts[targetPos] * mapRes;
+			}
+			
+			
+			for (int i = 0; i < offset.length; i++) {
+				if (!inBounds(pos, offset[i])){
+					continue;
+				}
+				
+				int neighbor = pos + offset[i];
+				
+				// don't explore the same node twice
+				if (closedSet.contains(neighbor)){
+					continue;
+				}
+				
+				float costMod = cachedCosts[neighbor];
+				if (costMod == Float.MAX_VALUE){
+					// calculate the cost if it isn't cached already
+					costMod = costs.getCost(slopeMap[neighbor], maxSlope, toAIFloat3(neighbor));
+					cachedCosts[neighbor] = costMod;
+				}
+				
+				// don't explore unpathable nodes, as they do not form valid paths
+				if (costMod == -1){
+					if (neighbor == targetPos){
+						// due to low slope map res it may consider the unit's position as unpathable,
+						// which prevents it from completing a path.
+						costMod = 1f;
+					}else {
+						continue;
+					}
+				}
+				
+				float templength = current.pathLength + (offsetCostMod[i] * costMod);
+				float dist = getHeuristic(neighbor, targetPos);
+				
+				if (dist < bestDist){
+					bestDist = dist;
+					bestPos = neighbor;
+				}
+				
+				if (templength < minCosts[neighbor]) {
+					minCosts[neighbor] = templength;
+					pqIndex++;
+					PathNode newNode = new PathNode(neighbor, templength + dist, templength, pqIndex);
+					
+					// if a node is already in the open set, replace it with the new, lower cost node.
+					if (openRecord.contains(neighbor)){
+						openSet.remove(newNode);
+					}else{
+						openRecord.add(neighbor);
+					}
+					openSet.add(newNode);
+				}
+			}
+		}
+	}
     
     private float getHeuristic(int start, int target) {
         double st = (double) start;
         double trg = (double) target;
         return (float) Math.sqrt((start % smwidth - target % smwidth) * (start % smwidth - target % smwidth) + (st / smwidth - trg / smwidth) * (st / smwidth - trg / smwidth));
+    }
+    
+    private float getElev(AIFloat3 pos){
+    	return maputil.getElevationAt(pos.x, pos.z);
     }
     
     private AIFloat3 toAIFloat3(int pos) {
@@ -433,14 +713,14 @@ public class Pathfinder extends Object {
     /**
      * Fastest path to target (not shortest)
      */
-    public final CostSupplier FAST_PATH = new CostSupplier() {
+    public final CostSupplier TEST_PATH = new CostSupplier() {
         
         @Override
         public float getCost(float slope, float maxSlope, AIFloat3 pos) {
-            if (slope > maxSlope) {
+            if (slope > maxSlope || getElev(pos) < maxDepth || getElev(pos) > minDepth) {
                 return -1;
             }
-            return 10 * ((slope / maxSlope) + 1);
+            return 1f + (slope / maxSlope);
         }
     };
     /**

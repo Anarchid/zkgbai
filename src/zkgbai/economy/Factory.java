@@ -44,7 +44,6 @@ public class Factory extends Worker {
 
 			if (defName.equals("factorytank")){
 				scoutAllowance = 2;
-				expensiveRaiderSpam = -5;
 			}
 
 			if (defName.equals("factorygunship")){
@@ -61,7 +60,8 @@ public class Factory extends Worker {
 			}
 
 			if (defName.equals("factoryspider")){
-				raiderSpam = -9;
+				maxScoutAllowance = 12;
+				scoutAllowance = 12;
 			}
 
 			/*if (callback.getMap().getHeight() + callback.getMap().getWidth() < 1280){

@@ -5,6 +5,7 @@ import com.springrts.ai.oo.clb.OOAICallback;
 import com.springrts.ai.oo.clb.Unit;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.EconomyManager;
+import zkgbai.economy.tasks.CombatReclaimTask;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
 import zkgbai.military.Enemy;
@@ -38,11 +39,11 @@ public class RaiderHandler {
 	RaiderSquad nextScytheSquad = null;
 	RaiderSquad nextHalberdSquad = null;
 	RaiderSquad nextPantherSquad = null;
-	public List<Raider> soloRaiders = new ArrayList<>();
+	public Deque<Raider> soloRaiders = new LinkedList<>();
 	public List<Raider> kodachis = new ArrayList<>();
 	public Map<Integer, Raider> smallRaiders = new HashMap<>();
 	public Map<Integer, Raider> mediumRaiders = new HashMap<>();
-	public List<RaiderSquad> raiderSquads = new ArrayList<>();
+	public Deque<RaiderSquad> raiderSquads = new LinkedList<>();
 
 	List<ScoutTask> scoutTasks = new ArrayList<>();
 	List<ScoutTask> soloScoutTasks = new ArrayList<>();
@@ -51,6 +52,9 @@ public class RaiderHandler {
 	
 	int pantherID;
 	int halberdID;
+	
+	int lastDamagedID = 0;
+	Raider lastDamagedRaider = null;
 
 	int frame;
 
@@ -249,47 +253,84 @@ public class RaiderHandler {
 	public void update(int frame){
 		this.frame = frame;
 
-		if(frame%15 == 4) {
-			cleanUnits();
-			createScoutTasks();
-			checkScoutTasks();
-
+		if(frame % 15 == (ai.offset + 4) % 15) {
+			List<Integer> invalidFighters = new ArrayList<Integer>();
 			for (Raider r:smallRaiders.values()){
-				if (r.squad == null && !retreatHandler.isRetreating(r.getUnit())){
+				if (r.isDead()){
+					r.clearTask();
+					invalidFighters.add(r.id);
+				}else if (r.squad == null && !retreatHandler.isRetreating(r.getUnit())){
 					addSmallRaider(r);
 				}
 			}
 			
+			for (Integer key:invalidFighters){
+				smallRaiders.remove(key);
+			}
+			invalidFighters.clear();
+			
 			for (Raider r:mediumRaiders.values()){
-				 if (r.squad == null && !retreatHandler.isRetreating(r.getUnit())){
+				if (r.isDead()){
+					r.clearTask();
+					invalidFighters.add(r.id);
+				}else if (r.squad == null && !retreatHandler.isRetreating(r.getUnit())){
 					addMediumRaider(r);
 				}
 			}
-
-			assignSoloRaiders();
+			
+			for (Integer key:invalidFighters){
+				mediumRaiders.remove(key);
+			}
+			
+			List<Raider> invalidRaiders = new ArrayList<>();
+			for (Raider r:kodachis){
+				if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID){
+					invalidRaiders.add(r);
+					r.clearTask();
+				}
+			}
+			kodachis.removeAll(invalidRaiders);
+			
+			createScoutTasks();
+			checkScoutTasks();
+			
 			superKodachiRally();
-			assignRaiderSquads();
 		}
+		
+		if (frame % 3 == ai.offset % 3) assignRaiderSquads();
+		
+		if (frame % 2 == ai.offset % 2) assignSoloRaiders();
 		
 		// unstick raiders that are caught on buildings or wrecks
-		if (frame % 30 == 1) {
+		if (frame % 30 == (ai.offset + 1) % 30) {
 			for (Raider r : smallRaiders.values()) {
-				if (r.getUnit().getHealth() > 0 && !retreatHandler.isRetreating(r.getUnit())) r.unstick(frame);
+				if (!r.isDead()) r.unstick(frame);
 			}
 		}
 		
-		if (frame % 30 == 2) {
+		if (frame % 30 == (ai.offset + 5) % 30) {
+			List<Integer> stuckRaiders = new ArrayList<>();
 			for (Raider r : mediumRaiders.values()) {
-				if (r.getUnit().getHealth() > 0 && !retreatHandler.isRetreating(r.getUnit())) r.unstick(frame);
+				if (!r.isDead()){
+					if (r.unstick(frame)){
+						if (r.squad != null) r.squad.removeUnit(r);
+						stuckRaiders.add(r.id);
+						ai.ecoManager.combatReclaimTasks.add(new CombatReclaimTask(r.getUnit()));
+						warManager.retreatHandler.removeUnit(r.getUnit());
+					}
+				}
+			}
+			for (int id: stuckRaiders){
+				mediumRaiders.remove(id);
 			}
 		}
 		
-		if (frame % 30 == 3) {
+		if (frame % 30 == (ai.offset + 8) % 30) {
 			for (Raider r : soloRaiders) {
-				if (r.getUnit().getHealth() > 0 && !retreatHandler.isRetreating(r.getUnit())) r.unstick(frame);
+				if (!r.isDead()) r.unstick(frame);
 			}
 			for (Raider r : kodachis) {
-				if (r.getUnit().getHealth() > 0 && !retreatHandler.isRetreating(r.getUnit())) r.unstick(frame);
+				if (!r.isDead()) r.unstick(frame);
 			}
 		}
 	}
@@ -329,12 +370,32 @@ public class RaiderHandler {
 				}
 			}
 			Raider r = null;
-			if (!soloRaiders.isEmpty()) {
+			if (!soloRaiders.isEmpty() || !kodachis.isEmpty()) {
 				// use the raider with the highest individual threat for maxthreat and the raider with the greatest
 				// all-terrain mobility for determining reachability, just to be conservative.
 				float maxThreat = 0;
 				float maxSlope = 0;
 				for (Raider ra: soloRaiders){
+					if (ra.isDead()) continue;
+					float tmpthreat = ((ra.getUnit().getPower() + ra.getUnit().getMaxHealth()) / 16f)/500f;
+					if (tmpthreat > maxThreat){
+						maxThreat = tmpthreat;
+					}
+					if (maxSlope == 2f) continue;
+					if (ra.getUnit().getDef().getMoveData() != null){
+						float tmpSlope = ra.getUnit().getDef().getMoveData().getMaxSlope();
+						if (tmpSlope > maxSlope){
+							maxSlope = tmpSlope;
+							r = ra;
+						}
+					}else if (ra.getUnit().getHealth() > 0){
+						maxSlope = 2f;
+						r = ra;
+					}
+				}
+				
+				for (Raider ra: kodachis){
+					if (ra.isDead()) continue;
 					float tmpthreat = ((ra.getUnit().getPower() + ra.getUnit().getMaxHealth()) / 16f)/500f;
 					if (tmpthreat > maxThreat){
 						maxThreat = tmpthreat;
@@ -381,101 +442,144 @@ public class RaiderHandler {
 		return cost;
 	}
 	
-	private void assignSoloRaiders(){
-		for (Raider r: soloRaiders){
-			if (r.getUnit().isBeingBuilt() || r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID || retreatHandler.isRetreating(r.getUnit())){
+	private void assignRaiderSquads(){
+		// Assign up to one solo raider per frame, with each being assigned up to twice per second.
+		while (!raiderSquads.isEmpty()){
+			RaiderSquad rs = raiderSquads.poll();
+			if (rs.isDead()){
+				if (rs.status == 'f'){
+					raiderSquads.add(rs);
+					return;
+				}
 				continue;
-			}
-			
-			AIFloat3 pos = r.getPos();
-			boolean overThreat = (warManager.getEffectiveThreat(pos) > 0 || warManager.getRiotThreat(pos) > 0
-				                        || (r.target != null && (warManager.getRiotThreat(r.target) > 0 || warManager.getThreat(r.target) > warManager.getFriendlyThreat(pos))));
-			if (overThreat){
-				// try to keep raiders from suiciding.
-				r.sneak(graphManager.getClosestRaiderHaven(pos), frame);
-				continue;
-			}
-			
-			ScoutTask bestTask = null;
-			AIFloat3 bestTarget = null;
-			float cost = Float.MAX_VALUE;
-			boolean porc = true;
-			
-			for (ScoutTask s:scoutTasks){
-				if (warManager.getRiotThreat(s.target) > 0 || warManager.getEffectiveThreat(s.target) > warManager.getFriendlyThreat(r.getPos())){
-					continue;
-				}
-				
-				float tmpcost = getScoutCost(s, r);
-				if (tmpcost < cost){
-					cost = tmpcost;
-					bestTask = s;
-				}
-			}
-			
-			for (DefenseTarget d: warManager.sniperSightings){
-				if (warManager.getRiotThreat(d.position) > 0) continue;
-				float tmpcost = distance(r.getPos(), d.position);
-				tmpcost = (tmpcost/4)-100;
-				
-				if (tmpcost < cost){
-					cost = tmpcost;
-					bestTarget = d.position;
-				}
-			}
-			
-			for (Enemy e: warManager.getTargets()){
-				if (r.getUnit().getDef().getName().equals("gunshipbomb")){
-					break;
-				}
-				if (e.isRiot || warManager.getRiotThreat(e.position) > 0 || warManager.getEffectiveThreat(e.position) > warManager.getFriendlyThreat(r.getPos())){
-					continue;
-				}
-				
-				float tmpcost = distance(r.getPos(), e.position);
-				if (!e.isArty && !e.isWorker && !e.isStatic && !e.isAA){
-					tmpcost += 1000;
-				}
-				if (e.isWorker){
-					tmpcost = (tmpcost/4)-100;
-					tmpcost += 750f * warManager.getThreat(e.position);
-				}
-				if (e.isPorc){
-					tmpcost = (tmpcost/4)-100;
-					tmpcost += 500f * warManager.getThreat(e.position);
-				}
-				
-				if (tmpcost < cost){
-					cost = tmpcost;
-					bestTarget = e.position;
-					porc = e.isStatic;
-				}
-			}
-			
-			if (bestTarget != null){
-				r.clearTask();
-				
-				if (distance(bestTarget, r.getPos()) > 500 || porc) {
-					r.sneak(bestTarget, frame);
-				} else {
-					r.raid(bestTarget, frame);
-				}
-			}else if (bestTask != null){
-				if (r.getTask() == null || !r.getTask().equals(bestTask)) {
-					r.clearTask();
-					bestTask.addRaider(r);
-					r.setTask(bestTask);
-				}
-				
-				if (distance(bestTask.target, r.getPos()) > 500) {
-					r.sneak(bestTask.target, frame);
-				} else {
-					r.raid(bestTask.target, frame);
-				}
+			}else if (frame - rs.lastAssignmentFrame < 15){
+				raiderSquads.push(rs);
+				return;
 			}else{
-				r.clearTask();
-				r.sneak(warManager.getRaiderRally(r.getPos()), frame);
+				assignRaiderSquad(rs);
+				rs.lastAssignmentFrame = frame;
+				raiderSquads.add(rs);
+				return;
 			}
+		}
+	}
+	
+	private void assignSoloRaiders(){
+		// Assign up to one solo raider per frame, with each being assigned up to twice per second.
+		while (!soloRaiders.isEmpty()){
+			Raider r = soloRaiders.poll();
+			if (r.isDead()){
+				r.clearTask();
+			}else if (r.getUnit().isBeingBuilt() || retreatHandler.isRetreating(r.getUnit())){
+				soloRaiders.add(r);
+				return;
+			}else if (frame - r.lastTaskFrame < 15){
+				soloRaiders.push(r);
+				return;
+			}else{
+				assignSoloRaider(r);
+				r.lastTaskFrame = frame;
+				soloRaiders.add(r);
+				return;
+			}
+		}
+	}
+	
+	private void assignSoloRaider(Raider r){
+		AIFloat3 pos = r.getPos();
+		boolean overThreat = (warManager.getEffectiveThreat(pos) > 0 || warManager.getRiotThreat(pos) > 0
+			                        || (r.target != null && (warManager.getRiotThreat(r.target) > 0 || warManager.getThreat(r.target) > warManager.getFriendlyThreat(pos))));
+		if (overThreat){
+			// try to keep raiders from suiciding.
+			r.sneak(graphManager.getClosestRaiderHaven(pos), frame);
+			return;
+		}
+		
+		ScoutTask bestTask = null;
+		AIFloat3 bestTarget = null;
+		float cost = Float.MAX_VALUE;
+		boolean porc = true;
+		
+		for (ScoutTask s:scoutTasks){
+			if (warManager.getRiotThreat(s.target) > 0 || warManager.getEffectiveThreat(s.target) > warManager.getFriendlyThreat(r.getPos())){
+				continue;
+			}
+			
+			float tmpcost = getScoutCost(s, r);
+			if (tmpcost < cost){
+				cost = tmpcost;
+				bestTask = s;
+			}
+		}
+		
+		for (DefenseTarget d: warManager.sniperSightings){
+			if (warManager.getRiotThreat(d.position) > 0) continue;
+			float tmpcost = distance(r.getPos(), d.position);
+			tmpcost = (tmpcost/4)-100;
+			
+			if (tmpcost < cost){
+				cost = tmpcost;
+				bestTarget = d.position;
+			}
+		}
+		
+		for (Enemy e: warManager.getTargets()){
+			if (r.getUnit().getDef().getName().equals("gunshipbomb")){
+				break;
+			}
+			if (e.isRiot || warManager.getRiotThreat(e.position) > 0 || warManager.getEffectiveThreat(e.position) > warManager.getFriendlyThreat(r.getPos())){
+				continue;
+			}
+			float ethreat = warManager.getThreat(e.position);
+			
+			float tmpcost = distance(pos, e.position);
+			if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
+				tmpcost += 1250f;
+			}else if (e.isPorc) {
+				tmpcost -= 400f;
+				//tmpcost += 500f * Math.ceil(ethreat);
+			}else if (e.isCom){
+				tmpcost -= 250f;
+			}else if (e.isWorker){
+				tmpcost = (tmpcost/4f) - 500f;
+				tmpcost += 1000f * Math.ceil(ethreat);
+			}else if (e.isMex){
+				tmpcost = (tmpcost/2f) - 300f;
+				tmpcost += 1000f * Math.ceil(ethreat);
+			}else {
+				tmpcost += 500f * ethreat;
+			}
+			
+			if (tmpcost < cost){
+				cost = tmpcost;
+				bestTarget = e.position;
+				porc = e.isStatic;
+			}
+		}
+		
+		if (bestTarget != null){
+			r.clearTask();
+			
+			if (distance(bestTarget, r.getPos()) > 500 || porc) {
+				r.sneak(bestTarget, frame);
+			} else {
+				r.raid(bestTarget, frame);
+			}
+		}else if (bestTask != null){
+			if (r.getTask() == null || !r.getTask().equals(bestTask)) {
+				r.clearTask();
+				bestTask.addRaider(r);
+				r.setTask(bestTask);
+			}
+			
+			if (distance(bestTask.target, r.getPos()) > 500) {
+				r.sneak(bestTask.target, frame);
+			} else {
+				r.raid(bestTask.target, frame);
+			}
+		}else{
+			r.clearTask();
+			r.sneak(warManager.getRaiderRally(r.getPos()), frame);
 		}
 	}
 	
@@ -567,181 +671,140 @@ public class RaiderHandler {
 		}
 	}
 
-	private void assignRaiderSquads(){
-		List<RaiderSquad> deadSquads = new ArrayList<RaiderSquad>();
-		for (RaiderSquad rs:raiderSquads){
-			if (rs.isDead()){
-				if (rs.status != 'f') deadSquads.add(rs);
-				continue;
+	private void assignRaiderSquad(RaiderSquad rs){
+		AIFloat3 pos = rs.getPos();
+		if (rs.status == 'f'){
+			// Assign forming squads.
+			boolean overThreat = (warManager.getEffectiveThreat(pos) > 0 || warManager.getThreat(pos) > warManager.availableMobileThreat
+				                        || warManager.getPorcThreat(pos) > 0 || warManager.getRiotThreat(pos) > 0
+				                        || (rs.target != null && (warManager.getPorcThreat(rs.target) > 0 || warManager.getRiotThreat(rs.target) > 0
+					                                                    || warManager.getThreat(rs.target) > warManager.availableMobileThreat)) );
+			if (!overThreat) {
+				rs.raid(warManager.getRaiderRally(pos), frame);
+			}else{
+				rs.sneak(graphManager.getClosestHaven(pos), frame);
+			}
+		}else if (rs.status == 'r'){
+			// Rally rallying squads.
+			rs.sneak(graphManager.getClosestHaven(pos), frame);
+			if (rs.isRallied(frame)) rs.status = 'a';
+		}else{
+			// Get targets for actively raiding squads.
+			float threat = rs.getThreat()/500f;
+			boolean overThreat = (!rs.leader.getUnit().isCloaked()
+				                        && (warManager.getThreat(pos) > threat || warManager.getRiotThreat(pos) > 0 || warManager.getRiotThreat(rs.target) > 0 || warManager.getThreat(rs.target) > threat));
+			if (overThreat){
+				// try to keep raider squads from suiciding.
+				rs.sneak(graphManager.getClosestRaiderHaven(pos), frame);
+				return;
 			}
 			
-			AIFloat3 pos = rs.getPos();
-			if (rs.status == 'f'){
-				// Assign forming squads.
-				boolean overThreat = (warManager.getEffectiveThreat(pos) > 0 || warManager.getThreat(pos) > warManager.availableMobileThreat
-					                        || warManager.getPorcThreat(pos) > 0 || warManager.getRiotThreat(pos) > 0
-					                        || (rs.target != null && (warManager.getPorcThreat(rs.target) > 0 || warManager.getRiotThreat(rs.target) > 0
-						                                                    || warManager.getThreat(rs.target) > warManager.availableMobileThreat)) );
-				if (!overThreat) {
-					rs.raid(warManager.getRaiderRally(pos), frame);
-				}else{
-					rs.sneak(graphManager.getClosestHaven(pos), frame);
-				}
-			}else if (rs.status == 'r'){
-				// Rally rallying squads.
-				rs.sneak(graphManager.getClosestHaven(pos), frame);
-				if (rs.isRallied(frame)) rs.status = 'a';
-			}else{
-				// Get targets for actively raiding squads.
-				float threat = rs.getThreat()/500f;
-				boolean overThreat = (!rs.leader.getUnit().isCloaked()
-					                        && (warManager.getThreat(pos) > threat || warManager.getRiotThreat(pos) > 0 || warManager.getRiotThreat(rs.target) > 0 || warManager.getThreat(rs.target) > threat));
-				if (overThreat){
-					// try to keep raider squads from suiciding.
-					rs.sneak(graphManager.getClosestRaiderHaven(pos), frame);
+			// for ready squads, assign to a target
+			ScoutTask bestTask = null;
+			AIFloat3 bestTarget = null;
+			float cost = Float.MAX_VALUE;
+			
+			for (ScoutTask s:scoutTasks){
+				if (warManager.getRiotThreat(s.target) > 0 || warManager.getThreat(s.target) > threat || !pathfinder.isRaiderReachable(rs.leader.getUnit(), s.target, threat)){
 					continue;
 				}
-				
-				// for ready squads, assign to a target
-				ScoutTask bestTask = null;
-				AIFloat3 bestTarget = null;
-				float cost = Float.MAX_VALUE;
-				
-				for (ScoutTask s:scoutTasks){
-					if (warManager.getRiotThreat(s.target) > 0 || warManager.getThreat(s.target) > threat || !pathfinder.isRaiderReachable(rs.leader.getUnit(), s.target, threat)){
-						continue;
-					}
-					float tmpcost = getScoutCost(s, rs.leader);
-					if (tmpcost < cost){
-						cost = tmpcost;
-						bestTask = s;
-					}
-				}
-
-				for (DefenseTarget d: warManager.sniperSightings){
-					if (warManager.getRiotThreat(d.position) > 0 || warManager.getThreat(d.position) > warManager.availableMobileThreat) continue;
-					float tmpcost = distance(pos, d.position);
-					tmpcost = (tmpcost/4)-100;
-
-					if (tmpcost < cost){
-						cost = tmpcost;
-						bestTarget = d.position;
-					}
-				}
-				
-				boolean porc = false;
-				for (Enemy e: warManager.getTargets()){
-					float ethreat = warManager.getThreat(e.position);
-					if (e.isRiot || warManager.getRiotThreat(e.position) > 0 || ethreat > threat || !e.identified){
-						continue;
-					}
-
-					float tmpcost = distance(pos, e.position);
-					if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
-						tmpcost += 1250f;
-					}
-					if (e.isWorker){
-						tmpcost = (tmpcost/4)-100;
-						tmpcost += 1000f * Math.ceil(ethreat);
-					}
-
-					if (e.isStatic && e.getDanger() > 0f){
-						tmpcost = (tmpcost/4)-100;
-						tmpcost += 500f * Math.ceil(ethreat);
-					}
-
-					if (tmpcost < cost){
-						cost = tmpcost;
-						bestTarget = e.position;
-						porc = e.isStatic;
-					}
-				}
-
-				if (bestTarget != null){
-					if (rs.leader.getTask() != null) {
-						rs.leader.clearTask();
-					}
-					if (distance(bestTarget, pos) > 400 || porc) {
-						rs.sneak(bestTarget, frame);
-					}else{
-						rs.raid(bestTarget, frame);
-					}
-				}else if (bestTask != null){
-					if (rs.leader.getTask() == null || !rs.leader.getTask().equals(bestTask)) {
-						rs.leader.clearTask();
-						bestTask.addRaider(rs.leader);
-						rs.leader.setTask(bestTask);
-					}
-
-					rs.sneak(bestTask.target, frame);
-				}else{
-					rs.leader.clearTask();
-					rs.sneak(warManager.getRaiderRally(pos), frame);
+				float tmpcost = getScoutCost(s, rs.leader);
+				if (tmpcost < cost){
+					cost = tmpcost;
+					bestTask = s;
 				}
 			}
+
+			for (DefenseTarget d: warManager.sniperSightings){
+				if (warManager.getRiotThreat(d.position) > 0 || warManager.getThreat(d.position) > warManager.availableMobileThreat) continue;
+				float tmpcost = distance(pos, d.position);
+				tmpcost = (tmpcost/4f)-1000f;
+
+				if (tmpcost < cost){
+					cost = tmpcost;
+					bestTarget = d.position;
+				}
+			}
+			
+			boolean porc = false;
+			for (Enemy e: warManager.getTargets()){
+				float ethreat = warManager.getThreat(e.position);
+				if (e.isRiot || warManager.getRiotThreat(e.position) > 0 || ethreat > threat || !e.identified){
+					continue;
+				}
+
+				float tmpcost = distance(pos, e.position);
+				if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
+					tmpcost += 1250f;
+				}else if (e.isPorc) {
+					tmpcost -= 400f;
+					//tmpcost += 500f * Math.ceil(ethreat);
+				}else if (e.isCom){
+					tmpcost -= 250f;
+				}else if (e.isWorker){
+					tmpcost = (tmpcost/4f) - 500f;
+					tmpcost += 1000f * Math.ceil(ethreat);
+				}else if (e.isMex){
+					tmpcost = (tmpcost/2f) - 300f;
+					tmpcost += 1000f * Math.ceil(ethreat);
+				}else {
+					tmpcost += 500f * ethreat;
+				}
+
+				if (tmpcost < cost){
+					cost = tmpcost;
+					bestTarget = e.position;
+					porc = e.isStatic;
+				}
+			}
+
+			if (bestTarget != null){
+				if (rs.leader.getTask() != null) {
+					rs.leader.clearTask();
+				}
+				if (distance(bestTarget, pos) > 400 || porc) {
+					rs.sneak(bestTarget, frame);
+				}else{
+					rs.raid(bestTarget, frame);
+				}
+			}else if (bestTask != null){
+				if (rs.leader.getTask() == null || !rs.leader.getTask().equals(bestTask)) {
+					rs.leader.clearTask();
+					bestTask.addRaider(rs.leader);
+					rs.leader.setTask(bestTask);
+				}
+
+				rs.sneak(bestTask.target, frame);
+			}else{
+				rs.leader.clearTask();
+				rs.sneak(warManager.getRaiderRally(pos), frame);
+			}
 		}
-		raiderSquads.removeAll(deadSquads);
 	}
 
 	public void avoidEnemies(Unit h, Unit attacker, AIFloat3 dir){
-			if (h.getHealth() > 0 && h.getHealth() / h.getMaxHealth() < 0.8f && attacker != null && attacker.getMaxSpeed() > 0) {
-				Raider r = smallRaiders.get(h.getUnitId());
-				if (r == null) return;
-				float movdist = -100f;
-				if (h.getDef().getName().charAt(0) == 'h') {
-					// for daggers
-					movdist = -450f;
-				}
-				float x = movdist * dir.x;
-				float z = movdist * dir.z;
-				AIFloat3 pos = h.getPos();
-				AIFloat3 target = new AIFloat3();
-				target.x = pos.x + x;
-				target.z = pos.z + z;
-				h.moveTo(target, (short) 0, Integer.MAX_VALUE);
-			}
-	}
-
-	private void cleanUnits(){
-		List<Integer> invalidFighters = new ArrayList<Integer>();
-		for (Raider r:smallRaiders.values()){
-			if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID){
-				r.clearTask();
-				invalidFighters.add(r.id);
-			}
+		if (h.getUnitId() != lastDamagedID){
+			lastDamagedID = h.getUnitId();
+			lastDamagedRaider = smallRaiders.get(h.getUnitId());
 		}
-		for (Integer key:invalidFighters){
-			smallRaiders.remove(key);
-		}
-		invalidFighters.clear();
-
-		for (Raider r:mediumRaiders.values()){
-			if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID){
-				r.clearTask();
-				invalidFighters.add(r.id);
-			}
-		}
-		for (Integer key:invalidFighters){
-			mediumRaiders.remove(key);
-		}
-		invalidFighters.clear();
-
-		List<Raider> invalidRaiders = new ArrayList<>();
-		for (Raider r:soloRaiders){
-			if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID){
-				invalidRaiders.add(r);
-				r.clearTask();
-			}
-		}
-		soloRaiders.removeAll(invalidRaiders);
 		
-		invalidRaiders.clear();
-		for (Raider r:kodachis){
-			if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID){
-				invalidRaiders.add(r);
-				r.clearTask();
+		Raider r = lastDamagedRaider;
+		if (r == null || frame - r.lastRotationFrame < 15) return;
+		
+		if (h.getHealth() > 0 && (h.getHealth() / h.getMaxHealth() < 0.8f || h.getParalyzeDamage() > 0) && attacker != null && attacker.getMaxSpeed() > 0) {
+			r.lastRotationFrame = frame;
+			float movdist = -100f;
+			if (h.getDef().getName().charAt(0) == 'h' || h.getParalyzeDamage() > 0) {
+				// for daggers
+				movdist = -450f;
 			}
+			float x = movdist * dir.x;
+			float z = movdist * dir.z;
+			AIFloat3 pos = h.getPos();
+			AIFloat3 target = new AIFloat3();
+			target.x = pos.x + x;
+			target.z = pos.z + z;
+			h.moveTo(target, (short) 0, Integer.MAX_VALUE);
 		}
-		kodachis.removeAll(invalidRaiders);
 	}
 }

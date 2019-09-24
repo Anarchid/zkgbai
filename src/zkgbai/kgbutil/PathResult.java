@@ -1,4 +1,4 @@
-package zkgbai.economy;
+package zkgbai.kgbutil;
 
 /**
  * Created by haplo on 12/6/2015.

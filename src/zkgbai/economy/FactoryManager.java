@@ -139,7 +139,7 @@ public class FactoryManager extends Module {
 	public int update(int frame) {
 		this.frame = frame;
 		
-		if (frame % 30 == 0){
+		if (frame % 30 == ai.offset % 30){
 			List<Float> params = new ArrayList<>();
 			if (earlyWorker && economyManager.workers.size() > 1 && numWorkers < 3 && economyManager.adjustedIncome < 10f){
 				params.add(3f);
@@ -149,7 +149,7 @@ public class FactoryManager extends Module {
 			for (Factory f:factories.values()) f.getUnit().executeCustomCommand(CMD_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
 		}
 		
-		if (frame % 60 == 0){
+		if (frame % 60 == ai.offset % 60){
 			if (striderHub != null){
 				if (striderTarget == null){
 					assignFactoryTask(striderHub);
@@ -768,7 +768,7 @@ public class FactoryManager extends Module {
 			return "cloakheavyraid";
 		}
 		
-		if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 4 || Math.random() > 0.5))){
+		if (fighterValue > AAvalue && Math.random() < Math.min(1f, graphManager.territoryFraction * 2) * (1f - AAvalue/warManager.maxEnemyAirValue)){
 			return "cloakaa";
 		}
 		
@@ -855,7 +855,7 @@ public class FactoryManager extends Module {
 		
 		if (fac.smallRaiderSpam) fac.smallRaiderSpam = false;
 		
-		if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 6 || Math.random() > 0.5))){
+		if (fighterValue > AAvalue && Math.random() < Math.min(1f, graphManager.territoryFraction * 2) * (1f - AAvalue/warManager.maxEnemyAirValue)){
 			return "shieldaa";
 		}
 		
@@ -908,12 +908,12 @@ public class FactoryManager extends Module {
 			return "amphraid";
 		}
 		
-		if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 3 || Math.random() > 0.5))){
+		if (fighterValue > AAvalue && Math.random() < Math.min(1f, graphManager.territoryFraction * 2) * (1f - AAvalue/warManager.maxEnemyAirValue)){
 			return "amphaa";
 		}
 		
 		if (economyManager.adjustedIncome > 30f
-			      && warManager.enemyPorcValue > artyValue && warManager.sniperSightings.isEmpty() && fighterValue - artyValue > 2000f && Math.random() > 0.85){
+			     && fighterValue - artyValue > 1500f && Math.random() < (graphManager.territoryFraction/2f) * (1f - artyValue/warManager.enemyPorcValue)){
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
 			return "amphassault";
 		}
@@ -934,7 +934,7 @@ public class FactoryManager extends Module {
 			return "amphassault";
 		}
 		double rand = Math.random();
-		if (rand > 0.20) {
+		if (rand > 0.30) {
 			return "amphfloater";
 		} else {
 			if (Math.random() > 0.75) return "amphriot";
@@ -968,7 +968,7 @@ public class FactoryManager extends Module {
 		}
 		
 		if (economyManager.adjustedIncome > 20
-			      && Math.random() < graphManager.territoryFraction * (1f - lightArtyValue/warManager.enemyLightPorcValue)){
+			      && Math.random() < Math.min(1f, 2f * graphManager.territoryFraction) * (1f - lightArtyValue/warManager.enemyLightPorcValue)){
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 1);
 			return "veharty";
 		}
@@ -977,7 +977,7 @@ public class FactoryManager extends Module {
 			return "vehcapture";
 		}
 		
-		if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 4 || Math.random() > 0.5))){
+		if (fighterValue > AAvalue && Math.random() < Math.min(1f, graphManager.territoryFraction * 2) * (1f - AAvalue/warManager.maxEnemyAirValue)){
 			return "vehaa";
 		}
 		
@@ -1037,12 +1037,12 @@ public class FactoryManager extends Module {
 		}
 		
 		if (economyManager.adjustedIncome > 30f
-			      && warManager.enemyPorcValue > artyValue && armyValue - artyValue > 2000f && Math.random() > 0.65){
+			      && armyValue - artyValue > 2000f && Math.random() < graphManager.territoryFraction * (1f - artyValue/warManager.enemyPorcValue)){
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
 			return "hoverarty";
 		}
 		
-		if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 3 || Math.random() > 0.5))) {
+		if (fighterValue > AAvalue && Math.random() < Math.min(1f, graphManager.territoryFraction * 2) * (1f - AAvalue/warManager.maxEnemyAirValue)){
 			return "hoveraa";
 		}
 		
@@ -1094,12 +1094,12 @@ public class FactoryManager extends Module {
 		
 		fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 1);
 		
-		if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 2 || Math.random() > 0.5))){
+		if (fighterValue > AAvalue && Math.random() < Math.min(1f, graphManager.territoryFraction * 2) * (1f - AAvalue/warManager.maxEnemyAirValue)){
 			return "tankaa";
 		}
 		
 		if ((economyManager.adjustedIncome < 35f || earlyWorker) && !graphManager.eminentTerritory) {
-			fac.expensiveRaiderSpam -= 2;
+			fac.expensiveRaiderSpam -= 3;
 		}else{
 			fac.expensiveRaiderSpam--;
 		}
@@ -1114,7 +1114,7 @@ public class FactoryManager extends Module {
 		
 		double rand = Math.random();
 		if (economyManager.adjustedIncome < 35 && !graphManager.eminentTerritory) {
-			if (numBanishers > numReapers){
+			if (numBanishers > 1 || warManager.enemyHeavyPorcValue > 850 * numReapers){
 				fac.expensiveRaiderSpam--;
 				return "tankassault";
 			}else {
@@ -1147,24 +1147,21 @@ public class FactoryManager extends Module {
 			}
 		}
 		
-		if (fac.raiderSpam < 0) {
-			if (Math.random() > 0.5) {
-				fac.raiderSpam++;
-			}
+		if (scoutBudget > 0) {
+			fac.creatingScout = true;
 			return "spiderscout";
 		}
 		
-		if ((warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue && (numAAs < 4 || Math.random() > 0.5))){
+		if (fighterValue > AAvalue && Math.random() < Math.min(1f, graphManager.territoryFraction * 2) * (1f - AAvalue/warManager.maxEnemyAirValue)){
 			return "spideraa";
 		}
 		
-		if (((!bigMap && economyManager.adjustedIncome > 30) || economyManager.adjustedIncome > 60)
-			      && warManager.enemyPorcValue > artyValue && Math.random() > 0.75){
-			fac.raiderSpam -= 4;
+		if (economyManager.adjustedIncome > 30 && Math.random() < (graphManager.territoryFraction/5f) * (1f - artyValue/warManager.enemyPorcValue)){
+			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 6);
 			return "spidercrabe";
 		}
 		
-		fac.raiderSpam -= 2;
+		fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 3);
 		if (numRedbacks < numVenoms){
 			return "spiderriot";
 		}
@@ -1181,7 +1178,8 @@ public class FactoryManager extends Module {
 		if (rand > 0.9 || numVenoms == 0) {
 			return "spideremp";
 		} else{
-			return "spiderskirm";
+			if (Math.random() > 0.5) return "spiderskirm";
+			return "spiderassault";
 		}
 	}
 	
@@ -1202,7 +1200,7 @@ public class FactoryManager extends Module {
 			return "gunshipcon";
 		}
 		
-		if (graphManager.eminentTerritory && (warManager.maxEnemyAirValue > AAvalue && fighterValue > AAvalue)){
+		if (graphManager.eminentTerritory && fighterValue > AAvalue && Math.random() < Math.min(1f, graphManager.territoryFraction * 2) * (1f - AAvalue/warManager.maxEnemyAirValue)){
 			return "gunshipaa";
 		}
 		

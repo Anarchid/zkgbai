@@ -37,7 +37,7 @@ public class Worker {
 		this.isChicken = false;
 		this.chickenFrame = 0;
 		this.bp = unit.getDef().getBuildSpeed();
-		this.buildRange = Math.round(unit.getDef().getBuildDistance()/32f);
+		this.buildRange = Math.round(unit.getDef().getBuildDistance()/64f);
 
 		for (Weapon w: unit.getWeapons()){
 			if (w.getDef().getShield() != null && w.getDef().getShield().getPower() > 0){
@@ -123,6 +123,10 @@ public class Worker {
 			if (path.size() > 1) path.poll();
 			if (!path.isEmpty()) unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 		}
+	}
+	
+	public boolean canReach(AIFloat3 pos){
+		return pathfinder.isWorkerReachable(unit, pos);
 	}
 
 	public float getShields(){

@@ -11,6 +11,7 @@ import zkgbai.graph.GraphManager;
 import zkgbai.military.MilitaryManager;
 import zkgbai.kgbutil.Pathfinder;
 import zkgbai.military.UnitClasses;
+import zkgbai.military.unitwrappers.Coward;
 import zkgbai.military.unitwrappers.Fighter;
 import static zkgbai.kgbutil.KgbUtil.*;
 
@@ -29,11 +30,11 @@ public class RetreatHandler {
 
     UnitClasses unitTypes = UnitClasses.getInstance();
 
-    Map<Integer, Unit> cowardUnits = new HashMap<>();
-    Map<Integer, Unit> retreatingUnits = new HashMap<>();
-    Map<Integer, Unit> retreatedUnits = new HashMap<>();
+    Map<Integer, Coward> cowardUnits = new HashMap<>();
+    Map<Integer, Coward> retreatingUnits = new HashMap<>();
+    Set<Integer> retreatedUnits = new HashSet<>();
 
-    Map<Integer, Weapon> shields = new HashMap<>();
+    Map<Integer, Coward> shields = new HashMap<>();
 
     Set<Integer> AAdefs = new HashSet<>();
     Set<Integer> lowManeuverability = new HashSet<>();
@@ -42,11 +43,11 @@ public class RetreatHandler {
     Set<Integer> planes = new HashSet<>();
     int halberdID = 0;
     int scytheID = 0;
+    
+    int lastDamagedID = 0;
+    Coward lastDamagedCoward = null;
 
     int frame;
-
-    public static final short OPTION_SHIFT_KEY = (1 << 5); //  32
-    private static final int CMD_FIND_PAD = 33411;
 
     public RetreatHandler(){
         this.ai = ZKGraphBasedAI.getInstance();
@@ -92,13 +93,27 @@ public class RetreatHandler {
     }
 
     public void addCoward(Unit u){
-        cowardUnits.put(u.getUnitId(), u);
-        for (Weapon w:u.getWeapons()){
-            if (w.getDef().getShield() != null && w.getDef().getShield().getPower() > 0){
-                shields.put(u.getUnitId(), w);
-                break;
-            }
-        }
+	    int defID = u.getDef().getUnitDefId();
+	    float rlvl;
+	    
+	    if (AAdefs.contains(defID)){
+	    	rlvl = 0.85f;
+	    }else if (u.getDef().isAbleToFly() || lowManeuverability.contains(defID)){
+	    	rlvl = 0.65f;
+	    }else if (striders.contains(defID)){
+	    	rlvl = 0.6f;
+	    }else{
+	    	rlvl = 0.5f;
+	    }
+	    
+	    Coward c = new Coward(u, rlvl);
+	    c.smallRaider = smallraiders.contains(defID);
+	    c.isScythe = u.getDef().getUnitDefId() == scytheID;
+	    c.isPlane = planes.contains(defID);
+    	
+        cowardUnits.put(c.id, c);
+        if (c.shield != null) shields.put(c.id, c);
+        
     }
 
     public boolean isCoward(Unit u){
@@ -106,30 +121,22 @@ public class RetreatHandler {
     }
 
     public void checkUnit(Unit u, boolean onFire){
-        float hp = u.getHealth() / u.getMaxHealth();
-        int uid = u.getUnitId();
-        int defID = u.getDef().getUnitDefId();
-
-        if (u.getHealth() <= 0 || u.getTeam() != ai.teamID){
-        	return;
-        }else if (cowardUnits.containsKey(uid) && !retreatingUnits.containsKey(uid)
-                && (hp < 0.5f || (AAdefs.contains(defID) && hp < 0.85f)
-                        || ((u.getDef().isAbleToFly() || lowManeuverability.contains(defID)) && hp < 0.65f)
-                        || (striders.contains(defID) && hp < 0.6f))) {
-            if (onFire && smallraiders.contains(defID)){
-                return;
-            }
-            if (defID == halberdID) u.setFireState(0, (short) 0, Integer.MAX_VALUE); // set halbs to hold fire when retreating.
-            retreatingUnits.put(u.getUnitId(), u);
-            squadHandler.removeFromSquad(u);
-            raiderHandler.removeFromSquad(u);
-        }
+    	if (lastDamagedID != u.getUnitId()){
+		    lastDamagedID = u.getUnitId();
+		    lastDamagedCoward = cowardUnits.get(u.getUnitId());
+	    }
+	    if (lastDamagedCoward == null || lastDamagedCoward.isRetreating || (onFire && lastDamagedCoward.smallRaider)) return;
+	    if (lastDamagedCoward.shouldRetreat()){
+		    retreatingUnits.put(u.getUnitId(), lastDamagedCoward);
+		    squadHandler.removeFromSquad(u);
+		    raiderHandler.removeFromSquad(u);
+	    }
     }
 
     public void update(int frame){
         this.frame = frame;
 
-        if (frame % 15 == 0) {
+        if (frame % 15 == ai.offset % 15) {
             if (cowardUnits.isEmpty()) return;
             cleanUnits();
             checkShields();
@@ -152,73 +159,52 @@ public class RetreatHandler {
 
     public void removeUnit(Unit u){
         int uid = u.getUnitId();
-        if (cowardUnits.containsKey(uid)) cowardUnits.remove(uid);
-        if (retreatingUnits.containsKey(uid)) retreatingUnits.remove(uid);
-        if (retreatedUnits.containsKey(uid)) retreatedUnits.remove(uid);
-        if (shields.containsKey(uid)) shields.remove(uid);
+        cowardUnits.remove(uid);
+        retreatingUnits.remove(uid);
+        retreatedUnits.remove(uid);
+        shields.remove(uid);
     }
 
     private void retreatCowards(){
         boolean retreated = false;
-        List<Unit> healedUnits = new ArrayList<Unit>();
-        for (Unit u: retreatingUnits.values()){
-            if (!shields.isEmpty() && shields.containsKey(u.getUnitId())){
-                Weapon w = shields.get(u.getUnitId());
-                if ((w.getShieldPower() > 0.5f * w.getDef().getShield().getPower() && u.getHealth() == u.getMaxHealth()) || u.getHealth() <= 0){
-                    healedUnits.add(u);
-                    continue;
-                }
-            }else if (u.getHealth() == u.getMaxHealth() || u.getHealth() <= 0){
-                healedUnits.add(u);
-                if (u.getDef().getUnitDefId() == halberdID) u.setFireState(2, (short) 0, Integer.MAX_VALUE); // return halbs to fire at will once healed.
+        List<Integer> healedUnits = new ArrayList<>();
+        for (Coward c: retreatingUnits.values()){
+            if (c.isHealed()){
+                healedUnits.add(c.id);
                 continue;
+            }
+            
+            if (c.isDead()){
+	            healedUnits.add(c.id);
+	            cowardUnits.remove(c.id);
+	            shields.remove(c.id);
             }
 
             // don't retreat scythes unless they're cloaked
-            if (u.getDef().getUnitDefId() == scytheID){
-                if (!u.isCloaked() && warManager.getEffectiveThreat(u.getPos()) <= 0){
+            if (c.isScythe){
+                if (!c.isCloaked() && warManager.getEffectiveThreat(c.getPos()) <= 0){
                     continue;
                 }
             }
 
-            if(!retreatedUnits.containsKey(u.getUnitId()) || warManager.getThreat(u.getPos()) > 0) {
+            if(!retreatedUnits.contains(c.id) || warManager.getThreat(c.getPos()) > 0) {
                 AIFloat3 position;
-                if (!planes.contains(u.getDef().getUnitDefId())) {
-                    if (u.getDef().isAbleToFly()){
-                        position = graphManager.getClosestAirHaven(u.getPos());
+                if (!c.isPlane) {
+                    if (c.isFlyer){
+                        position = graphManager.getClosestAirHaven(c.getPos());
                     }else {
-                        position = graphManager.getClosestHaven(u.getPos());
+                        position = graphManager.getClosestHaven(c.getPos());
                     }
-                    Queue<AIFloat3> path = pathfinder.findPath(u, position, pathfinder.AVOID_ENEMIES);
-                    u.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE);
-                    
-                    int pathSize = Math.min(3, path.size());
-                    int i = 0;
-                    while (i < pathSize && !path.isEmpty()) { // queue up to the first 3 waypoints
-                        // skip every other waypoint except the last, since they're not very far apart.
-                        if (path.size() > 1) {
-                            path.poll();
-                            // skip two out of three waypoints for flying units, since they move quickly.
-                            if (path.size() > 1 && u.getDef().isAbleToFly()) {
-                                path.poll();
-                            }
-                        }
-                        u.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
-                        i++;
-                    }
+                    c.retreatTo(position);
                 }else{
-                    List<Float> params = new ArrayList<Float>();
-
-                    if (!graphManager.isEnemyTerritory(u.getPos())) {
-                        u.executeCustomCommand(CMD_FIND_PAD, params, (short) 0, Integer.MAX_VALUE);
+                    if (!graphManager.isEnemyTerritory(c.getPos())) {
+                        c.findPad();
                     }else{
-                        Fighter b = new Fighter(u, 0);
-                        b.moveTo(graphManager.getAllyCenter()); // if in enemy territory, maneuver back to safety before finding an airpad.
-                        b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, OPTION_SHIFT_KEY,  Integer.MAX_VALUE);
+                        c.retreatTo(graphManager.getAllyCenter()); // if in enemy territory, maneuver back to safety before finding an airpad.
                     }
                 }
 
-                retreatedUnits.put(u.getUnitId(), u);
+                retreatedUnits.add(c.id);
                 retreated = true;
             }
         }
@@ -226,35 +212,33 @@ public class RetreatHandler {
             retreatedUnits.clear();
         }
         
-        for (Unit u: healedUnits){
-            retreatingUnits.remove(u.getUnitId());
-            retreatedUnits.remove(u.getUnitId());
+        for (int id: healedUnits){
+            retreatingUnits.remove(id);
+            retreatedUnits.remove(id);
         }
     }
 
     private void checkShields(){
-        for (int uid:shields.keySet()){
-            Weapon w = shields.get(uid);
-            if (w.getShieldPower() < 0.25 * w.getDef().getShield().getPower()){
-                Unit u = cowardUnits.get(uid);
-                retreatingUnits.put(u.getUnitId(), u);
-                squadHandler.removeFromSquad(u);
+        for (Coward c:shields.values()){
+            if (!c.isRetreating && c.checkShield()){
+                retreatingUnits.put(c.id, c);
+                squadHandler.removeFromSquad(c.getUnit());
             }
         }
     }
 
     private void cleanUnits(){
 	    List<Integer> invalidFighters = new ArrayList<Integer>();
-    	for (Unit u: cowardUnits.values()){
-    		if (u.getHealth() <= 0 || u.getTeam() != ai.teamID){
-    			invalidFighters.add(u.getUnitId());
+    	for (Coward c: cowardUnits.values()){
+    		if (c.isDead()){
+    			invalidFighters.add(c.id);
 		    }
 	    }
     	for (Integer key:invalidFighters){
-    		cowardUnits.remove(key);
-    		shields.remove(key);
-    		retreatingUnits.remove(key);
-    		retreatedUnits.remove(key);
+		    cowardUnits.remove(key);
+		    shields.remove(key);
+		    retreatingUnits.remove(key);
+		    retreatedUnits.remove(key);
 	    }
     }
 }

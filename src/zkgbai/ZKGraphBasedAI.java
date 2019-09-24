@@ -56,6 +56,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	public int mergedAllyID = 0;
 	
 	public boolean isFFA = false;
+	
+	public int offset = (int) Math.round(Math.random() * 30.0);
  
 	public LosManager losManager;
 	public GraphManager graphManager;
