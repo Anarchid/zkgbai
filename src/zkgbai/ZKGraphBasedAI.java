@@ -296,7 +296,11 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-	    
+	        float length = 0;
+	        for (Link l: graphManager.getLinks()){
+	        	length += l.length;
+	        }
+	        say("Average Link Length: " + (length/graphManager.getLinks().size()));
 		}
 
 		for (Module module : modules) {

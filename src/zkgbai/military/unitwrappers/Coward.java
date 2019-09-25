@@ -84,7 +84,7 @@ public class Coward {
 		boolean healed = (unit.getHealth() == unit.getMaxHealth() && unit.getCaptureProgress() == 0 && unit.getParalyzeDamage() == 0 &&
 			                    (shield == null || shield.getShieldPower() > 0.5f * shield.getDef().getShield().getPower()));
 		if (healed && holdFire) unit.setFireState(2, (short) 0, Integer.MAX_VALUE);
-		isRetreating = healed;
+		isRetreating = !healed;
 		return healed;
 	}
 	

@@ -1148,7 +1148,7 @@ public class EconomyManager extends Module {
 			
 			if (buildIDs.facIDs.contains(ctask.buildType.getUnitDefId())) {
 				// factory plops and emergency facs get maximum priority
-				if (facManager.factories.size() == 0) {
+				if (facManager.factories.isEmpty()) {
 					return -1000;
 				}
 				return ((dist / 2) - ctask.buildType.getCost(m)) + (500 * (costMod - 1));
@@ -1281,7 +1281,7 @@ public class EconomyManager extends Module {
 		for (ConstructionTask t: constructionTasks){
 			if (t.target == null && !callback.getMap().isPossibleToBuildAt(t.buildType, t.getPos(), t.facing)){
 				//check to make sure it isn't our own nanoframe, since update is called before unitCreated
-				List<Unit> stuff = callback.getFriendlyUnitsIn(t.getPos(), 25f);
+				List<Unit> stuff = callback.getFriendlyUnitsIn(t.getPos(), Math.min(t.buildType.getXSize(), t.buildType.getZSize()) * 4f);
 				boolean isNano = false;
 				for (Unit u:stuff){
 					if (u.isBeingBuilt() && u.getDef().getUnitDefId() == t.buildType.getUnitDefId() && u.getTeam() == ai.teamID){

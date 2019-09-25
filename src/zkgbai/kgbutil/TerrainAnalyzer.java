@@ -46,7 +46,7 @@ public class TerrainAnalyzer {
 
     private void populateFacList(){
         log(taMsg + "Checking Veh Pathability..");
-        PathResult veh = checkPathing(vehPath, 1.35f);
+        PathResult veh = checkPathing(vehPath, 1.2f);
         if (veh.result){
             log(taMsg + "Veh path check succeeded, enabling veh!");
             initialFacList.add("factoryveh");

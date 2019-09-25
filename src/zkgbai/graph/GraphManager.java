@@ -268,7 +268,7 @@ public class GraphManager extends Module {
 
 				boolean hasMex = false;
 				for (Unit u:friendlies){
-					if (u.getDef().getUnitDefId() == mexDefID){
+					if (u.getDef().getUnitDefId() == mexDefID && !u.isBeingBuilt()){
 						setOwned(ms);
 						hasMex = true;
 						ms.extractor = u;
