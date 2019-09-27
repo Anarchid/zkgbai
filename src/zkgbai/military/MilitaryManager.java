@@ -210,12 +210,6 @@ public class MilitaryManager extends Module {
 	
 	@Override
 	public int unitCreated(Unit unit, Unit builder){
-		UnitDef ud = unit.getDef();
-		
-		if (ud.getSpeed() > 0 && ud.getBuildOptions().isEmpty()){
-			newUnits.add(unit.getUnitId());
-		}
-		
 		// Paint ally threat for porc
 		if (unit.getDef().getSpeed() == 0 && unit.getDef().isAbleToAttack() && unit.getDef().getCost(m) < 1500f){
 			unbuiltPorcs.add(unit.getUnitId());
@@ -226,6 +220,7 @@ public class MilitaryManager extends Module {
 	@Override
 	public int unitFinished(Unit unit){
 		String defName = unit.getDef().getName();
+		UnitDef ud = unit.getDef();
 		if (defName.equals("staticnuke")){
 			hasNuke = true;
 			miscHandler.addNuke(unit);
@@ -248,16 +243,16 @@ public class MilitaryManager extends Module {
 			unit.setFireState(1, (short) 0, Integer.MAX_VALUE);
 			Raider f = new Raider(unit, unit.getDef().getCost(m));
 			miscHandler.addUlti(f);
-		}
-		
-		if (unitTypes.striders.contains(defName)){
+		}else if (unitTypes.striders.contains(defName)){
 			Strider st = new Strider(unit, unit.getDef().getCost(m));
 			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
 			miscHandler.addStrider(st);
+		}else if (ud.getSpeed() > 0 && ud.getBuildOptions().isEmpty()){
+			newUnits.add(unit.getUnitId());
 		}
 		
 		if (unit.getDef().getSpeed() > 0 && unit.getDef().getBuildOptions().isEmpty()
-			      && !defName.equals("shieldfelon") && !unitTypes.noRetreat.contains(defName)){
+			      && !unitTypes.noRetreat.contains(defName)){
 			retreatHandler.addCoward(unit);
 		}
 		
@@ -536,7 +531,7 @@ public class MilitaryManager extends Module {
 		Resource metal = ai.getCallback().getResourceByName("Metal");
 		
 		if(targets.containsKey(enemy.getUnitId())){
-			if (enemy.getDef().getName().equals("wolverine_mine")){
+			if (enemy.getDef().getUnitDefId() == wolvMineID){
 				targets.remove(enemy.getUnitId());
 				return 0;
 			}
@@ -563,7 +558,7 @@ public class MilitaryManager extends Module {
 				aaPorcGraphics.paintCircle(x, y, r + 1, effectivePower);
 				e.isPainted = true;
 			}
-		}else if (!enemy.getDef().getName().equals("wolverine_mine")){
+		}else if (enemy.getDef().getUnitDefId() != wolvMineID){
 			Enemy e = new Enemy(enemy, enemy.getDef().getCost(metal));
 			targets.put(enemy.getUnitId(),e);
 			e.visible = true;
@@ -618,7 +613,7 @@ public class MilitaryManager extends Module {
 				aaThreatGraphics.paintCircle(x, y, r + 1, effectivePower);
 				e.isPainted = true;
 			}
-		}else if (!enemy.getDef().getName().equals("wolverine_mine")){
+		}else if (enemy.getDef().getUnitDefId() != wolvMineID){
 			Enemy e = new Enemy(enemy, enemy.getDef().getCost(metal));
 			targets.put(enemy.getUnitId(),e);
 			e.visible = true;
@@ -821,6 +816,19 @@ public class MilitaryManager extends Module {
 					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
+				
+				// paint allythreat for striders
+				for (Fighter f : miscHandler.loners.values()) {
+					if (f.isDead()) continue;
+					int power = (int) ((f.getUnit().getPower() + f.getUnit().getMaxHealth()) / 8f);
+					if (!retreatHandler.isRetreating(f.getUnit())) availableMobileThreat += power;
+					AIFloat3 pos = f.getPos();
+					int x = Math.round(pos.x / 64f);
+					int y = Math.round(pos.z / 64f);
+					int rad = 15;
+					
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
 
 				// paint allythreat for striders
 				for (Strider s : miscHandler.striders.values()) {
@@ -909,8 +917,8 @@ public class MilitaryManager extends Module {
 					if (t.isAA || t.isFlexAA){
 						aaThreatGraphics.paintCircle(x, y, Math.round(r * 1.25f), effectivePower);
 					}else{
-						if (t.isRiot) riotGraphics.paintCircle(x, y, r + 1, 1);
-						threatGraphics.paintCircle(x, y, r + 1, effectivePower);
+						if (t.isRiot) riotGraphics.paintCircle(x, y, r + 2, 1);
+						threatGraphics.paintCircle(x, y, r + 2, effectivePower);
 					}
 				}else if (!t.isAA){
 					// for statics

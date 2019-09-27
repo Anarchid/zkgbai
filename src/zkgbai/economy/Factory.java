@@ -26,13 +26,14 @@ public class Factory extends Worker {
 		String defName = u.getDef().getName();
 
 		if (firstFac){
-			OOAICallback callback = ZKGraphBasedAI.getInstance().getCallback();
+			ZKGraphBasedAI ai = ZKGraphBasedAI.getInstance();
 			this.raiderSpam = -6;
 			this.scoutAllowance = 2;
 			this.maxScoutAllowance = 2;
-
-			boolean earlyWorker = Math.max(callback.getMap().getHeight(), callback.getMap().getWidth()) > 640 && callback.getMap().getHeight() + callback.getMap().getWidth() >= 1280;
-			boolean bigMap = callback.getMap().getHeight() + callback.getMap().getWidth() >= 1536;
+			
+			boolean earlyWorker = ai.mapDiag > 910f;
+			boolean bigMap = ai.mapDiag > 1270f;
+			
 			if (bigMap){
 				raiderSpam = -9;
 			}
@@ -56,6 +57,7 @@ public class Factory extends Worker {
 			}
 
 			if (defName.equals("factoryhover") && bigMap){
+				raiderSpam = -6;
 				expensiveRaiderSpam = -2;
 			}
 
@@ -63,11 +65,6 @@ public class Factory extends Worker {
 				maxScoutAllowance = 12;
 				scoutAllowance = 12;
 			}
-
-			/*if (callback.getMap().getHeight() + callback.getMap().getWidth() < 1280){
-				raiderSpam /= 2;
-				this.scoutAllowance = 1;
-			}*/
 
 			if (defName.equals("factoryplane")){
 				raiderSpam = -1;

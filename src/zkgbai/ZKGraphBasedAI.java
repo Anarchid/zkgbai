@@ -58,6 +58,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 	public boolean isFFA = false;
 	
 	public int offset = (int) Math.round(Math.random() * 30.0);
+	public float mapDiag;
  
 	public LosManager losManager;
 	public GraphManager graphManager;
@@ -90,6 +91,10 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
         this.callback = callback;
         this.teamID = callback.getGame().getMyTeam();
         this.allyTeamID = callback.getGame().getMyAllyTeam();
+		
+		float heightsq = callback.getMap().getHeight() * callback.getMap().getHeight();
+		float widthsq = callback.getMap().getWidth() * callback.getMap().getWidth();
+		mapDiag = (float) Math.sqrt(heightsq + widthsq);
 		
 		try {
 			identifyEnemyTeams();
@@ -297,10 +302,17 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
 	        float length = 0;
+	        float longest = 0;
+	        float shortest = Float.MAX_VALUE;
 	        for (Link l: graphManager.getLinks()){
 	        	length += l.length;
+	        	if (l.length > longest) longest = l.length;
+	        	if (l.length < shortest) shortest = l.length;
 	        }
 	        say("Average Link Length: " + (length/graphManager.getLinks().size()));
+	        say("Median Link Length: " + ((longest + shortest)/2f));
+	        say("Longest Link: " + longest);
+	        say("Shortest Link: " + shortest);
 		}
 
 		for (Module module : modules) {
@@ -643,6 +655,10 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
 
 	public void emote(String s){
 		callback.getGame().sendTextMessage("/say <ZKGBAI " + s + ">", 0);
+	}
+	
+	public void marker(AIFloat3 pos, String s){
+		callback.getMap().getDrawer().addPoint(pos, s);
 	}
 
 	private void chooseStartPos(){

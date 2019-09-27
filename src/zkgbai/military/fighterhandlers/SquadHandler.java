@@ -462,7 +462,7 @@ public class SquadHandler {
 			          || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getHealth() / shieldSquad.leader.getUnit().getMaxHealth() < 0.75)) {
 			    shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getPos()));
 		    } else if (shieldSquad.metalValue > 1300f && shieldSquad.leader.getUnit().getDef().getName().equals("shieldfelon")) {
-			    AIFloat3 target = warManager.getTarget(shieldSquad.leader.getUnit(), true);
+			    AIFloat3 target = warManager.getTarget(shieldSquad.leader.getUnit(), false);
 			    shieldSquad.setTarget(target);
 		    } else if (warManager.getEffectiveThreat(shieldSquad.getPos()) > 0f || warManager.getPorcThreat(shieldSquad.getPos()) > 0f) {
 			    shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getPos()));

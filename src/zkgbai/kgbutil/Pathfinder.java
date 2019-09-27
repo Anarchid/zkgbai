@@ -44,6 +44,9 @@ public class Pathfinder extends Object {
     private float minDepth;
     private float maxDepth;
     private float maxSlope;
+    private boolean floater;
+    private boolean amph;
+    private UnitDef blocker;
     
     private static Pathfinder instance = null;
     
@@ -62,6 +65,7 @@ public class Pathfinder extends Object {
         this.pathTo = new int[slopeMap.length];
         this.cachedCosts = new float[slopeMap.length];
 
+        blocker = callback.getUnitDefByName("striderdetriment");
         scytheID = callback.getUnitDefByName("cloakheavyraid").getUnitDefId();
     }
     
@@ -567,6 +571,8 @@ public class Pathfinder extends Object {
 			maxSlope = ud.getMoveData().getMaxSlope();
 			maxDepth = -ud.getMaxWaterDepth();
 			minDepth = (ud.getMinWaterDepth() > 0 ? -ud.getMinWaterDepth() : Float.MAX_VALUE);
+			floater = ud.isFloater();
+			amph = maxDepth < -1000f;
 		}
 		
 		int startPos = (int) (target.z / mapRes) * smwidth + (int) (target.x / mapRes); //reverse to return in right order when traversing backwards
@@ -717,10 +723,13 @@ public class Pathfinder extends Object {
         
         @Override
         public float getCost(float slope, float maxSlope, AIFloat3 pos) {
-            if (slope > maxSlope || getElev(pos) < maxDepth || getElev(pos) > minDepth) {
+        	float elev = getElev(pos);
+            if ((slope > maxSlope && (!floater || elev > 0f)) || elev < maxDepth || elev > minDepth) {
                 return -1;
             }
-            return 1f + (slope / maxSlope);
+            if (floater && elev < 0f) return 1f;
+            float waterPenalty = amph || elev > 0 ? 0 : 5f;
+            return 1f + waterPenalty + (slope / maxSlope);
         }
     };
     /**
@@ -812,7 +821,7 @@ public class Pathfinder extends Object {
         }
     };
     /**
-     * Fastest path to target while  TODO
+     * Fastest path to target while not suiciding too badly TODO
      */
     public final CostSupplier ASSAULT_PATH = new CostSupplier() {
         
@@ -824,6 +833,19 @@ public class Pathfinder extends Object {
             return 1f + (slope/maxSlope) + (5f * warManager.getThreat(pos));
         }
     };
+	/**
+	 * Fastest path to target while preventing getting stuck on buildings TODO
+	 */
+	public final CostSupplier STRIDER_PATH = new CostSupplier() {
+		
+		@Override
+		public float getCost(float slope, float maxSlope, AIFloat3 pos) {
+			if (slope > maxSlope || !maputil.isPossibleToBuildAt(blocker, pos, 0)) {
+				return -1;
+			}
+			return 1f + (slope/maxSlope) + (5f * warManager.getThreat(pos));
+		}
+	};
     /**
      * Fastest path to target while avoiding enemies that are able to attack
      */

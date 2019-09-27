@@ -46,17 +46,17 @@ public class TerrainAnalyzer {
 
     private void populateFacList(){
         log(taMsg + "Checking Veh Pathability..");
-        PathResult veh = checkPathing(vehPath, 1.2f);
+        PathResult veh = checkPathing(vehPath, 1.3f);
         if (veh.result){
             log(taMsg + "Veh path check succeeded, enabling veh!");
             initialFacList.add("factoryveh");
-            initialFacList.add("factorytank");
+            if (veh.avgCostRatio < 1.2f) initialFacList.add("factorytank");
             initialFacList.add("factoryhover");
         }
 
         if (!veh.result){
             log(taMsg + "Checking Hover Pathability..");
-            PathResult hover = checkPathing(hoverPath, 1.35f);
+            PathResult hover = checkPathing(hoverPath, 1.3f);
             if (hover.result){
                 log(taMsg + "Hover path check succeeded, enabling hovers!");
                 initialFacList.add("factoryhover");
@@ -64,10 +64,10 @@ public class TerrainAnalyzer {
         }
 
         log(taMsg + "Checking Bot Pathability..");
-        PathResult bot = checkPathing(botPath, 1.4f);
+        PathResult bot = checkPathing(botPath, 1.35f);
         if (bot.result
-	              && (!veh.result || bot.avgCostRatio < veh.avgCostRatio - 0.05f)
-	              || ai.mergedAllies > 3){
+	              /*&& (!veh.result || bot.avgCostRatio < veh.avgCostRatio - 0.05f)
+	              || ai.mergedAllies > 3*/){
             log(taMsg + "Bot path check succeeded, enabling bots!");
             initialFacList.add("factorycloak");
             initialFacList.add("factoryshield");
@@ -78,7 +78,7 @@ public class TerrainAnalyzer {
         }
 
         log(taMsg + "Checking Spider Pathability..");
-        PathResult spider = checkPathing(spiderPath, 5f);
+        PathResult spider = checkPathing(spiderPath, 1.35f);
         if (spider.result &&
 	              (((!bot.result || (spider.avgCostRatio < bot.avgCostRatio - 0.02f)) && (!veh.result || (spider.avgCostRatio < veh.avgCostRatio - 0.05f)))
 		                 || ai.mergedAllies > 7)){

@@ -102,7 +102,7 @@ public class RaiderHandler {
 				nextBanditSquad.status = 'r';
 				nextBanditSquad = null;
 			}
-		}else if (defName.equals("amphimpulse") || defName.equals("amphraid")) {
+		}else if (defName.equals("amphbomb") || defName.equals("amphraid")) {
 			if (nextAmphSquad == null) {
 				nextAmphSquad = new RaiderSquad();
 				nextAmphSquad.type = 's';
@@ -311,7 +311,7 @@ public class RaiderHandler {
 		if (frame % 30 == (ai.offset + 5) % 30) {
 			List<Integer> stuckRaiders = new ArrayList<>();
 			for (Raider r : mediumRaiders.values()) {
-				if (!r.isDead()){
+				if (!r.isDead() && r.squad != null && r.squad.status != 'f'){
 					if (r.unstick(frame)){
 						if (r.squad != null) r.squad.removeUnit(r);
 						stuckRaiders.add(r.id);
@@ -541,7 +541,7 @@ public class RaiderHandler {
 			}else if (e.isCom){
 				tmpcost -= 250f;
 			}else if (e.isWorker){
-				tmpcost = (tmpcost/4f) - 500f;
+				tmpcost = (tmpcost/2f) - 500f;
 				tmpcost += 1000f * Math.ceil(ethreat);
 			}else if (e.isMex){
 				tmpcost = (tmpcost/2f) - 300f;
@@ -627,20 +627,22 @@ public class RaiderHandler {
 				}
 			}
 			
-			for (Enemy e: warManager.getTargets()){
-				if (((reloading || !e.isMex) && warManager.getThreat(e.position) > 0) || warManager.getThreat(e.position) > 1f || warManager.getRiotThreat(e.position) > 0){
-					continue;
-				}
-				
-				float tmpcost = distance(r.getPos(), e.position);
-				if (e.isWorker){
-					tmpcost = (tmpcost/4)-100;
-				}
-				
-				if (tmpcost < cost){
-					cost = tmpcost;
-					bestTarget = e.position;
-					porc = e.isStatic;
+			if (!reloading) {
+				for (Enemy e : warManager.getTargets()) {
+					if ((!e.isMex && warManager.getThreat(e.position) > 0) || warManager.getThreat(e.position) > 1f || warManager.getRiotThreat(e.position) > 0) {
+						continue;
+					}
+					
+					float tmpcost = distance(r.getPos(), e.position);
+					if (e.isMex) {
+						tmpcost = (tmpcost / 4) - 500;
+					}
+					
+					if (tmpcost < cost) {
+						cost = tmpcost;
+						bestTarget = e.position;
+						porc = e.isStatic;
+					}
 				}
 			}
 			
@@ -673,12 +675,22 @@ public class RaiderHandler {
 
 	private void assignRaiderSquad(RaiderSquad rs){
 		AIFloat3 pos = rs.getPos();
+		boolean overThreat = false;
 		if (rs.status == 'f'){
 			// Assign forming squads.
-			boolean overThreat = (warManager.getEffectiveThreat(pos) > 0 || warManager.getThreat(pos) > warManager.availableMobileThreat
-				                        || warManager.getPorcThreat(pos) > 0 || warManager.getRiotThreat(pos) > 0
-				                        || (rs.target != null && (warManager.getPorcThreat(rs.target) > 0 || warManager.getRiotThreat(rs.target) > 0
-					                                                    || warManager.getThreat(rs.target) > warManager.availableMobileThreat)) );
+			if ((rs.target != null && (warManager.getPorcThreat(rs.target) > 0 || warManager.getRiotThreat(rs.target) > 0
+				                             || warManager.getThreat(rs.target) > warManager.availableMobileThreat))){
+				overThreat = true;
+			}else {
+				for (Raider r : rs.raiders) {
+					AIFloat3 rpos = r.getPos();
+					if (warManager.getEffectiveThreat(rpos) > 0 || warManager.getThreat(rpos) > warManager.availableMobileThreat
+						      || warManager.getPorcThreat(rpos) > 0 || warManager.getRiotThreat(rpos) > 0) {
+						overThreat = true;
+						break;
+					}
+				}
+			}
 			if (!overThreat) {
 				rs.raid(warManager.getRaiderRally(pos), frame);
 			}else{
@@ -687,12 +699,26 @@ public class RaiderHandler {
 		}else if (rs.status == 'r'){
 			// Rally rallying squads.
 			rs.sneak(graphManager.getClosestHaven(pos), frame);
-			if (rs.isRallied(frame)) rs.status = 'a';
+			if (rs.isRallied(frame)){
+				rs.status = 'a';
+				if (rs.type == 's'){
+					for (Raider r: rs.raiders) retreatHandler.removeUnit(r.getUnit());
+				}
+			}
 		}else{
 			// Get targets for actively raiding squads.
 			float threat = rs.getThreat()/500f;
-			boolean overThreat = (!rs.leader.getUnit().isCloaked()
-				                        && (warManager.getThreat(pos) > threat || warManager.getRiotThreat(pos) > 0 || warManager.getRiotThreat(rs.target) > 0 || warManager.getThreat(rs.target) > threat));
+			if (warManager.getRiotThreat(rs.target) > 0 || warManager.getThreat(rs.target) > threat){
+				overThreat = true;
+			}else {
+				for (Raider r:rs.raiders) {
+					AIFloat3 rpos = r.getPos();
+					if (!r.getUnit().isCloaked() && (warManager.getThreat(rpos) > threat || warManager.getRiotThreat(rpos) > 0)){
+						overThreat = true;
+						break;
+					}
+				}
+			}
 			if (overThreat){
 				// try to keep raider squads from suiciding.
 				rs.sneak(graphManager.getClosestRaiderHaven(pos), frame);
@@ -738,11 +764,10 @@ public class RaiderHandler {
 					tmpcost += 1250f;
 				}else if (e.isPorc) {
 					tmpcost -= 400f;
-					//tmpcost += 500f * Math.ceil(ethreat);
 				}else if (e.isCom){
 					tmpcost -= 250f;
 				}else if (e.isWorker){
-					tmpcost = (tmpcost/4f) - 500f;
+					tmpcost = (tmpcost/2f) - 500f;
 					tmpcost += 1000f * Math.ceil(ethreat);
 				}else if (e.isMex){
 					tmpcost = (tmpcost/2f) - 300f;

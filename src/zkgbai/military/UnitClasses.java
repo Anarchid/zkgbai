@@ -147,6 +147,7 @@ public class UnitClasses {
         // Things that should not retreat
         noRetreat.add("spidercrabe");
         noRetreat.add("shieldshield");
+        noRetreat.add("shieldfelon");
         noRetreat.add("bomberprec");
         noRetreat.add("gunshipbomb");
         noRetreat.add("planefighter");
