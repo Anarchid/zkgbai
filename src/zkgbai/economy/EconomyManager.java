@@ -337,7 +337,7 @@ public class EconomyManager extends Module {
 			
 			// if greedy workers make up too much of the workforce, convert them.
 			for (Worker w:workers.values()){
-				if (workers.size() > greed && (greed < 3 || ((float) greed)/((float) workers.size()) <= Math.min(1f - graphManager.territoryFraction, 0.65f))) break;
+				if (workers.size() > greed && (greed < 3 || ((float) greed)/((float) workers.size()) <= Math.min(1f - graphManager.territoryFraction, 0.5f))) break;
 				if (w.isGreedy) {
 					w.isGreedy = false;
 					greed--;
@@ -785,7 +785,7 @@ public class EconomyManager extends Module {
 		if (newWorkers.contains(u.getUnitId()) && u.getCurrentCommands().isEmpty()){
 			Worker w = new Worker(u);
 			workers.put(w.id, w);
-			if (workers.size() > 1 + ai.mergedAllies && (greed < 2 || ((((float) greed)/workers.size()) < Math.min(1f - graphManager.territoryFraction, 0.65f) && Math.random() > graphManager.territoryFraction))){
+			if (workers.size() > 1 + ai.mergedAllies && (greed < 2 || ((((float) greed)/workers.size()) < Math.min(1f - graphManager.territoryFraction, 0.5f)))){
 				w.isGreedy = true;
 				greed++;
 			}
@@ -1135,11 +1135,9 @@ public class EconomyManager extends Module {
 				return ((dist/4f) - 100f) + Math.max(0, (600f * (costMod - 2)));
 			}
 			
-			if (worker.isGreedy && (ctask.facDef || ctask.buildType.getCost(m) > 300f)){
+			if (worker.isGreedy && ((ctask.facDef && effectiveIncome < 15f) || ctask.buildType.getCost(m) > 300f)){
 				return dist + (10000f * costMod);
 			}
-			
-			//if (ctask.facDef) return (dist/3f) - 200f;
 
 			if (buildIDs.expensiveIDs.contains(ctask.buildType.getUnitDefId())){
 				// for expensive porc.
@@ -1529,7 +1527,7 @@ public class EconomyManager extends Module {
 
 		//do we need storages?
 		if (frame > 300 && !facManager.factories.isEmpty() &&
-			  ((metal/maxStorage > 0.8f && staticIncome > 15f * (1f + ai.mergedAllies)) || (commanders.size() + storages.size() < 1 + ai.mergedAllies)) && storageTasks.isEmpty() && facManager.factories.size() > 0){
+			  ((metal/maxStorage > 0.8f && staticIncome > 15f * (1f + ai.mergedAllies) && energy > 100f) || (commanders.size() + storages.size() < 1 + ai.mergedAllies)) && storageTasks.isEmpty() && facManager.factories.size() > 0){
 			createStorageTask(worker, getCaretakerTarget());
 		}
 
@@ -1636,8 +1634,8 @@ public class EconomyManager extends Module {
 		
 		// Uncomment this to set the intial fac for debugging purposes.
 		/*if (facManager.factories.size() == 0){
-			factory = callback.getUnitDefByName("factorycloak");
-			potentialFacList.remove("factorycloak");
+			factory = callback.getUnitDefByName("factorytank");
+			potentialFacList.remove("factorytank");
 		}else*/ if (userFac != null && facManager.factories.size() == 0){
 			factory = callback.getUnitDefByName(userFac);
 			potentialFacList.remove(userFac);

@@ -377,7 +377,7 @@ public class RaiderHandler {
 				float maxSlope = 0;
 				for (Raider ra: soloRaiders){
 					if (ra.isDead()) continue;
-					float tmpthreat = ((ra.getUnit().getPower() + ra.getUnit().getMaxHealth()) / 16f)/500f;
+					float tmpthreat = ((ra.getUnit().getPower() + ra.getUnit().getMaxHealth()) / 14f)/500f;
 					if (tmpthreat > maxThreat){
 						maxThreat = tmpthreat;
 					}
@@ -396,7 +396,7 @@ public class RaiderHandler {
 				
 				for (Raider ra: kodachis){
 					if (ra.isDead()) continue;
-					float tmpthreat = ((ra.getUnit().getPower() + ra.getUnit().getMaxHealth()) / 16f)/500f;
+					float tmpthreat = ((ra.getUnit().getPower() + ra.getUnit().getMaxHealth()) / 14f)/500f;
 					if (tmpthreat > maxThreat){
 						maxThreat = tmpthreat;
 					}
@@ -500,7 +500,7 @@ public class RaiderHandler {
 		float cost = Float.MAX_VALUE;
 		boolean porc = true;
 		
-		for (ScoutTask s:scoutTasks){
+		for (ScoutTask s:soloScoutTasks){
 			if (warManager.getRiotThreat(s.target) > 0 || warManager.getEffectiveThreat(s.target) > warManager.getFriendlyThreat(r.getPos())){
 				continue;
 			}
@@ -604,7 +604,7 @@ public class RaiderHandler {
 			float cost = Float.MAX_VALUE;
 			boolean porc = true;
 			
-			for (ScoutTask s:scoutTasks){
+			for (ScoutTask s:soloScoutTasks){
 				if (warManager.getRiotThreat(s.target) > 0 || warManager.getThreat(s.target) > (reloading ? 0 : 1f)){
 					continue;
 				}
