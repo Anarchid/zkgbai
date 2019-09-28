@@ -38,6 +38,7 @@ public class UnitClasses {
         smallRaiders.add("cloakraid");
         smallRaiders.add("shieldraid");
         smallRaiders.add("amphraid");
+	    smallRaiders.add("amphbomb");
         smallRaiders.add("hoverraid");
 
         mediumRaiders.add("vehraid");
@@ -142,7 +143,6 @@ public class UnitClasses {
         sappers.add("cloakbomb");
         sappers.add("shieldbomb");
         sappers.add("jumpbomb");
-        sappers.add("amphbomb");
 
         // Things that should not retreat
         noRetreat.add("spidercrabe");

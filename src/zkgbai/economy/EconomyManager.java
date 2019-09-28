@@ -30,7 +30,7 @@ public class EconomyManager extends Module {
 	public Queue<Worker> idlers = new LinkedList<>();
 	public Queue<Worker> assigned = new LinkedList<>();
 	public Queue<Worker> seeders = new LinkedList<>();
-	List<ConstructionTask> factoryTasks = new ArrayList<>();
+	public List<ConstructionTask> factoryTasks = new ArrayList<>();
 	List<ConstructionTask> superWepTasks = new ArrayList<>();
 	List<ConstructionTask> radarTasks = new ArrayList<>();
 	public List<ConstructionTask> constructionTasks = new ArrayList<>();
@@ -1135,8 +1135,16 @@ public class EconomyManager extends Module {
 				return ((dist/4f) - 100f) + Math.max(0, (600f * (costMod - 2)));
 			}
 			
-			if (worker.isGreedy && ((ctask.facDef && effectiveIncome < 15f) || ctask.buildType.getCost(m) > 300f)){
+			if (worker.isGreedy && !facManager.factories.isEmpty() && ((ctask.facDef && effectiveIncome < 15f) || ctask.buildType.getCost(m) > 300f)){
 				return dist + (10000f * costMod);
+			}
+			
+			if (buildIDs.facIDs.contains(ctask.buildType.getUnitDefId())) {
+				// factory plops and emergency facs get maximum priority
+				if (facManager.factories.isEmpty()) {
+					return -1000;
+				}
+				return ((dist / 2) - ctask.buildType.getCost(m)) + (500 * (costMod - 1));
 			}
 
 			if (buildIDs.expensiveIDs.contains(ctask.buildType.getUnitDefId())){
@@ -1172,14 +1180,6 @@ public class EconomyManager extends Module {
 				// for radar
 				if (worker.isGreedy) return dist + (10000f * costMod);
 				return (dist/4f) - 300 + (1500 * (costMod - 1));
-			}
-			
-			if (buildIDs.facIDs.contains(ctask.buildType.getUnitDefId())) {
-				// factory plops and emergency facs get maximum priority
-				if (facManager.factories.isEmpty()) {
-					return -1000;
-				}
-				return ((dist / 2) - ctask.buildType.getCost(m)) + (500 * (costMod - 1));
 			}
 			
 			if (ctask.buildType.getCost(m) > 300){
@@ -1747,11 +1747,11 @@ public class EconomyManager extends Module {
     void createRadarTask(Worker worker){
     	UnitDef radar = callback.getUnitDefByName("staticradar");
     	AIFloat3 position = worker.getPos();
-    	position = heightMap.getHighestPointInRadius(position, 800f);
+    	position = heightMap.getHighestPointInRadius(position, worker.isCom ? 350f : 800f);
     	position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
     	if (!needRadar(position) || !worker.canReach(position)){
 		    position = worker.getPos();
-		    position = heightMap.getHighestPointInRadius(position, 500f);
+		    position = heightMap.getHighestPointInRadius(position, worker.isCom ? 450f : 500f);
 		    position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
 		    if (!needRadar(position) || !worker.canReach(position)) return;
 	    }
@@ -2340,9 +2340,8 @@ public class EconomyManager extends Module {
 		ConstructionTask ct;
 
 		// for solars
-		if (((solars.size() + solarTasks.size()) < Math.round(rawMexIncome/2f) || solars.size() + solarTasks.size() * 2 < (windgens.size() + windTasks.size()))
+		if (((solars.size() + solarTasks.size()) < Math.round(rawMexIncome/1.5f) || solars.size() + solarTasks.size() * 2 < (windgens.size() + windTasks.size()))
 				&& callback.getMap().getElevationAt(position.x, position.z) > 0){
-		//if (callback.getMap().getElevationAt(position.x, position.z) > 0){
 			if (position == null){
 				return;
 			}
@@ -2446,7 +2445,7 @@ public class EconomyManager extends Module {
 		// for fusions
 		if (effectiveIncome > 35f && energy > 100f
 				&& Math.floor(staticIncome/27.5f) > fusions.size() && !facManager.factories.isEmpty()
-			      && fusionTasks.size() + fusions.size() - started < (ai.mergedAllies == 0 ? 2 : 3) && fusionTasks.size() < 1 + ai.mergedAllies){
+			      && fusionTasks.size() + fusions.size() - started < ((ai.mergedAllies == 0 && !bigMap) ? 2 : 3) && fusionTasks.size() < 1 + ai.mergedAllies){
 			boolean good = false;
 			int i = 0;
 			while (!good) {

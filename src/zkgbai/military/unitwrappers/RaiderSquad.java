@@ -191,7 +191,8 @@ public class RaiderSquad {
         Raider newLeader = null;
         int tmpindex = Integer.MAX_VALUE;
         for (Raider r:raiders){
-            if (r.index < tmpindex){
+        	int in = (r.getUnit().getDef().getName().contains("bomb") ? r.index + index : r.index);
+            if (in < tmpindex){
                 newLeader = r;
                 tmpindex = r.index;
             }

@@ -142,6 +142,7 @@ public class Enemy {
 			if (u.getTooltip().contains("aider") || u.getTooltip().contains("cout")){
 				// this is for keeping assault mobs from chasing raiders around.
 				this.isRaider = true;
+				if (!defName.startsWith("amph")) this.isRiot = false; // count archers as riots but not pyros.
 			}
 
 			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("vehsupport")) || u.isBuilder() && !u.getTooltip().contains("Riot")){

@@ -91,7 +91,7 @@ public class Worker {
 		
 		float jobdist = distance(unit.getPos(), task.getPos());
 
-		if ((getSpeed(unit) < unit.getDef().getSpeed()/10f && (jobdist > unit.getDef().getBuildDistance() || (unit.getResourceUse(m) == 0f && unit.getResourceUse(e) == 0f && unit.getResourceMake(m) == 0f)))
+		if ((getSpeed(unit) < unit.getDef().getSpeed()/10f && (jobdist > unit.getDef().getBuildDistance() || (unit.getResourceUse(m) == 0f && unit.getResourceUse(e) == 0f && unit.getResourceMake(m) == 0f && unit.getResourceMake(e) == 0f)))
 			      || unit.getCurrentCommands().isEmpty()){
 			AIFloat3 unstickPoint = getAngularPoint(task.getPos(), unit.getPos(), distance(task.getPos(), unit.getPos()) + 50f);
 			unit.moveTo(unstickPoint, (short) 0, Integer.MAX_VALUE);

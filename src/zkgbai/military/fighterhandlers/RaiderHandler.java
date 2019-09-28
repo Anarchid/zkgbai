@@ -102,7 +102,7 @@ public class RaiderHandler {
 				nextBanditSquad.status = 'r';
 				nextBanditSquad = null;
 			}
-		}else if (defName.equals("amphbomb") || defName.equals("amphraid")) {
+		}else if (defName.startsWith("amph")) {
 			if (nextAmphSquad == null) {
 				nextAmphSquad = new RaiderSquad();
 				nextAmphSquad.type = 's';

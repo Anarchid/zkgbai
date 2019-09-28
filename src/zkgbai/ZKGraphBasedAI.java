@@ -301,18 +301,12 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-	        float length = 0;
-	        float longest = 0;
-	        float shortest = Float.MAX_VALUE;
-	        for (Link l: graphManager.getLinks()){
-	        	length += l.length;
-	        	if (l.length > longest) longest = l.length;
-	        	if (l.length < shortest) shortest = l.length;
+	        for (Worker w:ecoManager.workers.values()){
+	        	if (w.isGreedy) marker(w.getPos(), "greedy");
 	        }
-	        say("Average Link Length: " + (length/graphManager.getLinks().size()));
-	        say("Median Link Length: " + ((longest + shortest)/2f));
-	        say("Longest Link: " + longest);
-	        say("Shortest Link: " + shortest);
+	        for (ConstructionTask ct: ecoManager.factoryTasks){
+	        	marker(ct.getPos(), ct.buildType.getHumanName());
+	        }
 		}
 
 		for (Module module : modules) {
