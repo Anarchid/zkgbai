@@ -33,7 +33,7 @@ public class BuildIDs {
 		for (UnitDef ud: callback.getUnitDefs()){
 			if (ud.getName().contains("factory") || ud.getName().contains("hub")){
 				facIDs.add(ud.getUnitDefId());
-			}else if (ud.getSpeed() == 0 && ud.getCost(m) > 300f && ud.isAbleToAttack() && !ud.getTooltip().contains("Anti-Air")){
+			}else if (ud.getSpeed() == 0 && ud.getCost(m) > 200f && ud.isAbleToAttack() && !ud.getTooltip().contains("Anti-Air")){
 				expensiveIDs.add(ud.getUnitDefId());
 			}
 		}

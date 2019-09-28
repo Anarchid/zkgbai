@@ -97,7 +97,7 @@ public class Enemy {
 			this.isWorker = true;
 		}
 		
-		if (ud.getName().contains("_")){
+		if (ud.getName().startsWith("dyn")){
 			this.isCom = true;
 		}
 
@@ -135,7 +135,7 @@ public class Enemy {
 				}
 			}
 			
-			if (ud.getName().contains("factory") || ud.getName().contains("hub") || ud.getName().equals("energyfusion") || ud.getName().equals("energysingu") || ud.getName().contains("_") /* commanders */){
+			if (ud.getName().contains("factory") || ud.getName().contains("hub") || ud.getName().equals("energyfusion") || ud.getName().equals("energysingu") || isCom){
 				this.isImportant = true;
 			}
 

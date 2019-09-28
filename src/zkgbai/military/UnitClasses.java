@@ -95,11 +95,11 @@ public class UnitClasses {
         loners.add("vehsupport");
         loners.add("tankheavyassault");
         loners.add("spidercrabe");
+	    loners.add("amphassault");
         
         // arties; stuff that has long range and can attack high threat areas without suiciding
         arties.add("cloaksnipe");
         arties.add("cloakarty");
-        arties.add("amphassault");
         arties.add("veharty");
         arties.add("vehheavyarty");
         arties.add("hoverarty");

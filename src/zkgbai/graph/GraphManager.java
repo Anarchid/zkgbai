@@ -177,6 +177,13 @@ public class GraphManager extends Module {
 	@Override
 	public int unitCreated(Unit unit, Unit builder) {
 		UnitDef def = unit.getDef();
+		if (def.getUnitDefId() == mexDefID && warManager.getTotalFriendlyThreat(unit.getPos()) < 0.5f){
+			MetalSpot ms = getClosestSpot(unit.getPos());
+			setOwned(ms);
+			ms.extractor = unit;
+		}
+		
+		
 		Integer radius = pylonDefs.get(def.getName());
 		if(radius != null){
 			Pylon p = new Pylon(unit, radius);
@@ -203,6 +210,16 @@ public class GraphManager extends Module {
 			}
 		}
 
+		return 0;
+	}
+	
+	@Override
+	public int unitFinished(Unit unit){
+		if (unit.getDef().getUnitDefId() == mexDefID){
+			MetalSpot ms = getClosestSpot(unit.getPos());
+			setOwned(ms);
+			ms.extractor = unit;
+		}
 		return 0;
 	}
 
@@ -268,17 +285,17 @@ public class GraphManager extends Module {
 
 				boolean hasMex = false;
 				for (Unit u:friendlies){
-					if (u.getDef().getUnitDefId() == mexDefID && (!u.isBeingBuilt() || warManager.getTotalFriendlyThreat(u.getPos()) == 0)){
-						setOwned(ms);
-						hasMex = true;
-						ms.extractor = u;
-					}
+					if (u.getDef().getUnitDefId() == mexDefID) hasMex = true;
+					break;
 				}
 
-				for (Unit u: enemies){
-					if (u.getDef().getUnitDefId() == mexDefID){
-						setHostile(ms);
-						hasMex = true;
+				if (!hasMex) {
+					for (Unit u : enemies) {
+						if (u.getDef().getUnitDefId() == mexDefID) {
+							setHostile(ms);
+							hasMex = true;
+							break;
+						}
 					}
 				}
 

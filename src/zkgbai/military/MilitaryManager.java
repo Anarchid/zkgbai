@@ -41,6 +41,7 @@ public class MilitaryManager extends Module {
 	ArrayGraphics threatGraphics;
 	ArrayGraphics enemyPorcGraphics;
 	ArrayGraphics allyThreatGraphics;
+	ArrayGraphics allyRaiderGraphics;
 	ArrayGraphics allyPorcGraphics;
 	ArrayGraphics aaThreatGraphics;
 	ArrayGraphics aaPorcGraphics;
@@ -125,6 +126,7 @@ public class MilitaryManager extends Module {
 		this.threatGraphics = new ArrayGraphics(width, height);
 		this.enemyPorcGraphics = new ArrayGraphics(width, height);
 		this.allyThreatGraphics = new ArrayGraphics(width, height);
+		this.allyRaiderGraphics = new ArrayGraphics(width, height);
 		this.allyPorcGraphics = new ArrayGraphics(width, height);
 		this.aaThreatGraphics = new ArrayGraphics(width, height);
 		this.aaPorcGraphics = new ArrayGraphics(width, height);
@@ -211,9 +213,9 @@ public class MilitaryManager extends Module {
 	@Override
 	public int unitCreated(Unit unit, Unit builder){
 		// Paint ally threat for porc
-		if (unit.getDef().getSpeed() == 0 && unit.getDef().isAbleToAttack() && unit.getDef().getCost(m) < 1500f){
+		/*if (unit.getDef().getSpeed() == 0 && unit.getDef().isAbleToAttack() && unit.getDef().getCost(m) < 1500f){
 			unbuiltPorcs.add(unit.getUnitId());
-		}
+		}*/
 		return 0;
 	}
 	
@@ -256,7 +258,7 @@ public class MilitaryManager extends Module {
 			retreatHandler.addCoward(unit);
 		}
 		
-		if (unbuiltPorcs.contains(unit.getUnitId())){
+		/*if (unbuiltPorcs.contains(unit.getUnitId())){
 			unbuiltPorcs.remove(unit.getUnitId());
 			int power = (int) ((unit.getPower() + unit.getMaxHealth())/10);
 			float radius = unit.getMaxRange();
@@ -266,7 +268,7 @@ public class MilitaryManager extends Module {
 			int rad = Math.round(radius/64f);
 			
 			allyPorcGraphics.paintCircle(x, y, rad, power);
-		}
+		}*/
 		return 0;
 	}
 	
@@ -757,6 +759,8 @@ public class MilitaryManager extends Module {
 			@Override
 			public void run() {
 				allyThreatGraphics.clear();
+				allyRaiderGraphics.clear();
+				allyPorcGraphics.clear();
 				availableMobileThreat = 0;
 				// paint allythreat for raiders
 				for (Raider r : raiderHandler.soloRaiders) {
@@ -766,7 +770,7 @@ public class MilitaryManager extends Module {
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
 					int rad = 7;
-					allyThreatGraphics.paintCircle(x, y, rad, power);
+					allyRaiderGraphics.paintCircle(x, y, rad, power);
 				}
 
 				for (RaiderSquad rs: raiderHandler.raiderSquads) {
@@ -778,9 +782,10 @@ public class MilitaryManager extends Module {
 					int y = Math.round(pos.z / 64f);
 					int rad = 8;
 					allyThreatGraphics.paintCircle(x, y, rad, power);
+					if (rs.status != 'f') allyRaiderGraphics.paintCircle(x, y, rad, power);
 				}
 
-				// paint allythreat for fighters
+				// paint allythreat for squads
 				for (Squad s: squadHandler.squads) {
 					if (s.isDead()) continue;
 					int power = s.getThreat();
@@ -788,7 +793,7 @@ public class MilitaryManager extends Module {
 					AIFloat3 pos = s.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
-					int rad = 13;
+					int rad = 10;
 
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
@@ -812,12 +817,12 @@ public class MilitaryManager extends Module {
 					AIFloat3 pos = s.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
-					int rad = 13;
+					int rad = 10;
 					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 				
-				// paint allythreat for striders
+				// paint allythreat for loners
 				for (Fighter f : miscHandler.loners.values()) {
 					if (f.isDead()) continue;
 					int power = (int) ((f.getUnit().getPower() + f.getUnit().getMaxHealth()) / 8f);
@@ -825,7 +830,7 @@ public class MilitaryManager extends Module {
 					AIFloat3 pos = f.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
-					int rad = 15;
+					int rad = 10;
 					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
@@ -859,16 +864,30 @@ public class MilitaryManager extends Module {
 				availableMobileThreat /= 500f;
 				availableMobileThreat *= 1.5f;
 
-				// paint allythreat for commanders
-				for (Worker w: ai.ecoManager.commanders){
-					if (w.getUnit().getHealth() <= 0 || w.getUnit().getTeam() != ai.teamID) continue;
+				// paint allythreat for commanders and welders
+				for (Worker w: ai.ecoManager.workers.values()){
+					if (w.getUnit().getHealth() <= 0 || w.getUnit().getTeam() != ai.teamID || !w.getUnit().getDef().isAbleToAttack()) continue;
 					int power = (int) ((w.getUnit().getPower() + w.getUnit().getMaxHealth()) / 10f);
 					AIFloat3 pos = w.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
-					int rad = 15;
+					int rad = 10;
 
 					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
+				
+				// paint ally porc threat
+				for (Unit u:ai.ecoManager.porcs){
+					if (u.getHealth() <= 0 || u.getTeam() != ai.teamID) continue;
+					float power = ((u.getPower() + u.getMaxHealth())/10f);
+					if (u.isBeingBuilt()) power *= u.getBuildProgress() * u.getBuildProgress();
+					float radius = u.getMaxRange();
+					AIFloat3 pos = u.getPos();
+					int x = Math.round(pos.x/64f);
+					int y = Math.round(pos.z/64f);
+					int rad = Math.round(radius/64f);
+					
+					allyPorcGraphics.paintCircle(x, y, rad, (int) power);
 				}
 
 				//paint buildpower
@@ -1125,6 +1144,13 @@ public class MilitaryManager extends Module {
 		int y = Math.round(position.z / 64f);
 
 		return allyThreatGraphics.getValue(x, y)/500f;
+	}
+	
+	public float getFriendlyRaiderThreat(AIFloat3 position){
+		int x = Math.round(position.x / 64f);
+		int y = Math.round(position.z / 64f);
+		
+		return allyRaiderGraphics.getValue(x, y)/500f;
 	}
 	
 	public float getFriendlyPorcThreat(AIFloat3 position){
@@ -1996,8 +2022,8 @@ public class MilitaryManager extends Module {
 
 		// then check for nearby enemies
 		for (Enemy e : targets.values()) {
-			if (((getEffectiveThreat(e.position) > getFriendlyThreat(pos)
-					|| (e.isRiot || getRiotThreat(e.position) > 0)
+			float ethreat = (getThreat(e.position) * (1f + getRiotThreat(e.position))) - getTotalFriendlyThreat(e.position);
+			if (((ethreat > getFriendlyThreat(pos)
 					|| (e.identified && e.ud.isAbleToFly())) && !squadHandler.fighters.isEmpty())
 					|| (!graphManager.isAllyTerritory(e.position) || getPorcThreat(e.position) > 0)){
 				continue;
@@ -2060,13 +2086,14 @@ public class MilitaryManager extends Module {
 		AIFloat3 facpos = (nearestFac != null) ? nearestFac.getPos() : pos;
 		AIFloat3 enemyCenter = !graphManager.getEnemyCenter().equals(nullpos) ? graphManager.getEnemyCenter() : pos;
 		for (Worker w: ai.ecoManager.workers.values()){
-			if (getEffectiveThreat(w.getPos()) > getFriendlyThreat(pos)) continue;
-			float dist = distance(pos, w.getPos()) - distance(w.getPos(), facpos) + distance(w.getPos(), enemyCenter) + (1000f * (getTotalFriendlyThreat(w.getPos()) - getEffectiveThreat(w.getPos())));
+			if (getEffectiveThreat(w.getPos()) > availableMobileThreat || (w.isCom && ai.ecoManager.workers.size() > 1)) continue;
+			float dist = distance(w.getPos(), enemyCenter) + (1000f * (getTotalFriendlyThreat(w.getPos()) - getEffectiveThreat(w.getPos())));
 			if (dist < mindist){
 				target = w.getPos();
 				mindist = dist;
 			}
 		}
+		if (target == null) return graphManager.getAllyCenter();
 		return callback.getMap().findClosestBuildSite(callback.getUnitDefByName("mahlazer"), getAngularPoint(target, graphManager.getMapCenter(), 250f), 600f, 3, 0);
 	}
 

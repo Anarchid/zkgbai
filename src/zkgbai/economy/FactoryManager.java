@@ -737,7 +737,9 @@ public class FactoryManager extends Module {
 			      || (earlyWorker && numWorkers < 2)
 		) {
 			return true;
-		}else if ((fac.raiderSpam >= 0 && numWorkers < ((ai.mergedAllies == 0 || bigMap) ? 3 : 2) * (1 + ai.mergedAllies))){
+		}else if ((fac.raiderSpam >= 0 && numWorkers < 2 * (1 + ai.mergedAllies))){
+			return true;
+		}else if (ai.mergedAllies == 0 && economyManager.effectiveIncome >= 15f && numWorkers < 3){
 			return true;
 		}
 		return false;
@@ -968,7 +970,7 @@ public class FactoryManager extends Module {
 		}
 		
 		if (economyManager.adjustedIncome > 20f
-			      && Math.random() < Math.min(1f, 2f * graphManager.territoryFraction) * (1f - lightArtyValue/warManager.enemyLightPorcValue)){
+			      && Math.random() < Math.min(1f, 2f * graphManager.territoryFraction) * (1f - lightArtyValue/warManager.enemyPorcValue)){
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 1);
 			return "veharty";
 		}

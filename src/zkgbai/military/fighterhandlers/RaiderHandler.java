@@ -487,8 +487,8 @@ public class RaiderHandler {
 	
 	private void assignSoloRaider(Raider r){
 		AIFloat3 pos = r.getPos();
-		boolean overThreat = (warManager.getEffectiveThreat(pos) > 0 || warManager.getRiotThreat(pos) > 0
-			                        || (r.target != null && (warManager.getRiotThreat(r.target) > 0 || warManager.getThreat(r.target) > warManager.getFriendlyThreat(pos))));
+		boolean overThreat = (warManager.getThreat(pos) * (1f + warManager.getRiotThreat(pos)) > warManager.getFriendlyRaiderThreat(pos)
+			                        || (r.target != null && warManager.getThreat(r.target) > warManager.getFriendlyRaiderThreat(pos)));
 		if (overThreat){
 			// try to keep raiders from suiciding.
 			r.sneak(graphManager.getClosestRaiderHaven(pos), frame);
@@ -678,14 +678,14 @@ public class RaiderHandler {
 		boolean overThreat = false;
 		if (rs.status == 'f'){
 			// Assign forming squads.
-			if ((rs.target != null && (warManager.getPorcThreat(rs.target) > 0 || warManager.getRiotThreat(rs.target) > 0
-				                             || warManager.getThreat(rs.target) > warManager.availableMobileThreat))){
+			if ((rs.target != null && (warManager.getPorcThreat(rs.target) > 0
+				                             || warManager.getTacticalThreat(rs.target) > warManager.availableMobileThreat))){
 				overThreat = true;
 			}else {
 				for (Raider r : rs.raiders) {
 					AIFloat3 rpos = r.getPos();
-					if (warManager.getEffectiveThreat(rpos) > 0 || warManager.getThreat(rpos) > warManager.availableMobileThreat
-						      || warManager.getPorcThreat(rpos) > 0 || warManager.getRiotThreat(rpos) > 0) {
+					if (warManager.getThreat(rpos) * (1f + warManager.getRiotThreat(rpos)) > warManager.getTotalFriendlyThreat(rpos)
+						      || warManager.getPorcThreat(rpos) > 0) {
 						overThreat = true;
 						break;
 					}
@@ -707,7 +707,7 @@ public class RaiderHandler {
 			}
 		}else{
 			// Get targets for actively raiding squads.
-			float threat = rs.getThreat()/500f;
+			float threat = warManager.getFriendlyRaiderThreat(pos);
 			if (warManager.getRiotThreat(rs.target) > 0 || warManager.getThreat(rs.target) > threat){
 				overThreat = true;
 			}else {
@@ -754,13 +754,13 @@ public class RaiderHandler {
 			
 			boolean porc = false;
 			for (Enemy e: warManager.getTargets()){
-				float ethreat = warManager.getThreat(e.position);
-				if (e.isRiot || warManager.getRiotThreat(e.position) > 0 || ethreat > threat || !e.identified){
+				float ethreat = warManager.getThreat(e.position) * (1f + warManager.getRiotThreat(e.position));
+				if (ethreat > threat || !e.identified){
 					continue;
 				}
 
 				float tmpcost = distance(pos, e.position);
-				if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
+				if (!e.isArty && !e.isRaider && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
 					tmpcost += 1250f;
 				}else if (e.isPorc) {
 					tmpcost -= 400f;
@@ -814,7 +814,7 @@ public class RaiderHandler {
 		}
 		
 		Raider r = lastDamagedRaider;
-		if (r == null || frame - r.lastRotationFrame < 15) return;
+		if (r == null || frame - r.lastRotationFrame < 5) return;
 		
 		if (h.getHealth() > 0 && (h.getHealth() / h.getMaxHealth() < 0.8f || h.getParalyzeDamage() > 0) && attacker != null && attacker.getMaxSpeed() > 0) {
 			r.lastRotationFrame = frame;
