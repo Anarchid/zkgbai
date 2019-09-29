@@ -30,6 +30,7 @@ public class ShieldSquad extends Squad {
     private static int felonID;
     private static int aspisID;
     private static int domiID;
+	private static int thugID;
     private static boolean initialized = false;
 
     public ShieldSquad(){
@@ -39,6 +40,7 @@ public class ShieldSquad extends Squad {
         if (!initialized) {
 	        OOAICallback callback = ZKGraphBasedAI.getInstance().getCallback();
 	        felonID = callback.getUnitDefByName("shieldfelon").getUnitDefId();
+	        thugID = callback.getUnitDefByName("shieldassault").getUnitDefId();
 	        aspisID = callback.getUnitDefByName("shieldshield").getUnitDefId();
 	        domiID = callback.getUnitDefByName("vehcapture").getUnitDefId();
         }
@@ -99,11 +101,13 @@ public class ShieldSquad extends Squad {
             params.add((float)leader.id);
             drawParams.add((float)leader.id);
             if (f.getUnit().getDef().getUnitDefId() == domiID){
-                params.add(175f);
+                params.add(250f);
             }else if (f.getUnit().getDef().getUnitDefId() == aspisID){
                 params.add(40f);
-            }else {
-                params.add(75f);
+            }else if (f.getUnit().getDef().getUnitDefId() == thugID) {
+                params.add(125f);
+            }else{
+	            params.add(90f);
             }
             f.getUnit().executeCustomCommand(CMD_ORBIT, params, (short) 0, Integer.MAX_VALUE);
             f.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
@@ -168,12 +172,14 @@ public class ShieldSquad extends Squad {
 			    List<Float> drawParams = new ArrayList<>();
 			    params.add((float)leader.id);
 			    drawParams.add((float)leader.id);
-			    if (f.getUnit().getDef().getName().equals("vehcapture")){
-				    params.add(175f);
-			    }else if (f.getUnit().getDef().getName().equals("shieldshield")){
+			    if (f.getUnit().getDef().getUnitDefId() == domiID){
+				    params.add(250f);
+			    }else if (f.getUnit().getDef().getUnitDefId() == aspisID){
 				    params.add(40f);
-			    }else {
-				    params.add(75f);
+			    }else if (f.getUnit().getDef().getUnitDefId() == thugID) {
+				    params.add(125f);
+			    }else{
+				    params.add(90f);
 			    }
 			    f.getUnit().executeCustomCommand(CMD_ORBIT, params, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 			    f.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, Integer.MAX_VALUE);

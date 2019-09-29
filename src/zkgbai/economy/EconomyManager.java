@@ -397,7 +397,7 @@ public class EconomyManager extends Module {
 		}
 		
 		if ((defName.equals("factoryplane") || defName.equals("striderhub") || defName.equals("factorygunship")) && defendedFac){
-			defendFusion(unit.getPos());
+			defendFusion(unit.getPos(), true);
 		}
 		
 		if (defName.equals("energypylon")){
@@ -418,7 +418,7 @@ public class EconomyManager extends Module {
 		}
 		
 		if (defName.equals("energyfusion") || defName.equals("energysingu") || defName.equals("staticheavyarty") || defName.equals("turretaaheavy") || defName.equals("turretaafar")){
-			defendFusion(unit.getPos());
+			defendFusion(unit.getPos(), false);
 		}
 		
 		if (defName.equals("energyfusion") || defName.equals("energysingu")){
@@ -558,6 +558,7 @@ public class EconomyManager extends Module {
 					nanos.put(unit.getUnitId(), nt);
 					unit.setRepeat(true, (short) 0, Integer.MAX_VALUE);
 					unit.guard(nt.target, (short) 0, Integer.MAX_VALUE);
+					fortifyMex(unit.getPos());
 				}
 
 				finished = ct;
@@ -1157,7 +1158,7 @@ public class EconomyManager extends Module {
 			}
 
 			if (ctask.buildType.isAbleToAttack()){
-				// for porc
+				// for cheap porc
 				if (warManager.slasherSpam * 140 > warManager.enemyPorcValue || (ai.mergedAllies > 2 && graphManager.territoryFraction < 0.2f)){
 					return dist+300;
 				}
@@ -1178,8 +1179,7 @@ public class EconomyManager extends Module {
 
 			if (ctask.buildType.getUnitDefId() == buildIDs.radarID){
 				// for radar
-				if (worker.isGreedy) return dist + (10000f * costMod);
-				return (dist/4f) - 300 + (1500 * (costMod - 1));
+				return (dist/4f) - 100 + (1500 * (costMod - 1));
 			}
 			
 			if (ctask.buildType.getCost(m) > 300){
@@ -1539,7 +1539,7 @@ public class EconomyManager extends Module {
 		}
 
 		// do we need radar?
-		if (!worker.isGreedy && adjustedIncome > 20f && energy > 100f && !tooCloseToFac){
+		if (adjustedIncome > 20f && energy > 100f && !tooCloseToFac){
     		createRadarTask(worker);
     	}
     	
@@ -1634,8 +1634,8 @@ public class EconomyManager extends Module {
 		
 		// Uncomment this to set the intial fac for debugging purposes.
 		/*if (facManager.factories.size() == 0){
-			factory = callback.getUnitDefByName("factorytank");
-			potentialFacList.remove("factorytank");
+			factory = callback.getUnitDefByName("factoryamph");
+			potentialFacList.remove("factoryamph");
 		}else*/ if (userFac != null && facManager.factories.size() == 0){
 			factory = callback.getUnitDefByName(userFac);
 			potentialFacList.remove(userFac);
@@ -1747,11 +1747,11 @@ public class EconomyManager extends Module {
     void createRadarTask(Worker worker){
     	UnitDef radar = callback.getUnitDefByName("staticradar");
     	AIFloat3 position = worker.getPos();
-    	position = heightMap.getHighestPointInRadius(position, worker.isCom ? 350f : 800f);
+    	position = heightMap.getHighestPointInRadius(position, 600f);
     	position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
     	if (!needRadar(position) || !worker.canReach(position)){
 		    position = worker.getPos();
-		    position = heightMap.getHighestPointInRadius(position, worker.isCom ? 450f : 500f);
+		    position = heightMap.getHighestPointInRadius(position, 400f);
 		    position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
 		    if (!needRadar(position) || !worker.canReach(position)) return;
 	    }
@@ -2036,13 +2036,13 @@ public class EconomyManager extends Module {
 		}*/
 	}
 	
-	void defendFusion(AIFloat3 position){
+	void defendFusion(AIFloat3 position, boolean factory){
 		UnitDef hlt = callback.getUnitDefByName("turretheavylaser");
 		UnitDef emp = callback.getUnitDefByName("turretemp");
 		ConstructionTask ct;
 		AIFloat3 pos;
 		// build an hlt and a faraday
-		pos = getAngularPoint(position, graphManager.getEnemyCenter(), 250f);
+		pos = getRadialPoint(position, factory ? 175f : 125f);
 		pos = callback.getMap().findClosestBuildSite(hlt, pos, 600f, 3, 0);
 		
 		ct = new ConstructionTask(hlt, pos, 0);
@@ -2340,7 +2340,7 @@ public class EconomyManager extends Module {
 		ConstructionTask ct;
 
 		// for solars
-		if (((solars.size() + solarTasks.size()) < Math.round(rawMexIncome/1.5f) || solars.size() + solarTasks.size() * 2 < (windgens.size() + windTasks.size()))
+		if (((solars.size() + solarTasks.size()) < Math.round(rawMexIncome/2f) || Math.random() > 0.5)
 				&& callback.getMap().getElevationAt(position.x, position.z) > 0){
 			if (position == null){
 				return;

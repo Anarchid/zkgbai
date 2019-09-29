@@ -311,7 +311,7 @@ public class RaiderHandler {
 		if (frame % 30 == (ai.offset + 5) % 30) {
 			List<Integer> stuckRaiders = new ArrayList<>();
 			for (Raider r : mediumRaiders.values()) {
-				if (!r.isDead() && r.squad != null && r.squad.status != 'f'){
+				if (!r.isDead() && r.squad != null && r.squad.status == 'a'){
 					if (r.unstick(frame)){
 						if (r.squad != null) r.squad.removeUnit(r);
 						stuckRaiders.add(r.id);
@@ -708,12 +708,12 @@ public class RaiderHandler {
 		}else{
 			// Get targets for actively raiding squads.
 			float threat = warManager.getFriendlyRaiderThreat(pos);
-			if (warManager.getRiotThreat(rs.target) > 0 || warManager.getThreat(rs.target) > threat){
+			if (warManager.getThreat(rs.target) * (1f + warManager.getRiotThreat(rs.target)) > threat){
 				overThreat = true;
 			}else {
 				for (Raider r:rs.raiders) {
 					AIFloat3 rpos = r.getPos();
-					if (!r.getUnit().isCloaked() && (warManager.getThreat(rpos) > threat || warManager.getRiotThreat(rpos) > 0)){
+					if (!r.getUnit().isCloaked() && (warManager.getThreat(rpos) * (1f + warManager.getRiotThreat(rpos)) > threat)){
 						overThreat = true;
 						break;
 					}
@@ -731,7 +731,7 @@ public class RaiderHandler {
 			float cost = Float.MAX_VALUE;
 			
 			for (ScoutTask s:scoutTasks){
-				if (warManager.getRiotThreat(s.target) > 0 || warManager.getThreat(s.target) > threat || !pathfinder.isRaiderReachable(rs.leader.getUnit(), s.target, threat)){
+				if (warManager.getThreat(s.target) * (1f + warManager.getRiotThreat(s.target)) > threat || !pathfinder.isRaiderReachable(rs.leader.getUnit(), s.target, threat)){
 					continue;
 				}
 				float tmpcost = getScoutCost(s, rs.leader);

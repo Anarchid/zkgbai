@@ -770,6 +770,7 @@ public class MilitaryManager extends Module {
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
 					int rad = 7;
+					allyThreatGraphics.paintCircle(x, y, rad, power);
 					allyRaiderGraphics.paintCircle(x, y, rad, power);
 				}
 
@@ -867,7 +868,7 @@ public class MilitaryManager extends Module {
 				// paint allythreat for commanders and welders
 				for (Worker w: ai.ecoManager.workers.values()){
 					if (w.getUnit().getHealth() <= 0 || w.getUnit().getTeam() != ai.teamID || !w.getUnit().getDef().isAbleToAttack()) continue;
-					int power = (int) ((w.getUnit().getPower() + w.getUnit().getMaxHealth()) / 10f);
+					int power = (int) ((w.getUnit().getPower() + w.getUnit().getMaxHealth()) / 14f);
 					AIFloat3 pos = w.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);

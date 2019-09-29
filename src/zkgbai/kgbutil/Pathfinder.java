@@ -865,11 +865,10 @@ public class Pathfinder extends Object {
     public final CostSupplier RAIDER_CHECK = new CostSupplier() {
         @Override
         public float getCost(float slope, float maxSlope, AIFloat3 pos) {
-            if (slope > maxSlope || warManager.getRiotThreat(pos) > 0) {
+        	float threat = warManager.getThreat(pos) * (1f + warManager.getRiotThreat(pos));
+            if (slope > maxSlope || threat > maxThreat) {
                 return -1;
             }else {
-                float threat = warManager.getThreat(pos);
-                if (threat > maxThreat) return -1;
                 return 1f + (slope/maxSlope) + (20f * threat);
             }
         }

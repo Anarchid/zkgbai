@@ -10,7 +10,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 
-import javafx.scene.shape.Path;
 import zkgbai.economy.EconomyManager;
 import zkgbai.economy.Factory;
 import zkgbai.economy.FactoryManager;
