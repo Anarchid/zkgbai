@@ -1743,25 +1743,6 @@ public class EconomyManager extends Module {
 			factoryTasks.add(ct);
 		}
 	}
-    
-    void createRadarTask(Worker worker){
-    	UnitDef radar = callback.getUnitDefByName("staticradar");
-    	AIFloat3 position = worker.getPos();
-    	position = heightMap.getHighestPointInRadius(position, 600f);
-    	position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
-    	if (!needRadar(position) || !worker.canReach(position)){
-		    position = worker.getPos();
-		    position = heightMap.getHighestPointInRadius(position, 400f);
-		    position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
-		    if (!needRadar(position) || !worker.canReach(position)) return;
-	    }
-
-    	 ConstructionTask ct =  new ConstructionTask(radar, position, 0);
-    	if (buildCheck(ct) && !radarTasks.contains(ct)){
-			constructionTasks.add(ct);
-			radarTasks.add(ct);
-		}
-    }
 
 	void createAATask(Worker worker){
 		AIFloat3 position = graphManager.getClosestFrontLineLink(worker.getPos());
@@ -2260,6 +2241,25 @@ public class EconomyManager extends Module {
 		if (buildCheck(ct) && !porcTasks.contains(ct)) {
 			constructionTasks.add(ct);
 			porcTasks.add(ct);
+		}
+	}
+	
+	void createRadarTask(Worker worker){
+		UnitDef radar = callback.getUnitDefByName("staticradar");
+		AIFloat3 position = worker.getPos();
+		position = heightMap.getHighestPointInRadius(position, 800f);
+		position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
+		if (!needRadar(position) || !worker.canReach(position)){
+			position = worker.getPos();
+			position = heightMap.getHighestPointInRadius(position, 500f);
+			position = callback.getMap().findClosestBuildSite(radar,position,600f, 3, 0);
+			if (!needRadar(position) || !worker.canReach(position)) return;
+		}
+		
+		ConstructionTask ct =  new ConstructionTask(radar, position, 0);
+		if (buildCheck(ct) && !radarTasks.contains(ct)){
+			constructionTasks.add(ct);
+			radarTasks.add(ct);
 		}
 	}
 	
