@@ -6,10 +6,8 @@ import com.springrts.ai.oo.clb.Weapon;
 import com.springrts.ai.oo.clb.WeaponDef;
 import zkgbai.ZKGraphBasedAI;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 import static zkgbai.kgbutil.KgbUtil.*;
 
 /**
@@ -151,7 +149,13 @@ public class ShieldSquad extends Squad {
         // set a target for the squad to attack.
         target = pos;
         collectStragglers();
-        leader.fightTo(target);
+        Queue<AIFloat3> path = leader.getFightPath(getDirectionalPoint(target, leader.getPos(), 135f));
+	    if (path.size() > 1) path.poll();
+	    leader.getUnit().moveTo(path.poll(), (short) 0, Integer.MAX_VALUE);
+	
+	    // Add one extra waypoint
+	    if (path.size() > 1) path.poll(); // skip every other waypoint since they're close together.
+	    if (!path.isEmpty()) leader.getUnit().moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
     }
 
     @Override
@@ -185,6 +189,17 @@ public class ShieldSquad extends Squad {
 			    f.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 		    }
 	    }
+    }
+    
+    @Override
+    public boolean isRallied(int frame){
+    	float rallied = 0;
+    	for (Fighter f:fighters){
+    		if (distance(f.getPos(), leader.getPos()) < 350f){
+    			rallied++;
+		    }
+	    }
+    	return rallied/fighters.size() > 0.75f;
     }
 
     @Override

@@ -65,6 +65,7 @@ public class Squad {
 		
 		Queue<AIFloat3> path = leader.getFightPath(pos);
 		if (isAirSquad && path.size() > 1) path.poll();
+		if (path.size() > 1) path.poll();
 		AIFloat3 waypoint = path.poll();
 		for (Fighter f:fighters){
 			f.target = target;

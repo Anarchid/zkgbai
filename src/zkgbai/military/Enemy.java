@@ -145,7 +145,7 @@ public class Enemy {
 				if (!defName.startsWith("amph")) this.isRiot = false; // count archers as riots but not pyros.
 			}
 
-			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("vehsupport")) || u.isBuilder() && !u.getTooltip().contains("Riot")){
+			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("vehsupport")) || u.isBuilder() && !u.getTooltip().contains("Riot") || u.getName().equals("tankcon")){
 				// identify arty/skirms
 				this.isArty = true;
 			}

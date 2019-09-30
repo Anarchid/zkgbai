@@ -333,6 +333,13 @@ public class MilitaryManager extends Module {
 		}
 		
 		if (unitTypes.smallRaiders.contains(defName)) {
+			if (defName.equals("amphbomb")){
+				unit.setMoveState(2, (short) 0, Integer.MAX_VALUE);
+				unit.setFireState(2, (short) 0, Integer.MAX_VALUE);
+				ArrayList<Float> params = new ArrayList<>();
+				params.add((float) 0);
+				unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, Integer.MAX_VALUE);
+			}
 			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiderHandler.addSmallRaider(r);
@@ -781,7 +788,7 @@ public class MilitaryManager extends Module {
 					AIFloat3 pos = rs.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
-					int rad = 8;
+					int rad = rs.type == 's' ? 8 : 10;
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 					if (rs.status != 'f') allyRaiderGraphics.paintCircle(x, y, rad, power);
 				}
@@ -950,20 +957,6 @@ public class MilitaryManager extends Module {
 				}
 			}
 		}
-
-		ArrayList<TargetMarker> deadMarkers = new ArrayList<TargetMarker>();
-		for(TargetMarker tm:targetMarkers){
-			int age = ai.currentFrame - tm.frame;
-			if(age < 255){
-
-			}else{
-				deadMarkers.add(tm);
-			}
-		}
-		
-		for(TargetMarker tm:deadMarkers){
-			targetMarkers.remove(tm);
-		}
 		
 		boolean ok = false;
 		while (!ok) {
@@ -1096,6 +1089,14 @@ public class MilitaryManager extends Module {
 		if (enemyAirValue > maxEnemyAirValue){
 			maxEnemyAirValue = enemyAirValue;
 		}
+		
+		ArrayList<TargetMarker> deadMarkers = new ArrayList<TargetMarker>();
+		for(TargetMarker tm:targetMarkers){
+			if(frame - tm.frame > 150){
+				deadMarkers.add(tm);
+			}
+		}
+		targetMarkers.removeAll(deadMarkers);
 	}
 	
 	public float getThreat(AIFloat3 position){

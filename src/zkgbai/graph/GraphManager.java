@@ -177,7 +177,7 @@ public class GraphManager extends Module {
 	@Override
 	public int unitCreated(Unit unit, Unit builder) {
 		UnitDef def = unit.getDef();
-		if (def.getUnitDefId() == mexDefID && warManager.getTotalFriendlyThreat(unit.getPos()) < 0.5f){
+		if (def.getUnitDefId() == mexDefID && (warManager.getTotalFriendlyThreat(unit.getPos()) < 0.5f || !ai.ecoManager.defendedFac)){
 			MetalSpot ms = getClosestSpot(unit.getPos());
 			setOwned(ms);
 			ms.extractor = unit;

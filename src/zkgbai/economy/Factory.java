@@ -34,13 +34,13 @@ public class Factory extends Worker {
 			boolean earlyWorker = ai.mapDiag > 910f;
 			boolean bigMap = ai.mapDiag > 1270f;
 			
-			if (bigMap){
-				raiderSpam = -9;
-			}
-			
 			if (earlyWorker){
 				this.scoutAllowance = 3;
 				this.maxScoutAllowance = 3;
+			}
+			
+			if (bigMap){
+				raiderSpam = -9;
 			}
 
 			if (defName.equals("factorytank")){

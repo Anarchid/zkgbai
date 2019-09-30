@@ -40,6 +40,7 @@ public class Strider extends Fighter {
         }
     
         Queue<AIFloat3> path = pathfinder.findPath(unit, target, pathfinder.STRIDER_PATH);
+	    if (path.size() > 1) path.poll(); // skip every other waypoint except the last, since they're not very far apart.
         unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE);
         
         if (path.size() > 1) path.poll(); // skip every other waypoint except the last, since they're not very far apart.

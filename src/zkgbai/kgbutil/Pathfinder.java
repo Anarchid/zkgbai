@@ -108,7 +108,7 @@ public class Pathfinder extends Object {
     
     public Queue<AIFloat3> findPath(Unit u, AIFloat3 target, CostSupplier costs) {
         AIFloat3 start = u.getPos();
-        Queue<AIFloat3> result = new LinkedList<>();
+        Deque<AIFloat3> result = new LinkedList<>();
         
         if (start == null){
             return result;
@@ -128,7 +128,7 @@ public class Pathfinder extends Object {
             maxDepth = -u.getDef().getMaxWaterDepth();
 	        minDepth = (u.getDef().getMinWaterDepth() > 0 ? -u.getDef().getMinWaterDepth() : Float.MAX_VALUE);
             flyer = false;
-            if (costs != AVOID_ENEMIES && maxSlope == callback.getUnitDefByName("spidercon").getMoveData().getMaxSlope()){
+            if (costs != AVOID_ENEMIES && costs != STRIDER_PATH && maxSlope == callback.getUnitDefByName("spidercon").getMoveData().getMaxSlope()){
                 // use special pathing for spiders, since they favor hills.
                 if (u.getDef().getName().equals("spiderscout")){
                     costs = SPIDER_RAIDER_PATH;
@@ -147,8 +147,8 @@ public class Pathfinder extends Object {
             flyheight = u.getPos().y - getElev(u.getPos());
         }
         
-        int startPos = (int) (target.z / mapRes) * smwidth + (int) (target.x / mapRes); //reverse to return in right order when traversing backwards
-        int targetPos = (int) (start.z / mapRes) * smwidth + (int) (start.x / mapRes);
+        int startPos = (int) (start.z / mapRes) * smwidth + (int) (start.x / mapRes);
+	    int targetPos = (int) (target.z / mapRes) * smwidth + (int) (target.x / mapRes);
         int[] offset = new int[]{-1, 1, smwidth, -smwidth, smwidth + 1, smwidth - 1, -smwidth + 1, -smwidth - 1};
         float[] offsetCostMod = new float[]{1, 1, 1, 1, 1.42f, 1.42f, 1.42f, 1.42f};
         
@@ -173,17 +173,17 @@ public class Pathfinder extends Object {
         };
         
         int pqIndex = 0;
-        PriorityQueue<PathNode> openSet = new PriorityQueue<PathNode>(1, pnComp);
+        PriorityQueue<PathNode> openSet = new PriorityQueue<PathNode>(9, pnComp);
         Set<Integer> openRecord = new HashSet<Integer>(); // needed because 'contains' checks on priority queues are O(n)
         Set<Integer> closedSet = new HashSet<Integer>();
         openSet.add(new PathNode(startPos, getHeuristic(startPos, targetPos), 0, pqIndex));
         openRecord.add(startPos);
         
-        
-        for (int i = 0; i < minCosts.length; i++) {
-            minCosts[i] = Float.MAX_VALUE;
-            cachedCosts[i] = Float.MAX_VALUE;
-        }
+        int closest = startPos;
+        float bestDist = Float.MAX_VALUE;
+	
+	    Arrays.fill(minCosts, Float.MAX_VALUE);
+	    Arrays.fill(cachedCosts, Float.MAX_VALUE);
         minCosts[startPos] = 0;
         
         int pos;
@@ -191,8 +191,18 @@ public class Pathfinder extends Object {
         while (true) {
             // if the open set is empty and we haven't reached targetPos, it indicates that the target is unreachable.
             if (openSet.isEmpty()) {
-                result.add(target);
-                return result;
+            	if (closest == startPos){
+            		result.add(target);
+            		return result;
+	            }
+                targetPos = closest;
+                closedSet.clear();
+                openRecord.clear();
+	            Arrays.fill(minCosts, Float.MAX_VALUE);
+	            minCosts[startPos] = 0;
+	
+	            openSet.add(new PathNode(startPos, getHeuristic(startPos, targetPos), 0, pqIndex));
+	            openRecord.add(startPos);
             }
             
             PathNode current = openSet.poll();
@@ -237,12 +247,18 @@ public class Pathfinder extends Object {
                 }
                 
                 float templength = current.pathLength + (offsetCostMod[i] * costMod);
+                float dist = getHeuristic(neighbor, targetPos);
+	
+	            if (dist < bestDist){
+		            closest = neighbor;
+		            bestDist = dist;
+	            }
                 
                 if (templength < minCosts[neighbor]) {
                     pathTo[neighbor] = pos;
                     minCosts[neighbor] = templength;
                     pqIndex++;
-                    PathNode newNode = new PathNode(neighbor, templength + getHeuristic(neighbor, targetPos), templength, pqIndex);
+                    PathNode newNode = new PathNode(neighbor, templength + dist, templength, pqIndex);
                     
                     // if a node is already in the open set, replace it with the new, lower cost node.
                     if (openRecord.contains(neighbor)){
@@ -258,21 +274,32 @@ public class Pathfinder extends Object {
         pos = targetPos;
         int i = 0;
         while (pos != startPos) {
-        	if (i % 4 == 0){
-	            if (flyer) {
-	                result.add(toAIFloat3(pos, flyheight));
-	            }else{
-	                result.add(toAIFloat3(pos));
-	            }
-        	}
+            if (flyer) {
+                result.push(toAIFloat3(pos, flyheight));
+            }else{
+                result.push(toAIFloat3(pos));
+            }
         	i++;
             pos = pathTo[pos];
         }
-        result.add(target);
-        if (result.size() > 1) result.poll(); // remove the unit's current location
-        //if (result.size() > 1) result.poll(); // remove the first waypoint because it causes stuttering.
         
-        return result;
+        if (result.size() > 1) result.poll();
+        Queue<AIFloat3> filtered = new LinkedList<>();
+        i = 0;
+	    while (result.size() > 1){
+		    if (i % 2 == 0) {
+		        filtered.add(result.poll());
+		    }else{
+		    	result.poll();
+		    }
+		    i++;
+	    }
+	    filtered.add(target);
+     
+	    //if (filtered.size() > 1) filtered.poll();
+        //if (result.size() > 1) result.poll(); // remove the unit's current location
+        
+        return filtered;
         
     }
     

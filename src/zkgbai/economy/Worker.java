@@ -2,7 +2,10 @@ package zkgbai.economy;
 
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Resource;
+import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.Weapon;
+import zkgbai.economy.tasks.ConstructionTask;
+import zkgbai.economy.tasks.RepairTask;
 import zkgbai.economy.tasks.WorkerTask;
 import static zkgbai.kgbutil.KgbUtil.*;
 
@@ -91,9 +94,8 @@ public class Worker {
 		
 		float jobdist = distance(unit.getPos(), task.getPos());
 
-		if ((getSpeed(unit) < unit.getDef().getSpeed()/10f && (jobdist > unit.getDef().getBuildDistance() || (unit.getResourceUse(m) == 0f && unit.getResourceUse(e) == 0f && unit.getResourceMake(m) == 0f && unit.getResourceMake(e) == 0f)))
-			      || unit.getCurrentCommands().isEmpty()){
-			AIFloat3 unstickPoint = getAngularPoint(task.getPos(), unit.getPos(), distance(task.getPos(), unit.getPos()) + 50f);
+		if ((getSpeed(unit) < unit.getDef().getSpeed()/10f && jobdist > unit.getDef().getBuildDistance() * 1.1f) || unit.getCurrentCommands().isEmpty()){
+			AIFloat3 unstickPoint = getAngularPoint(task.getPos(), unit.getPos(), distance(task.getPos(), unit.getPos()) + 150f);
 			unit.moveTo(unstickPoint, (short) 0, Integer.MAX_VALUE);
 			clearTask();
 			unstuck = true;
@@ -105,12 +107,18 @@ public class Worker {
 	}
 	
 	public void moveTo(AIFloat3 pos){
-		Queue<AIFloat3> path = pathfinder.findPath(unit, getDirectionalPoint(pos, unit.getPos(), unit.getDef().getBuildDistance()), pathfinder.AVOID_ENEMIES);
+		Queue<AIFloat3> path = pathfinder.findPath(unit, pos, pathfinder.AVOID_ENEMIES);
+		if (distance(pos, path.peek()) >= unit.getDef().getBuildDistance()){
+			unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
+		}else{
+			unit.moveTo(getDirectionalPoint(pos, unit.getPos(), unit.getDef().getBuildDistance() * 0.95f), (short) 0, Integer.MAX_VALUE);
+			return;
+		}
 		
-		unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
-		while (!path.isEmpty()) {
-			if (path.size() > 1) path.poll();
-			if (!path.isEmpty()) unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
+		int i = 0;
+		while (!path.isEmpty() && distance(pos, path.peek()) >= unit.getDef().getBuildDistance() && i < 2) {
+			unit.moveTo(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
+			i++;
 		}
 	}
 	
@@ -136,6 +144,19 @@ public class Worker {
 	
 	public boolean hasPlop(){
 		return unit.getRulesParamFloat("facplop", 0f) == 1f;
+	}
+	
+	public boolean isWorkingOnPorc(){
+		if (task == null) return false;
+		UnitDef ud = null;
+		if (task instanceof ConstructionTask){
+			ConstructionTask ctask = (ConstructionTask) task;
+			ud = ctask.buildType;
+		}else if (task instanceof RepairTask){
+			RepairTask rt = (RepairTask) task;
+			ud = rt.target.getDef();
+		}
+		return (ud != null && ud.getSpeed() == 0 && ud.isAbleToAttack());
 	}
 
 	@Override

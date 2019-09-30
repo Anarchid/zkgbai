@@ -500,6 +500,15 @@ public class RaiderHandler {
 		float cost = Float.MAX_VALUE;
 		boolean porc = true;
 		
+		if (raiderSquads.isEmpty() && ai.facManager.earlyWorker && !r.getUnit().getDef().getName().startsWith("spider")){
+			bestTarget = warManager.getRaiderRally(r.getPos());
+			if (distance(bestTarget, r.getPos()) > 500) {
+				r.sneak(bestTarget, frame);
+			} else {
+				r.raid(bestTarget, frame);
+			}
+		}
+		
 		for (ScoutTask s:soloScoutTasks){
 			if (warManager.getRiotThreat(s.target) > 0 || warManager.getEffectiveThreat(s.target) > warManager.getFriendlyThreat(r.getPos())){
 				continue;

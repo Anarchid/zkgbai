@@ -139,7 +139,7 @@ public class FactoryManager extends Module {
 		
 		/*if (frame % 30 == ai.offset % 30){
 			List<Float> params = new ArrayList<>();
-			if (earlyWorker && economyManager.workers.size() > 1 && numWorkers < 3 && economyManager.adjustedIncome < 10f){
+			if (economyManager.adjustedIncome < 12f && (economyManager.workers.size() > 1 || !earlyWorker)){
 				params.add(3f);
 			}else{
 				params.add(1f);
@@ -889,10 +889,11 @@ public class FactoryManager extends Module {
 			fac.raiderSpam -= Math.min(12, Math.max(6, (int) Math.floor(economyManager.adjustedIncome/5f)));
 		}
 		
-		if (economyManager.adjustedIncome > 20 && numRackets * 3 < numThugs + numLaws){
-			return "shieldarty";
-		}else if (numLaws * 2 > numThugs){
+		
+		if (numLaws * 2 > numThugs) {
 			return "shieldassault";
+		}else if (economyManager.adjustedIncome > 20 && numRackets < numLaws){
+			return "shieldarty";
 		}else {
 			return "shieldriot";
 		}
@@ -989,7 +990,7 @@ public class FactoryManager extends Module {
 			return "vehaa";
 		}
 		
-		fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 1);
+		fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
 		
 		if (Math.random() > (warManager.sniperSightings.isEmpty() ? 0.95 + Math.min(0.025f, graphManager.territoryFraction/20f) : 0.85)){
 			fac.raiderSpam -= Math.min(8f, Math.max(4f, Math.floor(economyManager.adjustedIncome / 4f))) + 1;

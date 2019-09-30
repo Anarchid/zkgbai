@@ -50,6 +50,7 @@ public class Fighter {
 
     public void fightTo(AIFloat3 pos){
         Queue<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(pos, 150f), pathfinder.ASSAULT_PATH);
+	    if (path.size() > 1) path.poll(); // skip every other waypoint since they're close together.
         unit.fight(path.poll(), (short) 0, Integer.MAX_VALUE);
         
         // Add one extra waypoint
@@ -61,6 +62,7 @@ public class Fighter {
         Queue<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(pos, 100f), pathfinder.AVOID_ENEMIES);
     
         if (unit.getDef().isAbleToFly() && path.size() > 1) path.poll();
+	    if (path.size() > 1) path.poll(); // skip every other waypoint since they're close together.
         unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE);
     
         // Add one extra waypoint

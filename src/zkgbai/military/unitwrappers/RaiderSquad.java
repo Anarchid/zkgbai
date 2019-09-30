@@ -78,6 +78,7 @@ public class RaiderSquad {
             // This keeps them mobbed up better so they can do maximum damage. Out of range units are still moved
             // to the leader to keep them dynamically rallied in case they get split up for whatever reason.
             Queue<AIFloat3> path = leader.getRaidPath(pos);
+	        if (path.size() > 1) path.poll();
             AIFloat3 waypoint = path.poll();
     
             for (Raider r : raiders) {
@@ -126,6 +127,7 @@ public class RaiderSquad {
             // This keeps them mobbed up better so they can do maximum damage. Out of range units are still moved
             // to the leader to keep them dynamically rallied in case they get split up for whatever reason.
             Queue<AIFloat3> path = leader.getRaidPath(pos);
+	        if (path.size() > 1) path.poll();
             AIFloat3 waypoint = path.poll();
     
             for (Raider r : raiders) {

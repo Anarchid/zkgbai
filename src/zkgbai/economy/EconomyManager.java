@@ -83,6 +83,8 @@ public class EconomyManager extends Module {
 
 	float reclaimValue = 0;
 	boolean energyReclaim = false;
+	boolean hardEstalled = false;
+	boolean estalled = false;
 
 	public float adjustedIncome = 0;
 	
@@ -90,7 +92,7 @@ public class EconomyManager extends Module {
 	
 	boolean bigMap;
 	boolean waterDamage;
-	boolean defendedFac = false;
+	public boolean defendedFac = false;
 	boolean addedFacs = false;
 	boolean havePlanes = false;
 	boolean antiNuke = false;
@@ -261,7 +263,7 @@ public class EconomyManager extends Module {
 			effectiveIncome = Math.min(effectiveIncomeMetal, effectiveIncomeEnergy);
 			effectiveExpenditure = Math.min(expendMetal, expendEnergy);
 
-			staticIncome = effectiveIncome;
+			staticIncome = effectiveIncomeMetal;
 
 			float currentReclaim = 0f;
 			for (Worker w:workers.values()){
@@ -306,17 +308,30 @@ public class EconomyManager extends Module {
 					}
 				}
 			}
-			if (maxStorage > 1f && energy < 100f && metal/maxStorage > 0.5f) energyReclaim = true;
+			
+			Boolean eFac = false; // note: cloaky uniquely requires running energy rich.
+			if (ai.mergedAllies < 2) {
+				for (Factory f : facManager.factories.values()) {
+					if (f.getUnit().getDef().getName().equals("factorycloak")) {
+						eFac = true;
+						break;
+					}
+				}
+			}
+			//float eratio = (eFac ? 1.5f : 1f) + (graphManager.territoryFraction + (graphManager.territoryFraction * graphManager.territoryFraction)) / 2f;
+			float eratio = (eFac ? 1.5f : 1f) + lerp((graphManager.territoryFraction + (graphManager.territoryFraction * graphManager.territoryFraction)) / 2f, graphManager.territoryFraction, graphManager.territoryFraction);
+			//eratio += (fusions.size() / 3f);
+			estalled = (maxStorage > 1f && energy < Math.min(effectiveIncomeEnergy * 2f, maxStorage/2f)) || rawMexIncome * eratio > effectiveIncomeEnergy || staticIncome > effectiveIncomeEnergy;
+			hardEstalled = (maxStorage > 1f && energy < Math.min(effectiveIncomeEnergy * 2f, maxStorage/2f)) || staticIncome > effectiveIncomeEnergy;
+			if (maxStorage > 1f && hardEstalled && metal/maxStorage > 0.5f) energyReclaim = true;
 			if (maxStorage > 1f && energy/maxStorage > 0.75f) energyReclaim = false;
 		}
 
 
 		if (frame % 30 == ai.offset % 30) {
 			captureMexes();
-			if (defendedFac && effectiveIncome > 10f){
-				defendLinks();
-				defendMexes();
-			}
+			defendLinks();
+			defendMexes();
 
 			// remove finished or invalidated tasks
 			cleanOrders();
@@ -371,10 +386,6 @@ public class EconomyManager extends Module {
 				if (w != null && w.getTask() != null && w.getTask() instanceof ConstructionTask && ((ConstructionTask) w.getTask()).buildType.getName().equals(defName)){
 					ConstructionTask ct = (ConstructionTask) w.getTask();
 					ct.target = unit;
-					
-					if (def.getUnitDefId() == buildIDs.mexID && !w.isCom && !defendedFac && mexes.size() > 1){
-						defendMex(unit.getPos());
-					}
 				}else{
 					for (ConstructionTask ct:constructionTasks){
 						float dist = distance(ct.getPos(), unit.getPos());
@@ -480,13 +491,6 @@ public class EconomyManager extends Module {
 
 		if(defName.equals("staticmex")){
 			mexes.add(unit);
-			/*if (defendedFac && ai.mergedAllies > 0 && mexes.size() > 1 + ai.mergedAllies){
-				if (graphManager.isFrontLine(unit.getPos())) {
-					fortifyMex(unit.getPos(), false);
-				}else{
-					defendMex(unit.getPos());
-				}
-			}*/
 			
 			if (!defendedFac && (mexes.size() > 1 + (ai.mergedAllies * 2) || graphManager.territoryFraction > 0.2f)){
 				for (Worker f:facManager.factories.values()) {
@@ -558,7 +562,7 @@ public class EconomyManager extends Module {
 					nanos.put(unit.getUnitId(), nt);
 					unit.setRepeat(true, (short) 0, Integer.MAX_VALUE);
 					unit.guard(nt.target, (short) 0, Integer.MAX_VALUE);
-					fortifyMex(unit.getPos());
+					defendNano(nt);
 				}
 
 				finished = ct;
@@ -863,13 +867,14 @@ public class EconomyManager extends Module {
 					commanders.remove(w);
 					seeders.remove(w);
 				}else {
-					if (!w.isChicken && warManager.getEffectiveThreat(w.getPos()) > warManager.getTotalFriendlyThreat(w.getPos())){
+					if (!w.isChicken && (warManager.getEffectiveThreat(w.getPos()) > warManager.getTotalFriendlyThreat(w.getPos())
+						                       || ((w.getUnit().getHealth() < w.getUnit().getMaxHealth() || w.getShields() < 0.5f) && warManager.getThreat(w.getPos()) > 0 && !w.isWorkingOnPorc()))){
 						w.isChicken = true;
 						w.chickenFrame = frame;
 						warManager.defenseTargets.add(new DefenseTarget(w.getPos(), w.getUnit().getMaxHealth(), frame));
 					}
 					if (w.isChicken) {
-						if (frame - w.chickenFrame > 600) {
+						if (warManager.getThreat(w.getPos()) == 0 && ((warManager.getTotalFriendlyThreat(w.getPos()) > 0 && frame - w.chickenFrame > 90) || frame - w.chickenFrame > 150)) {
 							w.isChicken = false;
 							assignWorker(w);
 							seeders.add(w);
@@ -877,6 +882,7 @@ public class EconomyManager extends Module {
 							AIFloat3 pos = graphManager.getClosestHaven(w.getPos());
 							if (distance(w.getPos(), pos) > 25f) {
 								w.retreatTo(pos, frame);
+								if (warManager.getThreat(w.getPos()) > 0) w.chickenFrame = frame;
 							} else {
 								w.isChicken = false;
 								assignWorker(w);
@@ -897,13 +903,14 @@ public class EconomyManager extends Module {
 					commanders.remove(w);
 					seeders.remove(w);
 				}else {
-					if (!w.isChicken && warManager.getEffectiveThreat(w.getPos()) > warManager.getTotalFriendlyThreat(w.getPos())){
+					if (!w.isChicken && (warManager.getEffectiveThreat(w.getPos()) > warManager.getTotalFriendlyThreat(w.getPos())
+						                       || ((w.getUnit().getHealth() < w.getUnit().getMaxHealth() || w.getShields() < 0.5f) && warManager.getThreat(w.getPos()) > 0 && !w.isWorkingOnPorc()))){
 						w.isChicken = true;
 						w.chickenFrame = frame;
 						warManager.defenseTargets.add(new DefenseTarget(w.getPos(), w.getUnit().getMaxHealth(), frame));
 					}
 					if (w.isChicken) {
-						if (frame - w.chickenFrame > 600) {
+						if (warManager.getThreat(w.getPos()) == 0 && ((warManager.getTotalFriendlyThreat(w.getPos()) > 0 && frame - w.chickenFrame > 90) || frame - w.chickenFrame > 150)) {
 							w.isChicken = false;
 							assignWorker(w);
 							seeders.add(w);
@@ -911,6 +918,7 @@ public class EconomyManager extends Module {
 							AIFloat3 pos = graphManager.getClosestHaven(w.getPos());
 							if (distance(w.getPos(), pos) > 25f) {
 								w.retreatTo(pos, frame);
+								if (warManager.getThreat(w.getPos()) > 0) w.chickenFrame = frame;
 							} else {
 								w.isChicken = false;
 								assignWorker(w);
@@ -1024,11 +1032,7 @@ public class EconomyManager extends Module {
 			cost = costOfJob(worker, task);
 			if (task instanceof ConstructionTask){
 				ConstructionTask ctask = (ConstructionTask) task;
-				if ((ctask.buildType.getName().equals("staticmex") && ctask.target != null && ctask.target.getHealth()/ctask.target.getMaxHealth() > 0.35f)
-				|| (ctask.buildType.getName().equals("energywind") || ctask.buildType.getName().equals("energysolar") && ctask.target != null)
-					&& warManager.getEffectiveThreat(ctask.getPos()) <= 0){
-					cost -= 1000f;
-				}
+				if (ctask.target != null) cost -= 1000f * (ctask.target.getBuildProgress() * ctask.target.getBuildProgress());
 			}
 			
 			cost += 500f * Math.max(0, warManager.getEffectiveThreat(task.getPos()));
@@ -1098,7 +1102,7 @@ public class EconomyManager extends Module {
 			float idist = distance(w.getPos(),task.getPos());
 			float rdist = Math.max(idist, 200f);
 			float deltadist = Math.abs(idist - dist);
-			if (!w.equals(worker) && (rdist < dist || deltadist < 100f)){
+			if (w.id != worker.id && (rdist < dist || deltadist < 100f)){
 				if (w.isCom && !worker.isCom){
 					costMod += 2f;
 				}else {
@@ -1121,7 +1125,7 @@ public class EconomyManager extends Module {
 
 			if (ctask.buildType.getUnitDefId() == buildIDs.solarID || ctask.buildType.getUnitDefId() == buildIDs.windID){
 				// for small energy
-				if ((energy < 50 && maxStorage > 0.5f) || effectiveIncomeMetal > effectiveIncomeEnergy - 2.5f) {
+				if (estalled || effectiveIncomeMetal > effectiveIncomeEnergy - 2.5f) {
 					if (worker.isGreedy) return dist + (10000f * costMod); // greedy workers shouldn't build energy at all.
 					return ((dist / 3f) - 200f) + Math.max(0, (1000 * (costMod - 1)));
 				}else {
@@ -1132,7 +1136,7 @@ public class EconomyManager extends Module {
 
 			if (ctask.buildType.getUnitDefId() == buildIDs.mexID){
 				// for mexes
-				if (worker.isGreedy) return ((dist/4f) - 100f) + Math.max(0, (600f * (costMod - 1)));
+				if (worker.isGreedy || worker.isCom) return ((dist/4f) - 100f) + Math.max(0, (600f * (costMod - 1)));
 				return ((dist/4f) - 100f) + Math.max(0, (600f * (costMod - 2)));
 			}
 			
@@ -1147,10 +1151,17 @@ public class EconomyManager extends Module {
 				}
 				return ((dist / 2) - ctask.buildType.getCost(m)) + (500 * (costMod - 1));
 			}
+			
+			if (ctask.facDef && worker.isCom){
+				Worker f = getNearestFac(ctask.getPos());
+				if (f != null && f.getUnit().getHealth() < f.getUnit().getMaxHealth()){
+					return -1000f;
+				}
+			}
 
 			if (buildIDs.expensiveIDs.contains(ctask.buildType.getUnitDefId())){
 				// for expensive porc.
-				if (energy < 100f) return dist + (250f * costMod);
+				if (hardEstalled) return dist + (250f * costMod);
 				if (costMod < 4){
 					return (dist/2) - Math.min(3500f, ctask.buildType.getCost(m));
 				}
@@ -1159,10 +1170,11 @@ public class EconomyManager extends Module {
 
 			if (ctask.buildType.isAbleToAttack()){
 				// for cheap porc
-				if (warManager.slasherSpam * 140 > warManager.enemyPorcValue || (ai.mergedAllies > 2 && graphManager.territoryFraction < 0.2f)){
+				if (!defendedFac || warManager.slasherSpam * 140 > warManager.enemyPorcValue){
 					return dist+300;
 				}
-				if (worker.isGreedy || worker.isCom) return ((dist/3f) - 200f) + Math.max(0, (1500 * (costMod - 1)));
+				if (worker.isCom && !estalled) return ((dist/4f) - 100f) + Math.max(0, (600f * (costMod - 1)));
+				if (worker.isGreedy || worker.isCom) return ((dist/3f) - 200f) + Math.max(0, (600f * (costMod - 1)));
 				return ((dist/2f) - 200f) + Math.max(0, (1500 * (costMod - 2)));
 			}
 
@@ -1174,11 +1186,12 @@ public class EconomyManager extends Module {
 			if (ctask.buildType.getUnitDefId() == buildIDs.pylonID) {
 				// for pylons
 				if (worker.isGreedy) return dist + (10000f * costMod);
-				return dist - 500 + (500 * (costMod - 1));
+				return (dist/4f) - 100f + (500f * (costMod - 1));
 			}
 
 			if (ctask.buildType.getUnitDefId() == buildIDs.radarID){
 				// for radar
+				if (hardEstalled) return dist + 300f;
 				return (dist/4f) - 100 + (1500 * (costMod - 1));
 			}
 			
@@ -1222,7 +1235,7 @@ public class EconomyManager extends Module {
 					// for mobile combat units
 					if (warManager.getPorcThreat(rptask.getPos()) > 0) return Float.MAX_VALUE;
 					
-					if (energy < 100){
+					if (hardEstalled){
 						return dist;
 					}
 
@@ -1234,11 +1247,7 @@ public class EconomyManager extends Module {
 						return dist + 500;
 					}
 
-					if (rptask.isTank && ai.mergedAllies < 2){
-						return dist + (100 * (costMod - 1)) - 250 - (rptask.target.getMaxHealth() - rptask.target.getHealth()) / (5 * costMod);
-					}
-
-					return dist + (100 * (costMod - 1)) - 250 - rptask.target.getMaxHealth() / (5 * costMod);
+					return dist + (100 * (costMod - 1)) - 250 - (rptask.target.getMaxHealth() + rptask.target.getHealth()) / (10 * costMod);
 				}else if (!worker.isGreedy && rptask.target.getDef().isAbleToAttack() && !rptask.target.getDef().isBuilder() && !rptask.target.getDef().getName().equals("turretaalaser")){
 					// for static defenses
 					return dist + (100 * (costMod - 1)) - (rptask.target.getMaxHealth() * 2) / costMod;
@@ -1484,40 +1493,12 @@ public class EconomyManager extends Module {
 			createAATask(worker);
 		}
 
-		if (!worker.isGreedy) {
-			// is there sufficient energy to cover metal income?
-			Boolean eFac = false; // note: cloaky uniquely requires running energy rich.
-			for (Factory f : facManager.factories.values()) {
-				if (f.getUnit().getDef().getName().equals("factorycloak")) {
-					eFac = true;
-					break;
-				}
-			}
-			
-			float eRatio;
-			if (eFac && ai.mergedAllies < 2) {
-				eRatio = 1.5f;
-			} else {
-				eRatio = 1f;
-			}
-			
-			float territorymod;
-			if (graphManager.eminentTerritory) {
-				territorymod = (graphManager.territoryFraction + (graphManager.territoryFraction * graphManager.territoryFraction)) / 2f;
-			} else {
-				territorymod = (graphManager.territoryFraction * graphManager.territoryFraction);
-			}
-			
-			eRatio += territorymod + (fusions.size() / 3f);
-			
-			int energySize = (2 * (solars.size() + solarTasks.size())) + windgens.size() + windTasks.size();
-			if ((Math.round(rawMexIncome * eRatio) > energySize && solarTasks.size() + windTasks.size() < facManager.numWorkers)
-				      || (effectiveIncomeMetal > 12f && energy < 100 && solarTasks.size() + windTasks.size() < facManager.numWorkers)) {
-				createEnergyTask(worker);
-			}
-			createFusionTask(worker);
+		
+		// is there sufficient energy to cover metal income?
+		if (!worker.isGreedy && estalled && solarTasks.size() + windTasks.size() < facManager.numWorkers) {
+			createEnergyTask(worker);
 		}
-
+		if (!worker.isGreedy) createFusionTask(worker);
     	
     	// do we need caretakers?
     	if(!facManager.factories.isEmpty() &&
@@ -1527,7 +1508,7 @@ public class EconomyManager extends Module {
 
 		//do we need storages?
 		if (frame > 300 && !facManager.factories.isEmpty() &&
-			  ((metal/maxStorage > 0.8f && staticIncome > 15f * (1f + ai.mergedAllies) && energy > 100f) || (commanders.size() + storages.size() < 1 + ai.mergedAllies)) && storageTasks.isEmpty() && facManager.factories.size() > 0){
+			  ((metal/maxStorage > 0.8f && staticIncome > 15f * (1f + ai.mergedAllies) && !hardEstalled) || (commanders.size() + storages.size() < 1 + ai.mergedAllies)) && storageTasks.isEmpty() && facManager.factories.size() > 0){
 			createStorageTask(worker, getCaretakerTarget());
 		}
 
@@ -1539,7 +1520,7 @@ public class EconomyManager extends Module {
 		}
 
 		// do we need radar?
-		if (adjustedIncome > 20f && energy > 100f && !tooCloseToFac){
+		if (!worker.isCom && adjustedIncome > 20f && !hardEstalled && !tooCloseToFac){
     		createRadarTask(worker);
     	}
     	
@@ -1634,8 +1615,8 @@ public class EconomyManager extends Module {
 		
 		// Uncomment this to set the intial fac for debugging purposes.
 		/*if (facManager.factories.size() == 0){
-			factory = callback.getUnitDefByName("factoryamph");
-			potentialFacList.remove("factoryamph");
+			factory = callback.getUnitDefByName("factoryshield");
+			potentialFacList.remove("factoryshield");
 		}else*/ if (userFac != null && facManager.factories.size() == 0){
 			factory = callback.getUnitDefByName(userFac);
 			potentialFacList.remove(userFac);
@@ -2006,15 +1987,21 @@ public class EconomyManager extends Module {
 			constructionTasks.add(ct);
 			porcTasks.add(ct);
 		}
+	}
+	
+	void defendNano(Nanotower n){
+		if (n.target == null || n.target.getHealth() <= 0 || n.target.getTeam() != ai.teamID) return;
+		UnitDef llt = callback.getUnitDefByName("turretlaser");
+		AIFloat3 pos;
 		
-		/*pos = getAngularPoint(position, graphManager.getEnemyCenter(), 100f);
+		pos = getDirectionalPoint(n.target.getPos(), n.unit.getPos(), distance(n.target.getPos(), n.unit.getPos()) + 100f);
 		pos = callback.getMap().findClosestBuildSite(llt, pos, 600f, 3, 0);
 		
-		ct = new ConstructionTask(llt, pos, 0);
+		ConstructionTask ct = new ConstructionTask(llt, pos, 0);
 		if (buildCheck(ct) && !porcTasks.contains(ct)) {
 			constructionTasks.add(ct);
 			porcTasks.add(ct);
-		}*/
+		}
 	}
 	
 	void defendFusion(AIFloat3 position, boolean factory){
@@ -2443,9 +2430,9 @@ public class EconomyManager extends Module {
 		}
 
 		// for fusions
-		if (effectiveIncome > 35f && energy > 100f
+		if (effectiveIncome > 35f && !hardEstalled
 				&& Math.floor(staticIncome/27.5f) > fusions.size() && !facManager.factories.isEmpty()
-			      && fusionTasks.size() + fusions.size() - started < ((ai.mergedAllies == 0 && !bigMap) ? 2 : 3) && fusionTasks.size() < 1 + ai.mergedAllies){
+			      && fusionTasks.size() + fusions.size() - started < 3 && fusionTasks.size() < 1 + ai.mergedAllies){
 			boolean good = false;
 			int i = 0;
 			while (!good) {
@@ -2471,7 +2458,7 @@ public class EconomyManager extends Module {
 		}
 		// for singus
 		else if (fusions.size() > 2 && fusions.size() < 5 + (ai.mergedAllies > 1 ? 1 : 0)
-				&& graphManager.territoryFraction > 0.35
+				&& graphManager.eminentTerritory
 				&& !facManager.factories.isEmpty() && fusionTasks.isEmpty()){
 			boolean good = false;
 			int i = 0;

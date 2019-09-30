@@ -32,6 +32,7 @@ public class Krow extends Strider {
 		if (distance(pos, getPos()) > 1200f) {
 			Queue<AIFloat3> path = pathfinder.findPath(unit, pos, pathfinder.ASSAULT_PATH);
 			if (path.size() > 1) path.poll(); // skip the first waypoint since flying units move pretty quick and the waypoints are close together.
+			if (path.size() > 1) path.poll();
 			unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE); // skip first few waypoints if target actually found to prevent stuttering, otherwise use the first waypoint.
 			if (path.size() > 1) path.poll();
 			if (path.size() > 1) path.poll();

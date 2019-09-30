@@ -457,11 +457,11 @@ public class SquadHandler {
 		    }
 		    
 		    if (shieldSquad.getHealth() < 0.85
-			          || shieldSquad.getShields() < 0.35f
+			          || shieldSquad.getShields() < 0.2f
 			          || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getRulesParamFloat("disarmed", 0) > 0)
-			          || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getHealth() / shieldSquad.leader.getUnit().getMaxHealth() < 0.75)) {
+			          || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getHealth() / shieldSquad.leader.getUnit().getMaxHealth() < 0.8)) {
 			    shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getPos()));
-		    } else if (shieldSquad.metalValue > 1300f && shieldSquad.leader.getUnit().getDef().getName().equals("shieldfelon")) {
+		    } else if (shieldSquad.metalValue > 1300f && shieldSquad.leader.getUnit().getDef().getName().equals("shieldfelon") && shieldSquad.isRallied(frame)) {
 			    AIFloat3 target = warManager.getTarget(shieldSquad.leader.getUnit(), false);
 			    shieldSquad.setTarget(target);
 		    } else if (warManager.getEffectiveThreat(shieldSquad.getPos()) > 0f || warManager.getPorcThreat(shieldSquad.getPos()) > 0f) {

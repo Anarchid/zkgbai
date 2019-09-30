@@ -27,6 +27,7 @@ import zkgbai.military.UnitClasses;
 import zkgbai.military.tasks.DefenseTarget;
 import zkgbai.military.unitwrappers.Fighter;
 import zkgbai.military.unitwrappers.Raider;
+import zkgbai.military.unitwrappers.ShieldSquad;
 import zkgbai.military.unitwrappers.Squad;
 
 import static zkgbai.kgbutil.KgbUtil.*;
@@ -300,12 +301,15 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-	        for (Worker w:ecoManager.workers.values()){
+	    	for (MetalSpot ms: graphManager.getEnemySpots()){
+	    		marker(ms.getPos(), "enemy spot");
+		    }
+	        /*for (Worker w:ecoManager.workers.values()){
 	        	if (w.isGreedy) marker(w.getPos(), "greedy");
 	        }
 	        for (ConstructionTask ct: ecoManager.factoryTasks){
 	        	marker(ct.getPos(), ct.buildType.getHumanName());
-	        }
+	        }*/
 		}
 
 		for (Module module : modules) {
