@@ -426,14 +426,14 @@ public class MilitaryManager extends Module {
 		
 		// create a defense task, if appropriate.
 		if ((attacker == null || attacker.getDef() == null || attacker.getPos() == null || !losManager.isInLos(attacker.getPos()))
-			      && (frame - lastDefenseFrame > 30 || (weaponDef != null && weaponDef.getWeaponDefId() == sniperBulletID)) && !on_fire) {
+			      && ((frame - lastDefenseFrame > 30) || (weaponDef != null && weaponDef.getWeaponDefId() == sniperBulletID)) && !on_fire) {
 			lastDefenseFrame = frame;
 			DefenseTarget dt = null;
 			
 			// only create defense targets on unitDamaged if the attacker is invisible or out of los.
 			if (weaponDef != null && !unitTypes.porcWeps.contains(weaponDef.getWeaponDefId())) {
 				AIFloat3 target;
-				if (attacker.getPos() == null) {
+				if (attacker == null || attacker.getPos() == null) {
 					float dist = weaponDef.getRange();
 					float x = dist * dir.x;
 					float z = dist * dir.z;
@@ -1848,7 +1848,7 @@ public class MilitaryManager extends Module {
 
 		// check for defense targets first
 		for (DefenseTarget d : defenseTargets) {
-			if (getPorcThreat(d.position) > 0 || getTacticalThreat(d.position) > availableMobileThreat){
+			if (getPorcThreat(d.position) > 0 || getTacticalThreat(d.position) > availableMobileThreat || !graphManager.isAllyTerritory(d.position)){
 				continue;
 			}
 			float tmpcost = distance(pos, d.position) - d.damage;
@@ -2027,7 +2027,7 @@ public class MilitaryManager extends Module {
 
 		// check for defense targets first
 		for (DefenseTarget d : defenseTargets) {
-			if ((getEffectiveThreat(d.position) > getFriendlyThreat(pos) || getPorcThreat(d.position) > 0 || getRiotThreat(d.position) > 0) && !squadHandler.fighters.isEmpty()){
+			if ((getEffectiveThreat(d.position) > getFriendlyThreat(pos) || getPorcThreat(d.position) > 0 || getRiotThreat(d.position) > 0) && !squadHandler.fighters.isEmpty() || !graphManager.isAllyTerritory(d.position)){
 				continue;
 			}
 			float tmpcost = distance(pos, d.position) - d.damage;
