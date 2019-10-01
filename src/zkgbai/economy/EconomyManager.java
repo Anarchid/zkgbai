@@ -2029,7 +2029,7 @@ public class EconomyManager extends Module {
 		ConstructionTask ct;
 		AIFloat3 pos;
 		
-		if (adjustedIncome > 20f) {
+		if (adjustedIncome > 30f) {
 			if (wd == null){
 				porc = callback.getUnitDefByName("turretemp");
 			}else if (wd.getRange() > 620f){
@@ -2042,13 +2042,15 @@ public class EconomyManager extends Module {
 		}else{
 			porc = callback.getUnitDefByName("turretlaser");
 			
-			pos = getAngularPoint(position, graphManager.getEnemyCenter(), 150f);
-			pos = callback.getMap().findClosestBuildSite(porc, pos, 600f, 3, 0);
-			
-			ct = new ConstructionTask(porc, pos, 0);
-			if (buildCheck(ct) && !porcTasks.contains(ct)) {
-				constructionTasks.add(ct);
-				porcTasks.add(ct);
+			if (adjustedIncome > 20f) {
+				pos = getAngularPoint(position, graphManager.getEnemyCenter(), 150f);
+				pos = callback.getMap().findClosestBuildSite(porc, pos, 600f, 3, 0);
+				
+				ct = new ConstructionTask(porc, pos, 0);
+				if (buildCheck(ct) && !porcTasks.contains(ct)) {
+					constructionTasks.add(ct);
+					porcTasks.add(ct);
+				}
 			}
 		}
 		

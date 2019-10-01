@@ -500,7 +500,7 @@ public class RaiderHandler {
 		float cost = Float.MAX_VALUE;
 		boolean porc = true;
 		
-		if (raiderSquads.isEmpty() && ai.facManager.earlyWorker && !r.getUnit().getDef().getName().startsWith("spider")){
+		if (raiderSquads.isEmpty() && warManager.squadHandler.fighters.isEmpty() && ai.facManager.earlyWorker && !r.getUnit().getDef().getName().startsWith("spider")){
 			bestTarget = warManager.getRaiderRally(r.getPos());
 			if (distance(bestTarget, r.getPos()) > 500) {
 				r.sneak(bestTarget, frame);

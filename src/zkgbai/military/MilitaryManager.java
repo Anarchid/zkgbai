@@ -425,19 +425,25 @@ public class MilitaryManager extends Module {
 		}
 		
 		// create a defense task, if appropriate.
-		if ((attacker == null || attacker.getPos() == null || attacker.getPos().equals(nullpos) || attacker.getDef() == null)
+		if ((attacker == null || attacker.getDef() == null || attacker.getPos() == null || !losManager.isInLos(attacker.getPos()))
 			      && (frame - lastDefenseFrame > 30 || (weaponDef != null && weaponDef.getWeaponDefId() == sniperBulletID)) && !on_fire) {
 			lastDefenseFrame = frame;
 			DefenseTarget dt = null;
 			
 			// only create defense targets on unitDamaged if the attacker is invisible or out of los.
-			if ((attacker == null || attacker.getDef() == null) && (weaponDef == null || !unitTypes.porcWeps.contains(weaponDef.getWeaponDefId()))) {
-				float x = 800 * dir.x;
-				float z = 800 * dir.z;
-				AIFloat3 pos = h.getPos();
-				AIFloat3 target = new AIFloat3();
-				target.x = pos.x + x;
-				target.z = pos.z + z;
+			if (weaponDef != null && !unitTypes.porcWeps.contains(weaponDef.getWeaponDefId())) {
+				AIFloat3 target;
+				if (attacker.getPos() == null) {
+					float dist = weaponDef.getRange();
+					float x = dist * dir.x;
+					float z = dist * dir.z;
+					AIFloat3 pos = h.getPos();
+					target = new AIFloat3();
+					target.x = pos.x + x;
+					target.z = pos.z + z;
+				}else{
+					target = attacker.getPos();
+				}
 				dt = new DefenseTarget(target, 2000f, frame);
 			} else if (attacker != null && attacker.getDef() != null) {
 				dt = new DefenseTarget(attacker.getPos(), (attacker.getMaxHealth() + h.getMaxHealth()) / 2f, frame);
