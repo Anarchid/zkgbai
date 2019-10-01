@@ -206,7 +206,7 @@ public class Squad {
 		return newLeader;
 	}
 
-	private Fighter getNewLeader(){
+	Fighter getNewLeader(){
 		Fighter newLeader = null;
 		int tmpindex = Integer.MAX_VALUE;
 		for (Fighter f:fighters){

@@ -871,14 +871,20 @@ public class FactoryManager extends Module {
 			return "shieldshield";
 		}
 		
-		if (economyManager.adjustedIncome > 20 && numFelons < Math.min(Math.floor(economyManager.adjustedIncome/15f), 4) && Math.random() > 0.5){
+		if (economyManager.adjustedIncome > 20 && numFelons < Math.min(Math.floor(economyManager.adjustedIncome/15f), 4) && Math.random() > 0.85){
 			fac.smallRaiderSpam = true;
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
-			if (Math.random() > graphManager.territoryFraction) {
-				fac.raiderSpam -= 4;
-				fac.expensiveRaiderSpam--;
-			}
+			fac.raiderSpam -= 4;
+			fac.expensiveRaiderSpam--;
 			return "shieldfelon";
+		}
+		
+		if (economyManager.adjustedIncome > 20 && Math.random() > 0.8){
+			fac.smallRaiderSpam = true;
+			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
+			fac.raiderSpam -= 4;
+			fac.expensiveRaiderSpam--;
+			return "shieldriot";
 		}
 		
 		if (economyManager.adjustedIncome > 20 && Math.random() > 0.95 - Math.min(0.05f, graphManager.territoryFraction/10f)){
@@ -1107,13 +1113,8 @@ public class FactoryManager extends Module {
 			return "tankaa";
 		}
 		
-		if ((economyManager.adjustedIncome < 35f || earlyWorker) && !graphManager.eminentTerritory) {
-			fac.expensiveRaiderSpam -= 3;
-		}else{
-			fac.expensiveRaiderSpam--;
-		}
-		
 		if (economyManager.adjustedIncome > 25f && warManager.enemyHeavyPorcValue > 0f && Math.random() < (graphManager.territoryFraction) * (1f - artyValue/warManager.enemyPorcValue)){
+			fac.expensiveRaiderSpam--;
 			return "tankarty";
 		}
 		
@@ -1123,18 +1124,22 @@ public class FactoryManager extends Module {
 		
 		double rand = Math.random();
 		if (economyManager.adjustedIncome < 35 && !graphManager.eminentTerritory) {
+			fac.expensiveRaiderSpam -= 2;
 			if (numBanishers > numReapers || warManager.enemyHeavyPorcValue > 850 * numReapers){
+				fac.expensiveRaiderSpam--;
 				return "tankassault";
 			}else {
 				return "tankriot";
 			}
 		}else{
-			if (warManager.squadHandler.squads.size() > 1 && Math.random() > 0.9){
-				fac.expensiveRaiderSpam--;
+			fac.expensiveRaiderSpam--;
+			if (armyValue > 2000f && Math.random() > 0.9){
+				fac.expensiveRaiderSpam -= 2;
 				fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 1);
 				return "tankheavyassault";
 			}
-			if (rand > 0.25){
+			if (rand > 0.15){
+				fac.expensiveRaiderSpam--;
 				return "tankassault";
 			}else {
 				return "tankriot";

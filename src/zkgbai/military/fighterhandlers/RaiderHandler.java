@@ -600,7 +600,7 @@ public class RaiderHandler {
 			
 			boolean reloading = r.isReloading(frame);
 			AIFloat3 pos = r.getPos();
-			boolean overThreat = (warManager.getEffectiveThreat(pos) > 1f || warManager.getRiotThreat(pos) > 0
+			boolean overThreat = (warManager.getEffectiveThreat(pos) > 1.25f || warManager.getRiotThreat(pos) > 0
 				                        || (r.target != null && (warManager.getRiotThreat(r.target) > 0 || warManager.getThreat(r.target) > (reloading ? 0 : 1f))));
 			if (overThreat){
 				// try to keep raiders from suiciding.
@@ -614,7 +614,7 @@ public class RaiderHandler {
 			boolean porc = true;
 			
 			for (ScoutTask s:soloScoutTasks){
-				if (warManager.getRiotThreat(s.target) > 0 || warManager.getThreat(s.target) > (reloading ? 0 : 1f)){
+				if (warManager.getRiotThreat(s.target) > 0 || warManager.getEffectiveThreat(s.target) > (reloading ? 0 : 1.25f)){
 					continue;
 				}
 				
@@ -638,7 +638,7 @@ public class RaiderHandler {
 			
 			if (!reloading) {
 				for (Enemy e : warManager.getTargets()) {
-					if ((!e.isMex && warManager.getThreat(e.position) > 0) || warManager.getThreat(e.position) > 1f || warManager.getRiotThreat(e.position) > 0) {
+					if ((!e.isMex && warManager.getThreat(e.position) > 0) || warManager.getEffectiveThreat(e.position) > 1.25f || warManager.getRiotThreat(e.position) > 0) {
 						continue;
 					}
 					
@@ -685,8 +685,8 @@ public class RaiderHandler {
 	private void assignRaiderSquad(RaiderSquad rs){
 		AIFloat3 pos = rs.getPos();
 		boolean overThreat = false;
-		if (rs.status == 'f'){
-			// Assign forming squads.
+		if (rs.status != 'a'){
+			// Assign forming and rallying squads.
 			if ((rs.target != null && (warManager.getPorcThreat(rs.target) > 0
 				                             || warManager.getTacticalThreat(rs.target) > warManager.availableMobileThreat))){
 				overThreat = true;
@@ -705,13 +705,13 @@ public class RaiderHandler {
 			}else{
 				rs.sneak(graphManager.getClosestHaven(pos), frame);
 			}
-		}else if (rs.status == 'r'){
-			// Rally rallying squads.
-			rs.sneak(graphManager.getClosestHaven(pos), frame);
-			if (rs.isRallied(frame)){
-				rs.status = 'a';
-				if (rs.type == 's'){
-					for (Raider r: rs.raiders) retreatHandler.removeUnit(r.getUnit());
+			if (rs.status == 'r') {
+				// Rally rallying squads.
+				if (rs.isRallied(frame)) {
+					rs.status = 'a';
+					if (rs.type == 's') {
+						for (Raider r : rs.raiders) retreatHandler.removeUnit(r.getUnit());
+					}
 				}
 			}
 		}else{

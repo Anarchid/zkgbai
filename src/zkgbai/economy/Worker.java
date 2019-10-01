@@ -4,6 +4,7 @@ import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Resource;
 import com.springrts.ai.oo.clb.UnitDef;
 import com.springrts.ai.oo.clb.Weapon;
+import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.tasks.ConstructionTask;
 import zkgbai.economy.tasks.RepairTask;
 import zkgbai.economy.tasks.WorkerTask;
@@ -31,6 +32,7 @@ public class Worker {
 	int lastTaskFrame = 0;
 	int lastStuckFrame = Integer.MIN_VALUE/2;
 	static Pathfinder pathfinder = null;
+	static int team;
 	protected static final short OPTION_SHIFT_KEY = (1 << 5);
 	
 	Worker(Unit unit){
@@ -51,6 +53,7 @@ public class Worker {
 		
 		if (pathfinder == null){
 			pathfinder = Pathfinder.getInstance();
+			team = ZKGraphBasedAI.getInstance().teamID;
 		}
 	}
 	
@@ -75,7 +78,7 @@ public class Worker {
 	public void clearTask(){
 		if (task != null) task.removeWorker(this);
 		this.task = null;
-		if (unit.getHealth() > 0) {
+		if (unit.getHealth() > 0 && unit.getTeam() == team) {
 			unit.stop((short) 0, Integer.MAX_VALUE);
 		}
 	}

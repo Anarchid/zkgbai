@@ -780,11 +780,21 @@ public class MilitaryManager extends Module {
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 					allyRaiderGraphics.paintCircle(x, y, rad, power);
 				}
+				
+				for (Raider r : raiderHandler.kodachis) {
+					if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID) continue;
+					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 14f);
+					AIFloat3 pos = r.getPos();
+					int x = Math.round(pos.x / 64f);
+					int y = Math.round(pos.z / 64f);
+					int rad = 7;
+					allyThreatGraphics.paintCircle(x, y, rad, power);
+				}
 
 				for (RaiderSquad rs: raiderHandler.raiderSquads) {
 					if (rs.isDead()) continue;
 					int power = rs.getThreat();
-					if (rs.status == 'f') availableMobileThreat += power;
+					if (rs.status != 'a') availableMobileThreat += power;
 					AIFloat3 pos = rs.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
