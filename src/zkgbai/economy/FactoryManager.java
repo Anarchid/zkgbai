@@ -871,20 +871,12 @@ public class FactoryManager extends Module {
 			return "shieldshield";
 		}
 		
-		if (economyManager.adjustedIncome > 20 && numFelons < Math.min(Math.floor(economyManager.adjustedIncome/15f), 4) && Math.random() > 0.85){
+		if (economyManager.adjustedIncome > 20 && numFelons < Math.min(Math.floor(economyManager.adjustedIncome/15f), 4) && Math.random() > 0.5){
 			fac.smallRaiderSpam = true;
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
 			fac.raiderSpam -= 4;
 			fac.expensiveRaiderSpam--;
 			return "shieldfelon";
-		}
-		
-		if (economyManager.adjustedIncome > 20 && Math.random() > 0.8){
-			fac.smallRaiderSpam = true;
-			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
-			fac.raiderSpam -= 4;
-			fac.expensiveRaiderSpam--;
-			return "shieldriot";
 		}
 		
 		if (economyManager.adjustedIncome > 20 && Math.random() > 0.95 - Math.min(0.05f, graphManager.territoryFraction/10f)){

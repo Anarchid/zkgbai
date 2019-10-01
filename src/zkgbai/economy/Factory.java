@@ -53,6 +53,7 @@ public class Factory extends Worker {
 
 			if (defName.equals("factoryveh")) {
 				scoutAllowance--;
+				maxScoutAllowance++;
 				raiderSpam = -4;
 			}
 

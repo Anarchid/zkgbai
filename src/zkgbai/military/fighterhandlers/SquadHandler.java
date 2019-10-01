@@ -239,82 +239,72 @@ public class SquadHandler {
 	        }
         }
     }
-
-    public void addShieldMob(Fighter f){
-	    List<ShieldSquad> dead = new ArrayList<>();
-	    List<Fighter> fit = new ArrayList<>();
-	    for (ShieldSquad s:shieldSquads){
-		    if (s.isDead()){
-			    dead.add(s);
-		    }
-	    }
-	    shieldSquads.removeAll(dead);
-
-        assignShieldMob(f);
-        fighters.put(f.id, f);
-    }
-    
-    private void assignShieldMob(Fighter f){
-	    if ((f.getUnit().getDef().getName().equals("shieldriot") || f.getUnit().getDef().getName().equals("shieldfelon")) && shieldSquads.size() < 4 && (ai.mergedAllies == 0 || shieldSquads.isEmpty())) {
-		    // Create a new shieldball for each felon or outlaw, up to 4. Unless on teams where you want just one giant death ball.
-		    retreatHandler.removeUnit(f.getUnit());
-		    ShieldSquad s = new ShieldSquad();
-		    s.status = 'a';
-		    shieldSquads.add(s);
-		    s.addUnit(f);
-		    callShieldMobs(s);
-	    }else if (f.getUnit().getDef().getName().equals("shieldfelon")){
-	    	// Assign felons to the squad with the fewest, giving preference to higher metal value shieldballs.
-		    retreatHandler.removeUnit(f.getUnit());
-		    ShieldSquad needed = null;
-		    float metalv = Float.MAX_VALUE;
-		    int minFelons = Integer.MAX_VALUE;
-		    for (ShieldSquad s: shieldSquads){
-			    if (s.numFelons < minFelons
-				          || (s.numFelons == minFelons && s.metalValue > metalv)){
-				    needed = s;
-				    metalv = s.metalValue;
-				    minFelons = s.numFelons;
-			    }
-		    }
-		    needed.addUnit(f);
-	    }else if (f.getUnit().getDef().getName().equals("shieldshield") && !shieldSquads.isEmpty()) {
-		    // Assign aspis to the squad with the fewest aspis, giving preference to higher metal value shieldballs
-		    // where they do the most good and are more likely to survive.
-		    retreatHandler.removeUnit(f.getUnit());
-		    ShieldSquad needed = null;
-		    float metalv = Float.MAX_VALUE;
-		    int minAspis = Integer.MAX_VALUE;
-		    for (ShieldSquad s: shieldSquads){
-			    if (s.numAspis < minAspis
-			    || (s.numAspis == minAspis && s.metalValue > metalv)){
-				    needed = s;
-				    metalv = s.metalValue;
-				    minAspis = s.numAspis;
-			    }
-		    }
-		    needed.addUnit(f);
-	    }else {
-		    // For other units.
-		    if (shieldSquads.isEmpty()) {
-			    // If there's no felon, treat shield mobs as regular assaults.
-			    retreatHandler.addCoward(f.getUnit());
-			    addAssault(f);
-		    }else{
-			    // Add the unit to the squad with the lowest value.
-			    retreatHandler.removeUnit(f.getUnit());
-			    ShieldSquad needed = null;
-			    float metalv = Float.MAX_VALUE;
-			    for (ShieldSquad s: shieldSquads){
-				    if (s.metalValue < metalv){
-					    needed = s;
-					    metalv = s.metalValue;
-				    }
-			    }
-			    needed.addUnit(f);
-		    }
-	    }
-    }
+	
+	public void addShieldMob(Fighter f){
+		List<ShieldSquad> dead = new ArrayList<>();
+		List<Fighter> fit = new ArrayList<>();
+		for (ShieldSquad s:shieldSquads){
+			if (s.isDead() || s.numFelons == 0){
+				// disband felonless squads and repurpose the units as regular mobs until a new felon appears.
+				fit.addAll(s.disband());
+				dead.add(s);
+			}
+		}
+		shieldSquads.removeAll(dead);
+		for (Fighter fi: fit){
+			assignShieldMob(fi);
+		}
+		
+		assignShieldMob(f);
+		fighters.put(f.id, f);
+	}
+	
+	private void assignShieldMob(Fighter f){
+		if (f.getUnit().getDef().getName().equals("shieldfelon") && (ai.mergedAllies == 0 || shieldSquads.isEmpty())) {
+			// Create a new shieldball for each felon, unless on teams where you want just one giant death ball.
+			retreatHandler.removeUnit(f.getUnit());
+			ShieldSquad s = new ShieldSquad();
+			s.status = 'a';
+			shieldSquads.add(s);
+			s.addUnit(f);
+			callShieldMobs(s);
+		}else if (f.getUnit().getDef().getName().equals("shieldshield") && !shieldSquads.isEmpty()) {
+			// Assign aspis to the squad with the fewest aspis, giving preference to higher metal value shieldballs
+			// where they do the most good and are more likely to survive.
+			retreatHandler.removeUnit(f.getUnit());
+			ShieldSquad needed = null;
+			float metalv = Float.MAX_VALUE;
+			int minAspis = Integer.MAX_VALUE;
+			for (ShieldSquad s: shieldSquads){
+				if (s.numAspis < minAspis
+					      || (s.numAspis == minAspis && s.metalValue > metalv)){
+					needed = s;
+					metalv = s.metalValue;
+					minAspis = s.numAspis;
+				}
+			}
+			needed.addUnit(f);
+		}else {
+			// For other units.
+			if (shieldSquads.isEmpty()) {
+				// If there's no felon, treat shield mobs as regular assaults.
+				retreatHandler.addCoward(f.getUnit());
+				addAssault(f);
+			}else{
+				// Add the unit to the squad with the lowest value.
+				retreatHandler.removeUnit(f.getUnit());
+				ShieldSquad needed = null;
+				float metalv = Float.MAX_VALUE;
+				for (ShieldSquad s: shieldSquads){
+					if (s.metalValue < metalv){
+						needed = s;
+						metalv = s.metalValue;
+					}
+				}
+				needed.addUnit(f);
+			}
+		}
+	}
 
     private void callShieldMobs(ShieldSquad s){
         // Call a flash mob when a felon appears.
@@ -445,38 +435,43 @@ public class SquadHandler {
 		    }
 	    }
     }
-    
-    private void assignShieldSquads(){
-	    // Process up to one shield squad at a time, four per second.
-	    while (!shieldSquads.isEmpty()) {
-		    ShieldSquad shieldSquad = shieldSquads.poll();
-		    
-		    if (shieldSquad.isDead()){
-		    	// drop dead squads from the queue.
-			    continue;
-		    }
-		    
-		    if (frame - shieldSquad.lastAssignmentFrame < 30){
-		        shieldSquads.push(shieldSquad);
-		        return;
-		    }
-		    
-		    if (shieldSquad.getHealth() < 0.85f
-			          || shieldSquad.getShields() < 0.2f
-			          || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getRulesParamFloat("disarmed", 0) > 0)
-			          || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getHealth() / shieldSquad.leader.getUnit().getMaxHealth() < 0.8)) {
-			    shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getPos()));
-		    } else if (shieldSquad.metalValue > 1300f && shieldSquad.isRallied(frame)) {
-			    AIFloat3 target = warManager.getTarget(shieldSquad.leader.getUnit(), false);
-			    shieldSquad.setTarget(target);
-		    } else if (warManager.getEffectiveThreat(shieldSquad.getPos()) > 0f || warManager.getPorcThreat(shieldSquad.getPos()) > 0f) {
-			    shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getPos()));
-		    } else {
-			    shieldSquad.setTarget(warManager.getRallyPoint(shieldSquad.getPos()));
-		    }
-		    shieldSquad.lastAssignmentFrame = frame;
-		    shieldSquads.add(shieldSquad);
-		    return;
-	    }
-    }
+	
+	private void assignShieldSquads(){
+		// Process up to one shield squad at a time, four per second.
+		while (!shieldSquads.isEmpty()) {
+			ShieldSquad shieldSquad = shieldSquads.poll();
+			
+			if (shieldSquad.isDead() || shieldSquad.numFelons == 0){
+				// disband felonless squads and assign them to other felons if available, else dump them back as assaults.
+				List<Fighter> fit = new ArrayList<>();
+				fit.addAll(shieldSquad.disband());
+				for (Fighter fi: fit){
+					assignShieldMob(fi);
+				}
+				continue;
+			}
+			
+			if (frame - shieldSquad.lastAssignmentFrame < 30){
+				shieldSquads.push(shieldSquad);
+				return;
+			}
+			
+			if (shieldSquad.getHealth() < 0.85
+				      || shieldSquad.getShields() < 0.2f
+				      || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getRulesParamFloat("disarmed", 0) > 0)
+				      || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getHealth() / shieldSquad.leader.getUnit().getMaxHealth() < 0.8)) {
+				shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getPos()));
+			} else if (shieldSquad.metalValue > 1300f && shieldSquad.leader.getUnit().getDef().getName().equals("shieldfelon") && shieldSquad.isRallied(frame)) {
+				AIFloat3 target = warManager.getTarget(shieldSquad.leader.getUnit(), false);
+				shieldSquad.setTarget(target);
+			} else if (warManager.getEffectiveThreat(shieldSquad.getPos()) > 0f || warManager.getPorcThreat(shieldSquad.getPos()) > 0f) {
+				shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getPos()));
+			} else {
+				shieldSquad.setTarget(warManager.getRallyPoint(shieldSquad.getPos()));
+			}
+			shieldSquad.lastAssignmentFrame = frame;
+			shieldSquads.add(shieldSquad);
+			return;
+		}
+	}
 }
