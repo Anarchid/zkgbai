@@ -30,6 +30,8 @@ public class RaiderHandler {
 	RetreatHandler retreatHandler;
 	GraphManager graphManager;
 	EconomyManager ecoManager;
+	
+	Raider sparrow;
 
 	RaiderSquad nextGlaiveSquad = null;
 	RaiderSquad nextBanditSquad = null;
@@ -69,6 +71,10 @@ public class RaiderHandler {
 		OOAICallback callback = ai.getCallback();
 		pantherID = callback.getUnitDefByName("tankheavyraid").getUnitDefId();
 		halberdID = callback.getUnitDefByName("hoverassault").getUnitDefId();
+	}
+	
+	public void addSparrow(Raider r){
+		sparrow = r;
 	}
 
 	public void addSmallRaider(Raider r){
@@ -143,7 +149,7 @@ public class RaiderHandler {
 			}
 			nextScorcherSquad.addUnit(r, frame);
 
-			if (nextScorcherSquad.raiders.size() >= (int) min(8f, max(4f, floor(ecoManager.adjustedIncome / 4f)))){
+			if (nextScorcherSquad.raiders.size() >= (int) min(5f, 3f + Math.floor(ecoManager.adjustedIncome / 20f))){
 				nextScorcherSquad.status = 'r';
 				nextScorcherSquad = null;
 			}
@@ -157,7 +163,7 @@ public class RaiderHandler {
 			}
 			nextHalberdSquad.addUnit(r, frame);
 
-			if (nextHalberdSquad.raiders.size() >= (int) min(8, max(2, floor(ecoManager.adjustedIncome / 8f)))){
+			if (nextHalberdSquad.raiders.size() >= (int) min(8, 2 + floor(ecoManager.adjustedIncome / 15f))){
 				nextHalberdSquad.status = 'r';
 				nextHalberdSquad = null;
 			}
@@ -290,6 +296,8 @@ public class RaiderHandler {
 				}
 			}
 			kodachis.removeAll(invalidRaiders);
+			
+			if (sparrow != null && !sparrow.isDead() && !retreatHandler.isRetreating(sparrow.getUnit())) assignSparrow();
 			
 			createScoutTasks();
 			checkScoutTasks();
@@ -592,6 +600,32 @@ public class RaiderHandler {
 		}
 	}
 	
+	private void assignSparrow(){
+		float cost = Float.MAX_VALUE;
+		ScoutTask bestTask = null;
+		for (ScoutTask s:scoutTasks){
+			if (warManager.getAAThreat(s.target) > 0 || !pathfinder.isRaiderReachable(sparrow.getUnit(), s.target, 0f)){
+				continue;
+			}
+			float tmpcost = getScoutCost(s, sparrow);
+			if (tmpcost < cost){
+				cost = tmpcost;
+				bestTask = s;
+			}
+		}
+		
+		if (bestTask != null) {
+			if (sparrow.getTask() == null || !sparrow.getTask().equals(bestTask)) {
+				sparrow.clearTask();
+				bestTask.addRaider(sparrow);
+				sparrow.setTask(bestTask);
+			}
+			sparrow.raid(bestTask.target, frame);
+		}else{
+			sparrow.raid(graphManager.getClosestLeadingLink(sparrow.getPos()), frame);
+		}
+	}
+	
 	private void superKodachiRally(){
 		for (Raider r: kodachis){
 			if (r.getUnit().isBeingBuilt() || r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID || retreatHandler.isRetreating(r.getUnit())){
@@ -600,8 +634,8 @@ public class RaiderHandler {
 			
 			boolean reloading = r.isReloading(frame);
 			AIFloat3 pos = r.getPos();
-			boolean overThreat = (warManager.getEffectiveThreat(pos) > 1.25f || warManager.getRiotThreat(pos) > 0
-				                        || (r.target != null && (warManager.getRiotThreat(r.target) > 0 || warManager.getThreat(r.target) > (reloading ? 0 : 1f))));
+			boolean overThreat = (warManager.getEffectiveThreat(pos) > 0.4f || warManager.getRiotThreat(pos) > 0
+				                        || (r.target != null && (warManager.getRiotThreat(r.target) > 0 || warManager.getThreat(r.target) > (reloading ? 0 : 0.4f))));
 			if (overThreat){
 				// try to keep raiders from suiciding.
 				r.sneak(graphManager.getClosestRaiderHaven(pos), frame);
@@ -614,7 +648,7 @@ public class RaiderHandler {
 			boolean porc = true;
 			
 			for (ScoutTask s:soloScoutTasks){
-				if (warManager.getRiotThreat(s.target) > 0 || warManager.getEffectiveThreat(s.target) > (reloading ? 0 : 1.25f)){
+				if (warManager.getRiotThreat(s.target) > 0 || warManager.getEffectiveThreat(s.target) > (reloading ? 0 : 0.4f)){
 					continue;
 				}
 				
@@ -638,7 +672,7 @@ public class RaiderHandler {
 			
 			if (!reloading) {
 				for (Enemy e : warManager.getTargets()) {
-					if ((!e.isMex && warManager.getThreat(e.position) > 0) || warManager.getEffectiveThreat(e.position) > 1.25f || warManager.getRiotThreat(e.position) > 0) {
+					if ((!e.isMex && warManager.getThreat(e.position) > 0) || warManager.getEffectiveThreat(e.position) > 0.4f || warManager.getRiotThreat(e.position) > 0) {
 						continue;
 					}
 					

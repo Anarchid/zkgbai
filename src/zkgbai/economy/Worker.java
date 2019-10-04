@@ -1,18 +1,16 @@
 package zkgbai.economy;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.Resource;
-import com.springrts.ai.oo.clb.UnitDef;
-import com.springrts.ai.oo.clb.Weapon;
+import com.springrts.ai.oo.clb.*;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.tasks.ConstructionTask;
 import zkgbai.economy.tasks.RepairTask;
 import zkgbai.economy.tasks.WorkerTask;
 import static zkgbai.kgbutil.KgbUtil.*;
 
-import com.springrts.ai.oo.clb.Unit;
 import zkgbai.kgbutil.Pathfinder;
 
+import java.util.Map;
 import java.util.Queue;
 
 public class Worker {
@@ -22,6 +20,7 @@ public class Worker {
 	public boolean isCom = false;
 	public boolean assignedPlop = false;
 	public boolean isGreedy = false;
+	public float power = 0f;
 	public float bp;
 	public int buildRange;
 	public boolean hasShields = false;
@@ -48,6 +47,29 @@ public class Worker {
 			if (w.getDef().getShield() != null && w.getDef().getShield().getPower() > 0){
 				shield = w;
 				hasShields = true;
+			}
+		}
+		
+		if (unit.getDef().getName().contains("dyn")){
+			power = 155f;
+		}else {
+			for (WeaponMount w : unit.getDef().getWeaponMounts()) {
+				WeaponDef wd = w.getWeaponDef();
+				if (!wd.isWaterWeapon() && !wd.getName().contains("fake")) {
+					// take the max between burst damage and continuous dps as weapon power.
+					float wepShot = wd.getDamage().getTypes().get(0) * wd.getProjectilesPerShot() * wd.getSalvoSize();
+					for (Map.Entry<String, String> param : wd.getCustomParams().entrySet()) {
+						if (param.getKey().equals("extra_damage")) wepShot += Float.parseFloat(param.getValue()); // emp
+						if (param.getKey().equals("impulse"))
+							wepShot += Float.parseFloat(param.getValue()) / 10f; // impulse
+						if (param.getKey().equals("timeslow_damagefactor"))
+							wepShot += (wepShot * Float.parseFloat(param.getValue())) / 2f; // slow
+						if (param.getKey().equals("disarmDamageOnly")) wepShot /= 10f;
+						if (param.getKey().equals("setunitsonfire")) wepShot *= 2f;
+					}
+					wepShot *= 1f + wd.getAreaOfEffect() / 100f;
+					power += Math.max(wepShot, wepShot / wd.getReload());
+				}
 			}
 		}
 		

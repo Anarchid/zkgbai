@@ -170,9 +170,9 @@ public class RaiderSquad {
     public int getThreat(){
         float threat = 0;
         for (Raider r:raiders){
-            threat += r.getUnit().getPower() + r.getUnit().getMaxHealth();
+            threat += r.power + r.getUnit().getMaxHealth();
         }
-        return (int) (threat / 12f);
+        return (int) (threat / 10f);
     }
 	
 	public boolean isDead(){

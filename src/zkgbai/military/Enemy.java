@@ -1,10 +1,9 @@
 package zkgbai.military;
 
 import com.springrts.ai.oo.AIFloat3;
-import com.springrts.ai.oo.clb.Unit;
-import com.springrts.ai.oo.clb.UnitDef;
-import com.springrts.ai.oo.clb.WeaponDef;
-import com.springrts.ai.oo.clb.WeaponMount;
+import com.springrts.ai.oo.clb.*;
+
+import java.util.Map;
 
 public class Enemy {
 	public Unit unit;
@@ -12,6 +11,7 @@ public class Enemy {
 	int unitID;
 	public AIFloat3 position;
 	float threatRadius = 0;
+	float power = 0;
 	public float value = 0;
 	float speed = 0;
 	float lastHealth = 0;
@@ -88,6 +88,7 @@ public class Enemy {
 	}
 
 	public void updateFromUnitDef(UnitDef u, float cost){
+		if (this.ud != null) return;
 		this.identified = true;
 		this.value = cost;
 		this.isStatic = (u.getSpeed() == 0);
@@ -116,7 +117,7 @@ public class Enemy {
 		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
-			if ((u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("shieldfelon") || u.getName().equals("turretemp") || u.getName().equals("turretheavy") || u.getName().equals("turretaaheavy") || u.getName().equals("turretaaflak"))){
+			if (u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("shieldfelon") || u.getName().equals("turretemp") || u.getName().equals("turretheavy") || u.getName().equals("turretaaheavy") || u.getName().equals("turretaaflak") || u.getName().contains("dyn")){
 				// identify riots
 				this.isRiot = true;
 			}
@@ -125,13 +126,30 @@ public class Enemy {
 				isStrong = true;
 			}
 
-			for (WeaponMount w:u.getWeaponMounts()){
-				WeaponDef wd = w.getWeaponDef();
-				if (wd.getCustomParams().containsKey("setunitsonfire")){
-					if (!u.getTooltip().contains("Arti")){
-						this.isStrong = true;
+			if (u.getName().contains("dyn")){
+				power = 300f;
+			}else {
+				for (WeaponMount w : u.getWeaponMounts()) {
+					WeaponDef wd = w.getWeaponDef();
+					if (!wd.isWaterWeapon() && !wd.getName().contains("fake")) {
+						// take the max between burst damage and continuous dps as weapon power.
+						float wepShot = wd.getDamage().getTypes().get(1) * wd.getProjectilesPerShot() * wd.getSalvoSize();
+						for (Map.Entry<String, String> param : wd.getCustomParams().entrySet()) {
+							if (param.getKey().equals("extra_damage")) wepShot += Float.parseFloat(param.getValue()); // emp
+							if (param.getKey().equals("impulse")) wepShot += Float.parseFloat(param.getValue()) / 10f; // impulse
+							if (param.getKey().equals("timeslow_damagefactor")) wepShot += Math.min((wepShot * Float.parseFloat(param.getValue())), wepShot/2f); // slow
+							if (param.getKey().equals("disarmDamageOnly")) wepShot /= 10f;
+							if (param.getKey().equals("setunitsonfire")) {
+								wepShot *= 2f;
+								this.isFlamer = true;
+							/*if (!u.getTooltip().contains("Arti") && !u.getName().startsWith("tank")){
+								this.isStrong = true;
+							}*/
+							}
+						}
+						wepShot *= 1f + wd.getAreaOfEffect() / 100f;
+						power += wepShot / wd.getReload();
 					}
-					this.isFlamer = true;
 				}
 			}
 			
@@ -145,7 +163,7 @@ public class Enemy {
 				if (!defName.startsWith("amph")) this.isRiot = false; // count archers as riots but not pyros.
 			}
 
-			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("vehsupport")) || u.isBuilder() && !u.getTooltip().contains("Riot") || u.getName().equals("tankcon")){
+			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("vehsupport")) || u.isBuilder() && !u.getTooltip().contains("Riot")){
 				// identify arty/skirms
 				this.isArty = true;
 			}
@@ -195,27 +213,30 @@ public class Enemy {
 
 			if (unit.getHealth() > 0) {
 				health = unit.getHealth();
+				lastHealth = health;
 			}else if (lastHealth > 0){
 				health = lastHealth;
 			}else{
 				health = ud.getHealth();
 			}
-			danger = (ud.getPower() + health)/10f;
+			danger = (power + health)/10f;
+			
+			if ((isArty && !ud.getName().equals("amphfloater"))
+				      || ud.isBuilder()){
+				danger /= 3f;
+			}
 
-			if (isFlamer || ud.getName().equals("spideremp") || ud.getName().equals("amphimpulse")){
+			/*if (isFlamer || ud.getName().equals("spideremp") || ud.getName().equals("amphimpulse")){
 				danger += 100f;
 			}
 			if (ud.getName().equals("turretemp")){
 				danger += 200f;
 			}
 			if ((isRiot && isPorc) || isStrong){
-				danger *= 2f;
-			}else if ((isArty && !ud.getName().equals("amphfloater"))
-					|| ud.isBuilder()){
-				danger /= 3f;
-			}else if ((isStatic && isAA)){
+				danger *= 1.5f;
+			}else else if ((isStatic && isAA)){
 				danger *= 5f;
-			}
+			}*/
 		}
 		return danger;
 	}

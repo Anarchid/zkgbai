@@ -185,9 +185,9 @@ public class Squad {
 	public int getThreat(){
 		float threat = 0;
 		for (Fighter f: fighters){
-			threat += f.getUnit().getPower() + f.getUnit().getMaxHealth();
+			threat += f.power + f.getUnit().getMaxHealth();
 		}
-		return (int) (threat/8f);
+		return (int) (threat/10f);
 	}
 	
 	private Fighter getBestLeader(){

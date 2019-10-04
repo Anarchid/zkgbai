@@ -3,9 +3,12 @@ package zkgbai.military.unitwrappers;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.Unit;
 import com.springrts.ai.oo.clb.Weapon;
+import com.springrts.ai.oo.clb.WeaponDef;
+import com.springrts.ai.oo.clb.WeaponMount;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.kgbutil.Pathfinder;
 
+import java.util.Map;
 import java.util.Queue;
 
 import static zkgbai.kgbutil.KgbUtil.*;
@@ -20,6 +23,7 @@ public class Fighter {
     public Squad squad;
     public boolean shieldMob = false;
     public boolean outOfRange = false;
+    public float power = 0f;
     protected Unit unit;
     static Pathfinder pathfinder = null;
     static int team;
@@ -29,6 +33,23 @@ public class Fighter {
         this.unit = u;
         this.id = u.getUnitId();
         this.metalValue = metal;
+	
+	    for (WeaponMount w:u.getDef().getWeaponMounts()){
+		    WeaponDef wd = w.getWeaponDef();
+		    if (!wd.isWaterWeapon() && !wd.getName().contains("fake")) {
+			    // take the max between burst damage and continuous dps as weapon power.
+			    float wepShot = wd.getDamage().getTypes().get(1) * wd.getProjectilesPerShot() * wd.getSalvoSize();
+			    for (Map.Entry<String, String> param: wd.getCustomParams().entrySet()){
+				    if (param.getKey().equals("extra_damage")) wepShot += Float.parseFloat(param.getValue()); // emp
+				    if (param.getKey().equals("impulse")) wepShot += Float.parseFloat(param.getValue())/10f; // impulse
+				    if (param.getKey().equals("timeslow_damagefactor")) wepShot += Math.min((wepShot * Float.parseFloat(param.getValue())), wepShot/2f); // slow
+				    if (param.getKey().equals("disarmDamageOnly")) wepShot /= 10f;
+				    if (param.getKey().equals("setunitsonfire")) wepShot *= 2f;
+			    }
+			    wepShot *= 1f + wd.getAreaOfEffect()/100f;
+			    power += wepShot/wd.getReload();
+		    }
+	    }
 
         if (pathfinder == null){
             pathfinder = Pathfinder.getInstance();
@@ -51,10 +72,12 @@ public class Fighter {
     public void fightTo(AIFloat3 pos){
         Queue<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(pos, 150f), pathfinder.ASSAULT_PATH);
 	    if (path.size() > 1) path.poll(); // skip every other waypoint since they're close together.
+	    if (unit.getDef().isAbleToFly() && path.size() > 1) path.poll();
         unit.fight(path.poll(), (short) 0, Integer.MAX_VALUE);
         
         // Add one extra waypoint
         if (path.size() > 1) path.poll(); // skip every other waypoint since they're close together.
+	    if (unit.getDef().isAbleToFly() && path.size() > 1) path.poll();
         if (!path.isEmpty()) unit.fight(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
     }
 

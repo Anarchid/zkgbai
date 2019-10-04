@@ -1,11 +1,13 @@
 package zkgbai.military;
 
 import java.util.*;
+import java.util.Map;
 
 import com.springrts.ai.AI;
 import com.springrts.ai.oo.AIFloat3;
 import com.springrts.ai.oo.clb.*;
 
+import org.slf4j.Marker;
 import zkgbai.Module;
 import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.Worker;
@@ -81,7 +83,7 @@ public class MilitaryManager extends Module {
 	public float enemyHeavyPorcValue = 0f;
 	public float maxEnemyAirValue = 0f;
 	public int slasherSpam = 0;
-	public int enemyHeavyFactor = 0;
+	public float enemyHeavyValue = 0;
 	public boolean enemyHasTrollCom = false;
 
 	public float enemyFighterValue = 0f;
@@ -223,6 +225,19 @@ public class MilitaryManager extends Module {
 	public int unitFinished(Unit unit){
 		String defName = unit.getDef().getName();
 		UnitDef ud = unit.getDef();
+		
+		if (defName.equals("planelightscout")){
+			unit.setIdleMode(0, (short) 0, Integer.MAX_VALUE);
+			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
+			Raider r = new Raider(unit, unit.getDef().getCost(m));
+			raiderHandler.addSparrow(r);
+		}
+		
+		// Deactivate outlaws so they don't destroy reclaim
+		if (defName.equals("shieldriot")){
+			unit.setOn(false, (short) 0, Integer.MAX_VALUE);
+		}
+		
 		if (defName.equals("staticnuke")){
 			hasNuke = true;
 			miscHandler.addNuke(unit);
@@ -257,6 +272,8 @@ public class MilitaryManager extends Module {
 			      && !unitTypes.noRetreat.contains(defName)){
 			retreatHandler.addCoward(unit);
 		}
+		
+		
 		
 		/*if (unbuiltPorcs.contains(unit.getUnitId())){
 			unbuiltPorcs.remove(unit.getUnitId());
@@ -306,11 +323,6 @@ public class MilitaryManager extends Module {
 			unit.setIdleMode(0, (short) 0, Integer.MAX_VALUE);
 		}
 		
-		// Activate outlaws
-		if (defName.equals("shieldriot")){
-			unit.setOn(true, (short) 0, Integer.MAX_VALUE);
-		}
-		
 		if (defName.equals("planefighter")){
 			unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
 			miscHandler.addSwift(unit);
@@ -347,10 +359,6 @@ public class MilitaryManager extends Module {
 			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiderHandler.addMediumRaider(r);
-		}else if (unitTypes.soloRaiders.contains(defName)) {
-			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
-			Raider r = new Raider(unit, unit.getDef().getCost(m));
-			raiderHandler.addSoloRaider(r);
 		}else if (unitTypes.assaults.contains(defName)) {
 			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
 			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
@@ -415,6 +423,23 @@ public class MilitaryManager extends Module {
 		if (h.getDef().getUnitDefId() == wolvMineID || (weaponDef != null && weaponDef.getWeaponDefId() == wolvMineBomblet)){
 			return 0;
 		}
+		
+		if (weaponDef != null && weaponDef.getName().equals("veharty_mine")){
+			ai.marker(h.getPos(), "wolv direct hit!");
+			if (attacker != null && attacker.getPos() != null){
+				ai.marker(attacker.getPos(), "wolverine");
+			}else if (dir != null){
+				float dist = weaponDef.getRange();
+				float x = dist * dir.x;
+				float z = dist * dir.z;
+				AIFloat3 pos = h.getPos();
+				AIFloat3 target = new AIFloat3();
+				target.x = pos.x + x;
+				target.z = pos.z + z;
+				ai.marker(target, "wolverine (inferred position)");
+			}
+		}
+		
 		// check if the damaged unit is on fire.
 		boolean on_fire = h.getRulesParamFloat("on_fire", 0.0f) > 0;
 		
@@ -778,7 +803,7 @@ public class MilitaryManager extends Module {
 				// paint allythreat for raiders
 				for (Raider r : raiderHandler.soloRaiders) {
 					if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID) continue;
-					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 14f);
+					int power = (int) ((r.power + r.getUnit().getMaxHealth()) / 10f);
 					AIFloat3 pos = r.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
@@ -789,7 +814,7 @@ public class MilitaryManager extends Module {
 				
 				for (Raider r : raiderHandler.kodachis) {
 					if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID) continue;
-					int power = (int) ((r.getUnit().getPower() + r.getUnit().getMaxHealth()) / 14f);
+					int power = (int) ((r.power + r.getUnit().getMaxHealth()) / 10f);
 					AIFloat3 pos = r.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
@@ -849,7 +874,7 @@ public class MilitaryManager extends Module {
 				// paint allythreat for loners
 				for (Fighter f : miscHandler.loners.values()) {
 					if (f.isDead()) continue;
-					int power = (int) ((f.getUnit().getPower() + f.getUnit().getMaxHealth()) / 8f);
+					int power = (int) ((f.power + f.getUnit().getMaxHealth()) / 10f);
 					if (!retreatHandler.isRetreating(f.getUnit())) availableMobileThreat += power;
 					AIFloat3 pos = f.getPos();
 					int x = Math.round(pos.x / 64f);
@@ -862,7 +887,7 @@ public class MilitaryManager extends Module {
 				// paint allythreat for striders
 				for (Strider s : miscHandler.striders.values()) {
 					if (s.getUnit().getHealth() <= 0 || s.getUnit().getTeam() != ai.teamID) continue;
-					int power = (int) ((s.getUnit().getPower() + s.getUnit().getMaxHealth()) / 6f);
+					int power = (int) ((s.power + s.getUnit().getMaxHealth()) / 10f);
 					if (!retreatHandler.isRetreating(s.getUnit())) availableMobileThreat += power;
 					AIFloat3 pos = s.getPos();
 					int x = Math.round(pos.x / 64f);
@@ -875,7 +900,7 @@ public class MilitaryManager extends Module {
 				// paint allythreat for krows
 				for (Strider s : miscHandler.krows.values()) {
 					if (s.getUnit().getHealth() <= 0 || s.getUnit().getTeam() != ai.teamID) continue;
-					int power = (int) ((s.getUnit().getPower() + s.getUnit().getMaxHealth()) / 6f);
+					int power = (int) ((s.power + s.getUnit().getMaxHealth()) / 10f);
 					if (!retreatHandler.isRetreating(s.getUnit())) availableMobileThreat += power;
 					AIFloat3 pos = s.getPos();
 					int x = Math.round(pos.x / 64f);
@@ -891,7 +916,7 @@ public class MilitaryManager extends Module {
 				// paint allythreat for commanders and welders
 				for (Worker w: ai.ecoManager.workers.values()){
 					if (w.getUnit().getHealth() <= 0 || w.getUnit().getTeam() != ai.teamID || !w.getUnit().getDef().isAbleToAttack()) continue;
-					int power = (int) ((w.getUnit().getPower() + w.getUnit().getMaxHealth()) / 14f);
+					int power = (int) ((w.power + w.getUnit().getMaxHealth()) / 14f);
 					AIFloat3 pos = w.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
@@ -903,7 +928,25 @@ public class MilitaryManager extends Module {
 				// paint ally porc threat
 				for (Unit u:ai.ecoManager.porcs){
 					if (u.getHealth() <= 0 || u.getTeam() != ai.teamID) continue;
-					float power = ((u.getPower() + u.getMaxHealth())/10f);
+					float power = 0;
+					for (WeaponMount w:u.getDef().getWeaponMounts()){
+						WeaponDef wd = w.getWeaponDef();
+						if (!wd.isWaterWeapon() && !wd.getName().contains("fake")) {
+							// take the max between burst damage and continuous dps as weapon power.
+							float wepShot = wd.getDamage().getTypes().get(1) * wd.getProjectilesPerShot() * wd.getSalvoSize();
+							for (Map.Entry<String, String> param: wd.getCustomParams().entrySet()){
+								if (param.getKey().equals("extra_damage")) wepShot += Float.parseFloat(param.getValue()); // emp
+								if (param.getKey().equals("impulse")) wepShot += Float.parseFloat(param.getValue())/10f; // impulse
+								if (param.getKey().equals("timeslow_damagefactor")) wepShot += Math.min((wepShot * Float.parseFloat(param.getValue())), wepShot/2f); // slow
+								if (param.getKey().equals("disarmDamageOnly")) wepShot /= 10f;
+								if (param.getKey().equals("setunitsonfire")) wepShot *= 2f;
+							}
+							wepShot *= 1f + wd.getAreaOfEffect()/100f;
+							power += wepShot/wd.getReload();
+						}
+					}
+					power += u.getMaxHealth();
+					power /= 10f;
 					if (u.isBeingBuilt()) power *= u.getBuildProgress() * u.getBuildProgress();
 					float radius = u.getMaxRange();
 					AIFloat3 pos = u.getPos();
@@ -954,7 +997,11 @@ public class MilitaryManager extends Module {
 				
 				if (!t.isStatic) {
 					if (!t.ud.isAbleToFly()) {
-						effectivePower = (int) (effectivePower * Math.max(0, (1f - (((frame - t.lastSeen)) / 900f))));
+						// Reduce threat gradually for units that haven't been seen recently.
+						float timeMod = (((frame - t.lastSeen)) / 900f);
+						timeMod *= timeMod;
+						timeMod = Math.max(0, (1f - timeMod));
+						effectivePower = (int) (effectivePower * timeMod);
 					}
 					// paint enemy threat for mobiles
 					if (t.isAA || t.isFlexAA){
@@ -1056,7 +1103,7 @@ public class MilitaryManager extends Module {
 		enemyHasAntiNuke = false;
 		enemyHasNuke = false;
 		float enemyAirValue = 0f;
-		enemyHeavyFactor = 0;
+		enemyHeavyValue = 0;
 		enemyFighterValue = 0;
 		for (Enemy t: targets.values()){
 			if (t.identified){
@@ -1083,10 +1130,8 @@ public class MilitaryManager extends Module {
 					enemyHasAntiNuke = true;
 				}else if (defName.equals("staticnuke")){
 					enemyHasNuke = true;
-				}else if (defName.equals("striderbantha")){
-					enemyHeavyFactor++;
-				}else if (defName.equals("striderdetriment")){
-					enemyHeavyFactor += 2;
+				}else if (defName.startsWith("strider") || defName.equals("tankassault") || defName.equals("tankheavyassault") || defName.equals("amphassault") || defName.equals("spidercrabe") || defName.equals("jumpsumo") || defName.equals("jumpassault")){
+					enemyHeavyValue += t.ud.getCost(m);
 				}else if (t.ud.isAbleToFly() && !t.isNanoSpam){
 					if (defName.equals("dronelight") || defName.equals("droneheavyslow") || defName.equals("dronecarry")){
 						enemyAirValue += 25f;
@@ -1919,6 +1964,7 @@ public class MilitaryManager extends Module {
 			return graphManager.getAllyCenter();
 		}
 		
+		ai.say("getRallyPoint is fukt.");
 		return graphManager.getClosestSpot(pos).getPos();
 	}
 	

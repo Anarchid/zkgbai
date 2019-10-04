@@ -22,6 +22,7 @@ public class ShieldSquad extends Squad {
 	private int leaderWeight;
 	public int numFelons = 0;
 	public int numAspis = 0;
+	public boolean lowShields = false;
 	private float maxShieldPower = 0f;
 	private Map<Integer, Weapon> shields = new HashMap<>();
 	
@@ -29,6 +30,7 @@ public class ShieldSquad extends Squad {
 	private static int aspisID;
 	private static int domiID;
 	private static int thugID;
+	private static int lawID;
 	private static boolean initialized = false;
 	
 	public ShieldSquad(){
@@ -39,6 +41,7 @@ public class ShieldSquad extends Squad {
 			OOAICallback callback = ZKGraphBasedAI.getInstance().getCallback();
 			felonID = callback.getUnitDefByName("shieldfelon").getUnitDefId();
 			thugID = callback.getUnitDefByName("shieldassault").getUnitDefId();
+			lawID = callback.getUnitDefByName("shieldriot").getUnitDefId();
 			aspisID = callback.getUnitDefByName("shieldshield").getUnitDefId();
 			domiID = callback.getUnitDefByName("vehcapture").getUnitDefId();
 		}
@@ -54,6 +57,8 @@ public class ShieldSquad extends Squad {
 		int defID = f.getUnit().getDef().getUnitDefId();
 		
 		if (defID == felonID) numFelons++;
+		
+		if (defID == lawID) f.getUnit().setOn(true, (short) 0, Integer.MAX_VALUE);
 		
 		if (defID != aspisID) {
 			for (Weapon w : f.getUnit().getWeapons()) {
@@ -253,28 +258,29 @@ public class ShieldSquad extends Squad {
 	public int getThreat(){
 		float threat = leader.getUnit().getPower() + leader.getUnit().getMaxHealth();
 		for (Fighter f: fighters){
-			threat += f.getUnit().getPower() + f.getUnit().getMaxHealth();
+			threat += f.power + f.getUnit().getMaxHealth();
 		}
 		for (Weapon w:shields.values()){
 			threat += w.getDef().getShield().getPower();
 		}
-		return (int) (threat/8f);
+		return (int) (threat/10f);
 	}
 	
 	public float getHealth(){
-		if (leader == null){
+		if (leader == null || leader.isDead()){
 			return 0;
 		}
 		
 		float count = fighters.size() + 1;
 		float health = 0;
-		health += (leader.getUnit().getHealth()/leader.getUnit().getMaxHealth())/count;
+		float leaderHealth = ((leader.getUnit().getHealth() - leader.getUnit().getParalyzeDamage())/leader.getUnit().getMaxHealth()) * (1f - leader.getUnit().getCaptureProgress());
+		health += leaderHealth;
 		
 		for (Fighter f:fighters){
-			health += (f.getUnit().getHealth()/f.getUnit().getMaxHealth())/count;
+			health += ((f.getUnit().getHealth() - f.getUnit().getParalyzeDamage())/f.getUnit().getMaxHealth()) * (1f - f.getUnit().getCaptureProgress());
 		}
 		
-		return health;
+		return Math.min(leaderHealth, health/count);
 	}
 	
 	public float getShields(){

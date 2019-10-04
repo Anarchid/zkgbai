@@ -52,7 +52,7 @@ public class EconomyManager extends Module {
 	public Map<Integer, Nanotower> nanos = new HashMap<>();
 	List<Unit> airpads = new ArrayList<>();
 	public List<Unit> fusions = new ArrayList<>();
-	List<Unit> mexes = new ArrayList<>();
+	public List<Unit> mexes = new ArrayList<>();
 	List<Unit> solars = new ArrayList<>();
 	List<Unit> windgens = new ArrayList<>();
 	List<Unit> pylons = new ArrayList<>();
@@ -223,7 +223,6 @@ public class EconomyManager extends Module {
 		if (frame % 300 == ai.offset % 300) checkNanos();
 
 		if (frame % 15 == ai.offset % 15) {
-			//checkShields();
 			rawMexIncome = 0;
 			effectiveIncomeMetal = 2f * (1 + ai.mergedAllies);
 			effectiveIncomeEnergy = 2f * (1 + ai.mergedAllies);
@@ -355,12 +354,14 @@ public class EconomyManager extends Module {
 			
 			// if greedy workers make up too much of the workforce, convert them.
 			for (Worker w:workers.values()){
-				if (workers.size() > greed && greed <= Math.ceil(workers.size() * Math.min(1f - graphManager.territoryFraction, 0.5f))) break;
+				if (workers.size() > greed && (greed <= 2 || greed <= workers.size() * ((1f - (graphManager.territoryFraction * graphManager.territoryFraction))/2f))) break;
 				if (w.isGreedy) {
 					w.isGreedy = false;
 					greed--;
 				}
 			}
+			
+			if (effectiveIncome > 30f && sparrow == null) morphSparrow();
 			
 			/*if (!morphedComs && adjustedIncome > 20f){
 				morphComs();
@@ -533,6 +534,10 @@ public class EconomyManager extends Module {
     	if(defName.equals("staticradar")){
     		radars.add(unit);
     	}
+    	
+    	if (defName.equals("planelightscout")){
+    		sparrow = unit;
+	    }
 
 		if(defName.equals("staticstorage")){
 			storages.add(unit);
@@ -631,31 +636,12 @@ public class EconomyManager extends Module {
 		}
 		
 		// fortify mexes if they die
-		if (h.getDef().getUnitDefId() == buildIDs.mexID && h.getHealth() <= 0){
+		if (h.getDef().getUnitDefId() == buildIDs.mexID && h.getHealth() <= 0 && !h.isBeingBuilt()){
 			if (graphManager.getClosestSpot(h.getPos()).owned) {
 				// only fortify mexes that had already been completed
 				fortifyMex(h.getPos(), weaponDef);
 			}
 		}
-
-		/*if (h.getHealth() > 0 && h.getDef().getBuildSpeed() > 0 && h.getDef().getSpeed() > 0) {
-			if (lastDamagedWorker == null || lastDamagedWorker.id != h.getUnitId()){
-				lastDamagedWorker = workers.get(h.getUnitId());
-			}
-			Worker w = lastDamagedWorker;
-			if (w != null && !w.isChicken && ((h.getHealth() / h.getMaxHealth() < 0.8 || warManager.getEffectiveThreat(h.getPos()) > 0) || (weaponDef != null && unitTypes.porcWeps.contains(weaponDef.getWeaponDefId())))) {
-				// retreat if a worker gets attacked by enemy porc, is taking serious damage, or is in a hopeless situation.
-				if (w.getTask() != null) {
-					w.clearTask();
-				}
-				seeders.remove(w);
-				AIFloat3 pos = graphManager.getClosestHaven(h.getPos());
-				w.isChicken = true;
-				w.chickenFrame = frame;
-				w.retreatTo(pos, frame);
-				warManager.defenseTargets.add(new DefenseTarget(h.getPos(), h.getMaxHealth(), frame));
-			}
-		}*/
 		
 		// If it was a building under construction, reset the builder's target
 		ConstructionTask invalidtask = null;
@@ -713,6 +699,8 @@ public class EconomyManager extends Module {
 					break;
 				}
 			}
+		}else if (sparrow != null && unit.getUnitId() == sparrow.getUnitId() && sparrow.getRulesParamFloat("wasMorphedTo", 0f) == 0){
+			sparrow = null;
 		}
 
 		newWorkers.remove(unit.getUnitId());
@@ -814,7 +802,7 @@ public class EconomyManager extends Module {
 		if (newWorkers.contains(u.getUnitId()) && u.getCurrentCommands().isEmpty()){
 			Worker w = new Worker(u);
 			workers.put(w.id, w);
-			if (workers.size() > 1 + ai.mergedAllies && greed < workers.size() * Math.min(1f - graphManager.territoryFraction, 0.5f)){
+			if (workers.size() > 1 + ai.mergedAllies && (greed < 2 || greed < ((workers.size() - commanders.size())) * ((1f - (graphManager.territoryFraction * graphManager.territoryFraction))/2f))){
 				w.isGreedy = true;
 				greed++;
 			}
@@ -894,6 +882,9 @@ public class EconomyManager extends Module {
 			params.add(1f);
 		}
 		for (Unit u:newEnergy) {
+			if (u.getHealth() > 0 && u.getTeam() == ai.teamID && u.isBeingBuilt()) u.executeCustomCommand(CMD_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
+		}
+		for (Unit u:fusions){
 			if (u.getHealth() > 0 && u.getTeam() == ai.teamID && u.isBeingBuilt()) u.executeCustomCommand(CMD_PRIORITY, params, (short) 0, Integer.MAX_VALUE);
 		}
 	}
@@ -1093,7 +1084,7 @@ public class EconomyManager extends Module {
 			}
 		}
 		
-		if (maxStorage > 1f && metal/maxStorage < 0.9f && !energyReclaim) {
+		if (maxStorage > 1f && (metal/maxStorage < 0.9f || !hardEstalled) && (!energyReclaim || energyReclaimTasks.isEmpty())) {
 			for (WorkerTask t : reclaimTasks) {
 				float tmpcost = costOfJob(worker, t);
 				tmpcost += 500f * Math.max(0, warManager.getEffectiveThreat(t.getPos()));
@@ -1195,7 +1186,7 @@ public class EconomyManager extends Module {
 			}
 			
 			if (buildIDs.facIDs.contains(ctask.buildType.getUnitDefId())) {
-				// factory plops and emergency facs get maximum priority
+				// emergency facs get maximum priority
 				if (facManager.factories.isEmpty()) {
 					return -1000;
 				}
@@ -1241,13 +1232,13 @@ public class EconomyManager extends Module {
 
 			if (ctask.buildType.getUnitDefId() == buildIDs.radarID){
 				// for radar
-				if (hardEstalled) return dist + 300f;
+				if (hardEstalled && !worker.isGreedy) return dist + 300f;
 				return (dist/4f) - 100 + (1500 * (costMod - 1));
 			}
 			
 			if (ctask.buildType.getCost(m) > 300){
 				// allow at least 3 builders for each expensive task, more if the cost is high.
-				 return ((dist/2) - Math.min(3000f, ctask.buildType.getCost(m))) + Math.max(0, (500 * (costMod - 3)));
+				return ((dist/2) - Math.min(3000f, ctask.buildType.getCost(m))) + Math.max(0, (500 * (costMod - 3)));
 			}
 
 			return (dist - 250) + (100 * (costMod - 1));
@@ -1325,11 +1316,11 @@ public class EconomyManager extends Module {
 
 		//get the new building's area based on facing
 		if (task.facing == 0 || task.facing == 2){
-			xsize = task.buildType.getXSize()*4;
-			zsize = task.buildType.getZSize()*4;
+			xsize = task.buildType.getXSize()*4f;
+			zsize = task.buildType.getZSize()*4f;
 		}else{
-			xsize = task.buildType.getZSize()*4;
-			zsize = task.buildType.getXSize()*4;
+			xsize = task.buildType.getZSize()*4f;
+			zsize = task.buildType.getXSize()*4f;
 		}
 
 		//check for overlap with existing queued jobs
@@ -1339,11 +1330,11 @@ public class EconomyManager extends Module {
 
 			//get the queued building's area based on facing
 			if (c.facing == 0 || c.facing == 2){
-				cxsize = c.buildType.getXSize()*4;
-				czsize = c.buildType.getZSize()*4;
+				cxsize = c.buildType.getXSize()*4f;
+				czsize = c.buildType.getZSize()*4f;
 			}else{
-				cxsize = c.buildType.getZSize()*4;
-				czsize = c.buildType.getXSize()*4;
+				cxsize = c.buildType.getZSize()*4f;
+				czsize = c.buildType.getXSize()*4f;
 			}
 			float minTolerance = xsize+cxsize;
 			float axisDist = Math.abs(c.getPos().x - task.getPos().x);
@@ -1357,6 +1348,36 @@ public class EconomyManager extends Module {
 				}
 			}
 		}
+		
+		for (Worker w:facManager.factories.values()){
+			// check fac overlap
+			float cxsize = 0;
+			float czsize = 0;
+			Unit fac = w.getUnit();
+			UnitDef def = fac.getDef();
+			if (def == null) continue;
+			int facing = fac.getBuildingFacing();
+			
+			if (facing == 0 || facing == 2){
+				cxsize = (def.getXSize() + 1f) * 4f;
+				czsize = (def.getZSize() + 1f) * 4f;
+			}else{
+				cxsize = (def.getZSize() + 1f) * 4f;
+				czsize = (def.getXSize() + 1f) * 4f;
+			}
+			float minTolerance = xsize+cxsize;
+			float axisDist = Math.abs(fac.getPos().x - task.getPos().x);
+			if (axisDist < minTolerance){
+				// if it's too close in the x dimension
+				minTolerance = zsize+czsize;
+				axisDist = Math.abs(fac.getPos().z - task.getPos().z);
+				if (axisDist < minTolerance){
+					//and it's too close in the z dimension
+					return false;
+				}
+			}
+		}
+		
 		return true;
 	}
 
@@ -1477,25 +1498,6 @@ public class EconomyManager extends Module {
 		}
 	}
 
-	void checkShields(){
-		for (Worker w:workers.values()){
-			if (w.getUnit().getHealth() > 0 && w.getUnit().getTeam() == ai.teamID){
-				// Check shield hp, because unitDamaged sucks.
-				if (!w.isChicken && w.hasShields && w.getShields() < 0.3f){
-					if (w.getTask() != null) {
-						w.clearTask();
-					}
-					AIFloat3 pos = graphManager.getClosestHaven(w.getPos());
-					w.retreatTo(pos, frame);
-					w.isChicken = true;
-					w.chickenFrame = frame;
-					warManager.defenseTargets.add(new DefenseTarget(w.getPos(), w.getUnit().getMaxHealth() * 2f, frame));
-					seeders.remove(w);
-				}
-			}
-		}
-	}
-
     void generateTasks(Worker worker){
     	AIFloat3 position = worker.getPos();
 	    
@@ -1518,22 +1520,13 @@ public class EconomyManager extends Module {
 		
 		boolean hasPlop = worker.hasPlop();
 		if ((hasPlop && !worker.assignedPlop)
-				|| (frame > 900 && !hasPlop && facManager.factories.size() < 1 + ai.mergedAllies && factoryTasks.isEmpty())
-				|| (!worker.isGreedy && staticIncome > 50f && facManager.factories.size() == 1 && nanos.size() > 3 && factoryTasks.isEmpty())
-				|| (!worker.isGreedy && staticIncome > 90f && facManager.factories.size() == 2 && nanos.size() > 6 && graphManager.eminentTerritory && factoryTasks.isEmpty())
-				|| (ai.mergedAllies > 0 && staticIncome > 65f && !hasStriders && graphManager.eminentTerritory && factoryTasks.isEmpty())
-				|| (ai.mergedAllies > 0 && staticIncome > 65f && graphManager.territoryFraction > 0.35f && (!hasPlanes && !hasGunship) && factoryTasks.isEmpty())
-				|| (ai.mergedAllies > 0 && bigMap && graphManager.territoryFraction > 0.4f && (!warManager.miscHandler.striders.isEmpty() || !warManager.squadHandler.shieldSquads.isEmpty()) && (!hasPlanes || !hasGunship) && factoryTasks.isEmpty())) {
+			      || (frame > 900 && !hasPlop && facManager.factories.size() < 1 + ai.mergedAllies && factoryTasks.isEmpty())
+			      || (staticIncome > 50f && facManager.factories.size() == 1 && nanos.size() > 3 && factoryTasks.isEmpty())
+			      || (staticIncome > 90f && facManager.factories.size() == 2 && nanos.size() > 6 && graphManager.eminentTerritory && factoryTasks.isEmpty())
+			      || (ai.mergedAllies > 0 && staticIncome > 65f && !hasStriders && graphManager.eminentTerritory && factoryTasks.isEmpty())
+			      || (ai.mergedAllies > 0 && staticIncome > 65f && graphManager.territoryFraction > 0.35f && (!hasPlanes && !hasGunship) && factoryTasks.isEmpty())
+			      || (ai.mergedAllies > 0 && bigMap && graphManager.territoryFraction > 0.4f && (!warManager.miscHandler.striders.isEmpty() || !warManager.squadHandler.shieldSquads.isEmpty()) && (!hasPlanes || !hasGunship) && factoryTasks.isEmpty())) {
 			createFactoryTask(worker, hasPlop);
-		}
-
-		//Don't build crap right in front of the fac.
-		boolean tooCloseToFac = false;
-		for(Worker w:facManager.factories.values()){
-			float dist = distance(position,w.getPos());
-			if (dist<200){
-				tooCloseToFac = true;
-			}
 		}
 	
 		if (!worker.isCom) collectReclaimables(worker);
@@ -1548,7 +1541,7 @@ public class EconomyManager extends Module {
 		if (!worker.isGreedy && estalled && solarTasks.size() + windTasks.size() < facManager.numWorkers) {
 			createEnergyTask(worker);
 		}
-		if (!worker.isGreedy) createFusionTask(worker);
+		createFusionTask(worker);
     	
     	// do we need caretakers?
     	if(!facManager.factories.isEmpty() &&
@@ -1570,7 +1563,7 @@ public class EconomyManager extends Module {
 		}
 
 		// do we need radar?
-		if (!worker.isCom && adjustedIncome > 20f && !hardEstalled && !tooCloseToFac){
+		if (!worker.isCom && adjustedIncome > 20f && !hardEstalled){
     		createRadarTask(worker);
     	}
     	
@@ -1581,7 +1574,7 @@ public class EconomyManager extends Module {
 	    }
 
 		// do we need pylons?
-		if (fusions.size() > 3 && !tooCloseToFac){
+		if (fusions.size() > 3){
 			createGridTask(worker.getPos());
 		}
 		
@@ -1665,8 +1658,8 @@ public class EconomyManager extends Module {
 		
 		// Uncomment this to set the intial fac for debugging purposes.
 		/*if (facManager.factories.size() == 0){
-			factory = callback.getUnitDefByName("factoryshield");
-			potentialFacList.remove("factoryshield");
+			factory = callback.getUnitDefByName("factoryhover");
+			potentialFacList.remove("factoryhover");
 		}else*/ if (userFac != null && facManager.factories.size() == 0){
 			factory = callback.getUnitDefByName(userFac);
 			potentialFacList.remove(userFac);
@@ -1722,7 +1715,7 @@ public class EconomyManager extends Module {
 			while (!good) {
 				if (i++ > 10) return;
 				position = worker.getPos();
-				position = getDirectionalPoint(position, graphManager.getMapCenter(), 100f);
+				position = getDirectionalPoint(position, graphManager.getMapCenter(), clearance + 20f);
 				position = callback.getMap().findClosestBuildSite(factory, position,600f, 3, facing);
 				
 				// don't let factories get blocked by random crap, nor build them on top of mexes
@@ -2395,6 +2388,33 @@ public class EconomyManager extends Module {
 	    morphedComs = true;
     }
     
+    private void morphSparrow(){
+		if (!facManager.factories.isEmpty() && !radars.isEmpty()){
+			// find the most useless radar and turn it into a sparrow
+			Unit best = null;
+			float bestdist = Float.MAX_VALUE;
+			for (Unit r:radars){
+				if (r.getHealth() <= 0 || r.getTeam() != ai.teamID) continue;
+				Worker f = getNearestFac(r.getPos());
+				float tmpdist = distance(f.getPos(), r.getPos());
+				if (tmpdist < bestdist){
+					bestdist = tmpdist;
+					best = r;
+				}
+			}
+			if (best != null){
+				sparrow = best;
+				radars.remove(sparrow);
+				List<Float> params = new ArrayList<>();
+				params.add((float) callback.getUnitDefByName("planelightscout").getUnitDefId());
+				sparrow.executeCustomCommand(CMD_MORPH, params, (short) 0, Integer.MAX_VALUE);
+				params.clear();
+				params.add(3f);
+				sparrow.executeCustomCommand(CMD_MISC_PRIORITY, params, (short) 0, Integer.MAX_VALUE); // low prio, cause sparrows are freaking expensive.
+			}
+		}
+    }
+    
     void createEnergyTask(Worker worker){
     	UnitDef solar = callback.getUnitDefByName("energysolar");
 		UnitDef windgen = callback.getUnitDefByName("energywind");
@@ -2506,10 +2526,19 @@ public class EconomyManager extends Module {
 		}
 
 		// for fusions
-		if (effectiveIncome > 35f && !hardEstalled
+		if (effectiveIncome > 35f && graphManager.eminentTerritory
 				&& Math.floor(staticIncome/27.5f) > fusions.size() && !facManager.factories.isEmpty()
 			      && fusionTasks.size() + fusions.size() - started < 3 && fusionTasks.size() < 1 + ai.mergedAllies){
-			boolean good = false;
+			position = getAngularPoint(graphManager.getAllyCenter(), graphManager.getAllyBase(), distance(graphManager.getAllyCenter(), graphManager.getAllyBase()));
+			position = graphManager.getOverdriveSweetSpot(position, fusion);
+			position = callback.getMap().findClosestBuildSite(fusion, position, 600f, 3, 0);
+			ct = new ConstructionTask(fusion, position, 0);
+			if (buildCheck(ct)) {
+				constructionTasks.add(ct);
+				fusionTasks.add(ct);
+			}
+			
+			/*boolean good = false;
 			int i = 0;
 			while (!good) {
 				if (i++ > 4) return;
@@ -2530,13 +2559,21 @@ public class EconomyManager extends Module {
 						good = true;
 					}
 				}
-			}
+			}*/
 		}
 		// for singus
 		else if (fusions.size() > 2 && fusions.size() < 5 + (ai.mergedAllies > 1 ? 1 : 0)
 				&& graphManager.eminentTerritory
 				&& !facManager.factories.isEmpty() && fusionTasks.isEmpty()){
-			boolean good = false;
+			position = getAngularPoint(graphManager.getAllyCenter(), graphManager.getAllyBase(), distance(graphManager.getAllyCenter(), graphManager.getAllyBase()));
+			position = graphManager.getOverdriveSweetSpot(position, singu);
+			position = callback.getMap().findClosestBuildSite(singu, position, 600f, 3, 0);
+			ct = new ConstructionTask(singu, position, 0);
+			if (buildCheck(ct)) {
+				constructionTasks.add(ct);
+				fusionTasks.add(ct);
+			}
+			/*boolean good = false;
 			int i = 0;
 			while (!good) {
 				if (i++ > 4) return;
@@ -2557,7 +2594,7 @@ public class EconomyManager extends Module {
 						good = true;
 					}
 				}
-			}
+			}*/
 		}
 	}
 

@@ -50,8 +50,12 @@ public class Raider extends Fighter {
 	
 	public void raid(AIFloat3 target, int frame) {
 		Queue<AIFloat3> path = pathfinder.findPath(unit, getRadialPoint(target, 100f), unit.isCloaked() ? pathfinder.SCYTHE_PATH : pathfinder.RAIDER_PATH);
+		if (unit.getDef().isAbleToFly() && path.size() > 1) path.poll();
+		if (unit.getDef().isAbleToFly() && path.size() > 1) path.poll();
 		if (path.size() > 1) path.poll();
 		unit.fight(path.poll(), (short) 0, Integer.MAX_VALUE);
+		if (unit.getDef().isAbleToFly() && path.size() > 1) path.poll();
+		if (unit.getDef().isAbleToFly() && path.size() > 1) path.poll();
 		if (!path.isEmpty()) unit.fight(path.poll(), OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 		
 		this.target = target;

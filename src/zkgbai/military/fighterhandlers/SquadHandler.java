@@ -456,10 +456,15 @@ public class SquadHandler {
 				return;
 			}
 			
-			if (shieldSquad.getHealth() < 0.85
-				      || shieldSquad.getShields() < 0.2f
-				      || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getRulesParamFloat("disarmed", 0) > 0)
-				      || (shieldSquad.leader != null && shieldSquad.leader.getUnit().getHealth() / shieldSquad.leader.getUnit().getMaxHealth() < 0.8)) {
+			if (shieldSquad.lowShields && shieldSquad.getShields() > 0.5f){
+				shieldSquad.lowShields = false;
+			}else if (!shieldSquad.lowShields && shieldSquad.getShields() < 0.2f){
+				shieldSquad.lowShields = true;
+			}
+			
+			if (shieldSquad.lowShields){
+				shieldSquad.retreatTo(graphManager.getClosestRaiderHaven(shieldSquad.getPos()));
+			}else if (shieldSquad.getHealth() < 0.85f) {
 				shieldSquad.retreatTo(graphManager.getClosestHaven(shieldSquad.getPos()));
 			} else if (shieldSquad.metalValue > 1300f && shieldSquad.leader.getUnit().getDef().getName().equals("shieldfelon") && shieldSquad.isRallied(frame)) {
 				AIFloat3 target = warManager.getTarget(shieldSquad.leader.getUnit(), false);

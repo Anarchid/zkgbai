@@ -9,6 +9,7 @@ import com.springrts.ai.oo.clb.*;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
+import java.util.Map;
 
 import zkgbai.economy.EconomyManager;
 import zkgbai.economy.Factory;
@@ -301,15 +302,12 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-	    	for (MetalSpot ms: graphManager.getEnemySpots()){
-	    		marker(ms.getPos(), "enemy spot");
+	    	for (Enemy e: warManager.getTargets()){
+	    		marker(e.position, e.identified ? e.ud.getHumanName() : "unidentified");
 		    }
-	        /*for (Worker w:ecoManager.workers.values()){
-	        	if (w.isGreedy) marker(w.getPos(), "greedy");
-	        }
-	        for (ConstructionTask ct: ecoManager.factoryTasks){
-	        	marker(ct.getPos(), ct.buildType.getHumanName());
-	        }*/
+		    /*for (Worker w:ecoManager.workers.values()){
+		    	marker(w.getPos(), w.getTask() == null ? "no task" : w.getTask().toString());
+		    }*/
 		}
 
 		for (Module module : modules) {

@@ -56,7 +56,8 @@ public class Factory extends Worker {
 
 			if (defName.equals("factoryveh")) {
 				scoutAllowance--;
-				raiderSpam = -4;
+				maxScoutAllowance++;
+				raiderSpam = -3;
 			}
 
 			if (defName.equals("factoryhover") && bigMap){

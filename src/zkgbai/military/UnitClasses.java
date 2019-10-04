@@ -93,7 +93,7 @@ public class UnitClasses {
         striders.add("striderdetriment");
 
         // loners; strider-like stuff that does better on its own than in mobs
-        loners.add("vehsupport");
+	    loners.add("vehsupport");
         loners.add("tankheavyassault");
         loners.add("spidercrabe");
 	    loners.add("amphassault");
@@ -156,7 +156,7 @@ public class UnitClasses {
         heavies.add("tankassault");
         heavies.add("tankheavyassault");
         heavies.add("spidercrabe");
-        heavies.add("amphassault");
+	    heavies.add("amphassault");
 
         // porc weps are set in root.
     }

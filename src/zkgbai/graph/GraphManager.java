@@ -285,8 +285,11 @@ public class GraphManager extends Module {
 
 				boolean hasMex = false;
 				for (Unit u:friendlies){
-					if (u.getDef().getUnitDefId() == mexDefID) hasMex = true;
-					break;
+					if (u.getDef().getUnitDefId() == mexDefID) {
+						ms.hostile = false;
+						hasMex = true;
+						break;
+					}
 				}
 
 				if (!hasMex) {
