@@ -55,7 +55,7 @@ public class Worker {
 		}else {
 			for (WeaponMount w : unit.getDef().getWeaponMounts()) {
 				WeaponDef wd = w.getWeaponDef();
-				if (!wd.isWaterWeapon() && !wd.getName().contains("fake")) {
+				if (!wd.getName().contains("torpedo") && !wd.getName().contains("fake")) {
 					// take the max between burst damage and continuous dps as weapon power.
 					float wepShot = wd.getDamage().getTypes().get(0) * wd.getProjectilesPerShot() * wd.getSalvoSize();
 					for (Map.Entry<String, String> param : wd.getCustomParams().entrySet()) {

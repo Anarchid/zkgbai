@@ -44,7 +44,6 @@ public class UnitClasses {
         mediumRaiders.add("vehraid");
         mediumRaiders.add("gunshipraid");
         mediumRaiders.add("cloakheavyraid");
-	    mediumRaiders.add("hoverassault");
 	    mediumRaiders.add("tankheavyraid");
 
         soloRaiders.add("spiderscout");
@@ -63,6 +62,7 @@ public class UnitClasses {
         assaults.add("vehassault");
         assaults.add("hoverskirm");
         assaults.add("hoverriot");
+	    assaults.add("hoverassault");
         assaults.add("spiderassault");
         assaults.add("spiderskirm");
         assaults.add("spideremp");

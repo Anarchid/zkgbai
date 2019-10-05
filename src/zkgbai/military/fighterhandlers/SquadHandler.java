@@ -10,11 +10,14 @@ import zkgbai.graph.GraphManager;
 import zkgbai.military.MilitaryManager;
 import zkgbai.military.UnitClasses;
 import zkgbai.military.unitwrappers.Fighter;
+import zkgbai.military.unitwrappers.HoverSquad;
 import zkgbai.military.unitwrappers.ShieldSquad;
 import zkgbai.military.unitwrappers.Squad;
 
 import java.util.*;
 
+import static java.lang.Math.floor;
+import static java.lang.Math.min;
 import static zkgbai.kgbutil.KgbUtil.*;
 
 /**
@@ -37,6 +40,7 @@ public class SquadHandler {
 	public Squad nextRecluseSquad = null;
     public Squad nextSpiderSquad = null;
     public Squad nextVehSquad = null;
+	public HoverSquad nextHalberdSquad = null;
     public Squad nextHoverSquad = null;
     public Squad nextTankSquad = null;
     public Squad nextAirSquad = null;
@@ -178,6 +182,20 @@ public class SquadHandler {
 	        if (((nextVehSquad.metalValue > nextVehSquad.income * 45f && nextVehSquad.metalValue > 1000f) || nextVehSquad.metalValue > 2500f) && nextVehSquad.getSize() > 2) {
 		        nextVehSquad.status = 'r';
 		        nextVehSquad = null;
+	        }
+        }else if (defName.equals("hoverassault")){
+	        // create a new squad if there isn't one
+	        if (nextHalberdSquad == null) {
+		        nextHalberdSquad = new HoverSquad();
+		        nextHalberdSquad.income = ecoManager.effectiveIncome / (1f + (ai.mergedAllies * graphManager.territoryFraction * graphManager.territoryFraction));
+		        squads.add(nextHalberdSquad);
+	        }
+	
+	        nextHalberdSquad.addUnit(f);
+	
+	        if (nextHalberdSquad.getSize() >= (int) min(8, 2 + floor(ecoManager.adjustedIncome / 15f))) {
+		        nextHalberdSquad.status = 'r';
+		        nextHalberdSquad = null;
 	        }
         }else if (defName.startsWith("hover")){
 	        // create a new squad if there isn't one

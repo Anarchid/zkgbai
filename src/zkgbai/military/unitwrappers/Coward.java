@@ -53,6 +53,7 @@ public class Coward {
 	public void retreatTo(AIFloat3 pos){
 		Queue<AIFloat3> path = pathfinder.findPath(unit, pos, pathfinder.AVOID_ENEMIES);
 		if (path.size() > 1 && isFlyer) path.poll();
+		if (path.size() > 1 && isFlyer) path.poll();
 		unit.moveTo(path.poll(), (short) 0, Integer.MAX_VALUE);
 		
 		int pathSize = Math.min(3, path.size());

@@ -131,7 +131,7 @@ public class Enemy {
 			}else {
 				for (WeaponMount w : u.getWeaponMounts()) {
 					WeaponDef wd = w.getWeaponDef();
-					if (!wd.isWaterWeapon() && !wd.getName().contains("fake")) {
+					if ((!wd.getName().contains("torpedo") || isStatic) && !wd.getName().contains("fake")) {
 						// take the max between burst damage and continuous dps as weapon power.
 						float wepShot = wd.getDamage().getTypes().get(1) * wd.getProjectilesPerShot() * wd.getSalvoSize();
 						for (Map.Entry<String, String> param : wd.getCustomParams().entrySet()) {
@@ -147,6 +147,7 @@ public class Enemy {
 							}*/
 							}
 						}
+						if (wd.isParalyzer()) wepShot *= 2f;
 						wepShot *= 1f + wd.getAreaOfEffect() / 100f;
 						power += wepShot / wd.getReload();
 					}

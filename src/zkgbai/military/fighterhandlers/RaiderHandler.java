@@ -128,7 +128,7 @@ public class RaiderHandler {
 			}
 			nextDaggerSquad.addUnit(r, frame);
 
-			if (nextDaggerSquad.raiders.size() >= min(12, max(6, (int) floor(ecoManager.adjustedIncome / (5f))))) {
+			if (nextDaggerSquad.raiders.size() >= min(10, max(5, (int) floor(ecoManager.adjustedIncome / (5f))))) {
 				nextDaggerSquad.status = 'r';
 				nextDaggerSquad = null;
 			}

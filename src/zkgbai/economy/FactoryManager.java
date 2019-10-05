@@ -742,7 +742,7 @@ public class FactoryManager extends Module {
 			      || (earlyWorker && numWorkers < 2)
 		) {
 			return true;
-		}else if ((fac.raiderSpam >= 0 && numWorkers < 2 * (1 + ai.mergedAllies))){
+		}else if (((fac.raiderSpam >= 0 && scoutBudget == 0 && fac.expensiveRaiderSpam >= 0) && numWorkers < 2 * (1 + ai.mergedAllies))){
 			return true;
 		}else if (ai.mergedAllies == 0 && economyManager.effectiveIncome >= 15f && numWorkers < 3){
 			return true;
@@ -1064,10 +1064,10 @@ public class FactoryManager extends Module {
 			return "hoveraa";
 		}
 		
-		if (!highprio && Math.random() > (warManager.sniperSightings.isEmpty() ? 0.95 + Math.min(0.025f, graphManager.territoryFraction/20f) : 0.85)){
-			fac.raiderSpam -= Math.min(12, Math.max(6, (int) Math.floor(economyManager.adjustedIncome/5f)));
+		if (!highprio && Math.random() > (warManager.sniperSightings.isEmpty() ? 0.9 + Math.min(0.05f, graphManager.territoryFraction/10f) : 0.85)){
+			fac.raiderSpam -= Math.min(8, Math.max(4, (int) Math.floor(economyManager.adjustedIncome/5f)));
 		}
-		if (Math.random() > 0.9) {
+		if (Math.random() > 0.85) {
 			fac.expensiveRaiderSpam -= (int) Math.min(6, Math.max(2, Math.floor(economyManager.adjustedIncome / 10f))) + 1;
 		}
 		
@@ -1076,7 +1076,7 @@ public class FactoryManager extends Module {
 		}else {
 			fac.raiderSpam--;
 		}
-		if (numScalpels > numMaces * (economyManager.adjustedIncome > 30f ? 6 : 4) && numScalpels > 2){
+		if (Math.random() > 0.8){
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 1);
 			return "hoverriot";
 		}
@@ -1090,7 +1090,6 @@ public class FactoryManager extends Module {
 	}
 	
 	private String getTanks(Factory fac) {
-		fac.raiderSpam = -scoutBudget;
 		if (needWorkers(fac)) {
 			return "tankcon";
 		}

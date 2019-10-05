@@ -302,12 +302,9 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-	    	for (Enemy e: warManager.getTargets()){
-	    		marker(e.position, e.identified ? e.ud.getHumanName() : "unidentified");
-		    }
-		    /*for (Worker w:ecoManager.workers.values()){
+		    for (Worker w:ecoManager.workers.values()){
 		    	marker(w.getPos(), w.getTask() == null ? "no task" : w.getTask().toString());
-		    }*/
+		    }
 		}
 
 		for (Module module : modules) {

@@ -424,22 +424,6 @@ public class MilitaryManager extends Module {
 			return 0;
 		}
 		
-		if (weaponDef != null && weaponDef.getName().equals("veharty_mine")){
-			ai.marker(h.getPos(), "wolv direct hit!");
-			if (attacker != null && attacker.getPos() != null){
-				ai.marker(attacker.getPos(), "wolverine");
-			}else if (dir != null){
-				float dist = weaponDef.getRange();
-				float x = dist * dir.x;
-				float z = dist * dir.z;
-				AIFloat3 pos = h.getPos();
-				AIFloat3 target = new AIFloat3();
-				target.x = pos.x + x;
-				target.z = pos.z + z;
-				ai.marker(target, "wolverine (inferred position)");
-			}
-		}
-		
 		// check if the damaged unit is on fire.
 		boolean on_fire = h.getRulesParamFloat("on_fire", 0.0f) > 0;
 		
@@ -450,13 +434,12 @@ public class MilitaryManager extends Module {
 		}
 		
 		// create a defense task, if appropriate.
-		if ((attacker == null || attacker.getDef() == null || attacker.getPos() == null || !losManager.isInLos(attacker.getPos()))
-			      && ((frame - lastDefenseFrame > 30) || (weaponDef != null && weaponDef.getWeaponDefId() == sniperBulletID)) && !on_fire) {
-			lastDefenseFrame = frame;
+		if ((attacker == null || attacker.getDef() == null || attacker.getPos() == null || (attacker.getDef() == null && !losManager.isInLos(attacker.getPos())) || (h.getDef() != null && h.getDef().getBuildSpeed() > 0 && h.getDef().getSpeed() == 0))
+			     && weaponDef != null && (frame - lastDefenseFrame > 30 || weaponDef.getWeaponDefId() == sniperBulletID)) {
 			DefenseTarget dt = null;
 			
 			// only create defense targets on unitDamaged if the attacker is invisible or out of los.
-			if (weaponDef != null && !unitTypes.porcWeps.contains(weaponDef.getWeaponDefId())) {
+			if (!unitTypes.porcWeps.contains(weaponDef.getWeaponDefId())) {
 				AIFloat3 target;
 				if (attacker == null || attacker.getPos() == null) {
 					float dist = weaponDef.getRange();
@@ -466,16 +449,20 @@ public class MilitaryManager extends Module {
 					target = new AIFloat3();
 					target.x = pos.x + x;
 					target.z = pos.z + z;
+					if (losManager.isInLos(target)) return 0;
 				}else{
 					target = attacker.getPos();
 				}
-				dt = new DefenseTarget(target, 2000f, frame);
-			} else if (attacker != null && attacker.getDef() != null) {
-				dt = new DefenseTarget(attacker.getPos(), (attacker.getMaxHealth() + h.getMaxHealth()) / 2f, frame);
+				if (h.getDef() != null && h.getDef().getBuildSpeed() > 0 && h.getDef().getSpeed() == 0){
+					dt = new DefenseTarget(target, h.getMaxHealth(), frame);
+				}else{
+					dt = new DefenseTarget(target, weaponDef.getRange(), frame);
+				}
 			}
 			
 			// don't create defense targets vs air units.
 			if (dt != null) {
+				lastDefenseFrame = frame;
 				if (weaponDef != null && weaponDef.getWeaponDefId() == sniperBulletID){
 					sniperSightings.add(dt);
 					defenseTargets.add(dt);
@@ -931,7 +918,7 @@ public class MilitaryManager extends Module {
 					float power = 0;
 					for (WeaponMount w:u.getDef().getWeaponMounts()){
 						WeaponDef wd = w.getWeaponDef();
-						if (!wd.isWaterWeapon() && !wd.getName().contains("fake")) {
+						if (!wd.getName().contains("fake")) {
 							// take the max between burst damage and continuous dps as weapon power.
 							float wepShot = wd.getDamage().getTypes().get(1) * wd.getProjectilesPerShot() * wd.getSalvoSize();
 							for (Map.Entry<String, String> param: wd.getCustomParams().entrySet()){
@@ -941,6 +928,7 @@ public class MilitaryManager extends Module {
 								if (param.getKey().equals("disarmDamageOnly")) wepShot /= 10f;
 								if (param.getKey().equals("setunitsonfire")) wepShot *= 2f;
 							}
+							if (wd.isParalyzer()) wepShot *= 2f;
 							wepShot *= 1f + wd.getAreaOfEffect()/100f;
 							power += wepShot/wd.getReload();
 						}
