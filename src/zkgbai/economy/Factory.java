@@ -37,10 +37,10 @@ public class Factory extends Worker {
 			
 			if (earlyWorker){
 				this.scoutAllowance = 3;
-				this.maxScoutAllowance = 3;
+				this.maxScoutAllowance = 4;
 			}
 			
-			if (medMap) this.maxScoutAllowance = 4;
+			//if (medMap) this.maxScoutAllowance = 4;
 			
 			if (bigMap){
 				raiderSpam = -9;
@@ -57,7 +57,7 @@ public class Factory extends Worker {
 			if (defName.equals("factoryveh")) {
 				scoutAllowance--;
 				maxScoutAllowance++;
-				raiderSpam = -3;
+				raiderSpam = -4;
 			}
 
 			if (defName.equals("factoryhover")){

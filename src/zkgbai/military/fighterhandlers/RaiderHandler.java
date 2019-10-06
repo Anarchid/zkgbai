@@ -149,7 +149,7 @@ public class RaiderHandler {
 			}
 			nextScorcherSquad.addUnit(r, frame);
 
-			if (nextScorcherSquad.raiders.size() >= (int) min(5f, 3f + Math.floor(ecoManager.adjustedIncome / 20f))){
+			if (nextScorcherSquad.raiders.size() >= (int) min(5f, 4f + Math.floor(ecoManager.adjustedIncome / 25f))){
 				nextScorcherSquad.status = 'r';
 				nextScorcherSquad = null;
 			}
@@ -450,6 +450,19 @@ public class RaiderHandler {
 		return cost;
 	}
 	
+	private float getSparrowCost(ScoutTask task,  Raider raider){
+		float cost = distance(task.target, raider.getPos());
+		cost /= Math.max(1f, ((frame - task.spot.getLastSeen()) / 900f));
+		cost += Math.max(0, 4 * (900 - (frame - task.spot.getLastSeen())));
+		
+		// disprefer scouting the same non-hostile spot with more than one raider.
+		if (!task.assignedRaiders.isEmpty() && !task.assignedRaiders.contains(raider)){
+			cost += 2000f;
+		}
+		
+		return cost;
+	}
+	
 	private void assignRaiderSquads(){
 		// Assign up to one solo raider per frame, with each being assigned up to twice per second.
 		while (!raiderSquads.isEmpty()){
@@ -544,7 +557,8 @@ public class RaiderHandler {
 			if (r.getUnit().getDef().getName().equals("gunshipbomb")){
 				break;
 			}
-			if (e.isRiot || warManager.getRiotThreat(e.position) > 0 || warManager.getEffectiveThreat(e.position) > warManager.getFriendlyThreat(r.getPos())){
+			if (e.isRiot || warManager.getRiotThreat(e.position) > 0 || warManager.getEffectiveThreat(e.position) > warManager.getFriendlyThreat(r.getPos())
+			|| (!e.isPorc && warManager.getPorcThreat(e.position) > 0)){
 				continue;
 			}
 			float ethreat = warManager.getThreat(e.position);
@@ -553,18 +567,18 @@ public class RaiderHandler {
 			if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
 				tmpcost += 1250f;
 			}else if (e.isPorc) {
-				tmpcost -= 400f;
-				//tmpcost += 500f * Math.ceil(ethreat);
+				tmpcost -= 100f * warManager.getRaiderValue(e.position);
+				tmpcost += 5000f * ethreat;
 			}else if (e.isCom){
 				tmpcost -= 250f;
 			}else if (e.isWorker){
-				tmpcost = (tmpcost/2f) - 500f;
-				tmpcost += 1000f * Math.ceil(ethreat);
-			}else if (e.isMex){
-				tmpcost = (tmpcost/2f) - 300f;
-				tmpcost += 1000f * Math.ceil(ethreat);
+				tmpcost = (tmpcost/2f) - 1000f;
+				tmpcost += 2500f * ethreat;
+			}else if (e.isStatic){
+				tmpcost = (tmpcost/2f) - 750f;
+				tmpcost += 2500f * ethreat;
 			}else {
-				tmpcost += 500f * ethreat;
+				tmpcost += 1000f * ethreat;
 			}
 			
 			if (tmpcost < cost){
@@ -607,7 +621,7 @@ public class RaiderHandler {
 			if (warManager.getAAThreat(s.target) > 0 || !pathfinder.isRaiderReachable(sparrow.getUnit(), s.target, 0f)){
 				continue;
 			}
-			float tmpcost = getScoutCost(s, sparrow);
+			float tmpcost = getSparrowCost(s, sparrow);
 			if (tmpcost < cost){
 				cost = tmpcost;
 				bestTask = s;
@@ -798,25 +812,26 @@ public class RaiderHandler {
 			boolean porc = false;
 			for (Enemy e: warManager.getTargets()){
 				float ethreat = warManager.getThreat(e.position) * (1f + warManager.getRiotThreat(e.position));
-				if (ethreat > threat || !e.identified){
+				if (ethreat > threat || !e.identified || (!e.isPorc && warManager.getPorcThreat(e.position) > 0)){
 					continue;
 				}
-
+				
 				float tmpcost = distance(pos, e.position);
-				if (!e.isArty && !e.isRaider && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
+				if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
 					tmpcost += 1250f;
 				}else if (e.isPorc) {
-					tmpcost -= 400f;
+					tmpcost -= 100f * warManager.getRaiderValue(e.position);
+					tmpcost += 5000f * ethreat;
 				}else if (e.isCom){
 					tmpcost -= 250f;
 				}else if (e.isWorker){
-					tmpcost = (tmpcost/2f) - 500f;
-					tmpcost += 1000f * Math.ceil(ethreat);
-				}else if (e.isMex){
-					tmpcost = (tmpcost/2f) - 300f;
-					tmpcost += 1000f * Math.ceil(ethreat);
+					tmpcost = (tmpcost/2f) - 1000f;
+					tmpcost += 2500f * ethreat;
+				}else if (e.isStatic){
+					tmpcost = (tmpcost/2f) - 750f;
+					tmpcost += 2500f * ethreat;
 				}else {
-					tmpcost += 500f * ethreat;
+					tmpcost += 1500f * ethreat;
 				}
 
 				if (tmpcost < cost){
@@ -859,7 +874,7 @@ public class RaiderHandler {
 		Raider r = lastDamagedRaider;
 		if (r == null || frame - r.lastRotationFrame < 5) return;
 		
-		if (h.getHealth() > 0 && (h.getHealth() / h.getMaxHealth() < 0.8f || h.getParalyzeDamage() > 0) && attacker != null && attacker.getMaxSpeed() > 0) {
+		if (h.getHealth() > 0 && (h.getHealth() / h.getMaxHealth() < 0.8f || h.getParalyzeDamage() > 0 || h.getCaptureProgress() > 0) && attacker != null && attacker.getMaxSpeed() > 0) {
 			r.lastRotationFrame = frame;
 			float movdist = -100f;
 			if (h.getDef().getName().charAt(0) == 'h' || h.getParalyzeDamage() > 0) {

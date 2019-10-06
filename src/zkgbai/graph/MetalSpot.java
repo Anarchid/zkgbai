@@ -81,20 +81,27 @@ public class MetalSpot {
 
 	public boolean isConnected(){
 		int numConnected = 0;
-		for (Link l:links){
-			if (l.isOwned()){
-				if (l.v0.extractor == null || l.v1.extractor == null){
-					return false;
-				}
-				if (!l.connected && l.v0.extractor.getHealth() > 0 && l.v1.extractor.getHealth() > 0 && l.v0.extractor.getRulesParamFloat("gridNumber", 0f) != l.v1.extractor.getRulesParamFloat("gridNumber", 0f)){
-					return false;
-				}
-				numConnected++;
-			}
-		}
-		if (numConnected == 0){
+		if (extractor == null || extractor.isBeingBuilt()){
+			// don't allow more than one connected link to uncapped or partially finished mexes where we can't check grid number.
+			for (Link l : links) if (l.connected) return true;
 			return false;
+		}else {
+			for (Link l : links) {
+				if (l.isOwned()) {
+					if (l.v0.extractor == null || l.v0.extractor.isBeingBuilt() || l.v1.extractor == null || l.v1.extractor.isBeingBuilt()) {
+						if (l.connected) numConnected++;
+						continue;
+					}
+					if (!l.connected && l.v0.extractor.getHealth() > 0 && l.v1.extractor.getHealth() > 0 && l.v0.extractor.getRulesParamFloat("gridNumber", 0f) != l.v1.extractor.getRulesParamFloat("gridNumber", 0f)) {
+						return false;
+					}
+					numConnected++;
+				}
+			}
+			if (numConnected == 0) {
+				return false;
+			}
+			return true;
 		}
-		return true;
 	}
 }

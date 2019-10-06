@@ -113,7 +113,7 @@ public class FactoryManager extends Module {
 		this.ai = ai;
 		this.callback = ai.getCallback();
 		
-		this.bigMap = ai.mapDiag > 910f;
+		this.bigMap = ai.mapDiag > 1080f;
 		
 		this.earlyWorker = bigMap;
 		this.m = callback.getResourceByName("Metal");
@@ -733,7 +733,7 @@ public class FactoryManager extends Module {
 		
 		//float territoryMod = Math.min(0.25f, graphManager.territoryFraction/2f);
 		//float fv = (fighterValue * (facType == "factorytank" ? Math.min(0.6f, 1.25f * graphManager.territoryFraction) : Math.min(0.5f, graphManager.territoryFraction))) + Math.min(fighterValue * territoryMod, reclaimValue/2f);
-		float income = economyManager.effectiveIncomeMetal + Math.min(20f, reclaimValue/(2f * fac.costPerBP)) + (5f * economyManager.fusions.size());
+		float income = economyManager.effectiveIncomeMetal /*+ Math.min(20f, reclaimValue/(2f * fac.costPerBP)) + (5f * economyManager.fusions.size())*/;
 		int workerDeficit = Math.round((income - mobileBP)/fac.workerBP);
 		
 		if (workerDeficit > 0 &&
@@ -869,6 +869,8 @@ public class FactoryManager extends Module {
 		if (Math.random() > 0.5) fac.expensiveRaiderSpam -= 2;
 		fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 1);
 		
+		if (numFelons > 0 && (Math.round(Math.log(warManager.enemyHeavyValue)) > numRackets || Math.random() < (graphManager.territoryFraction) * (1f - (numRackets * 350f)/warManager.enemyHeavyPorcValue))) return "shieldarty";
+		
 		if (hasFusion && numFelons > 0 && ((numAspis < numFelons && Math.random() > 0.5) || (numAspis >= numFelons && numAspis < 2 * numFelons && Math.random() > 0.8))){
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
 			fac.raiderSpam -= 4;
@@ -876,9 +878,7 @@ public class FactoryManager extends Module {
 			return "shieldshield";
 		}
 		
-		if (1.5f * Math.round(Math.log(warManager.enemyHeavyValue)) > numRackets && numFelons > 0) return "shieldarty";
-		
-		if (economyManager.adjustedIncome > 20 && numFelons < Math.min(Math.floor(economyManager.adjustedIncome/15f), 4) && Math.random() > 0.5){
+		if (economyManager.adjustedIncome > 20f && numFelons < Math.min(Math.floor(economyManager.adjustedIncome/20f), 4) && Math.random() > 0.5){
 			fac.smallRaiderSpam = true;
 			fac.scoutAllowance = Math.min(fac.maxScoutAllowance, fac.scoutAllowance + 2);
 			fac.raiderSpam -= 4;
@@ -895,7 +895,7 @@ public class FactoryManager extends Module {
 		}
 		
 		
-		if (numLaws * 2 > numThugs) {
+		if (numLaws * 3 > numThugs) {
 			return "shieldassault";
 		}else if (economyManager.adjustedIncome > 20 && numRackets < numLaws){
 			return "shieldarty";

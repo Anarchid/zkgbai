@@ -72,7 +72,7 @@ public class Enemy {
 	}
 	
 	void checkNano(){
-		if (unit.isBeingBuilt() && unit.getHealth()/unit.getMaxHealth() < 0.25){
+		if (unit.isBeingBuilt() && unit.getBuildProgress() < 0.25){
 			isNanoSpam = true;
 		}else{
 			isNanoSpam = false;
@@ -183,7 +183,7 @@ public class Enemy {
 				this.isSuperWep = true;
 			}
 			
-			if (isStatic && !isAA && getDanger() > 0f){
+			if (isStatic && !isAA && !isSuperWep && getDanger() > 0f){
 				isPorc = true;
 			}
 			

@@ -78,8 +78,8 @@ public class Link {
 		}
 		
 		public void checkConnected() {
-			ArrayList<Pylon>visited = new ArrayList<Pylon>();
-			Queue <Pylon>queue = new LinkedList<Pylon>();
+			ArrayList<Pylon> visited = new ArrayList<Pylon>();
+			Queue<Pylon> queue = new LinkedList<Pylon>();
 			float minDistance = Float.MAX_VALUE;
 			int i = 0;
 

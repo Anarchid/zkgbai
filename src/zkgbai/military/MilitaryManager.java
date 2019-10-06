@@ -48,6 +48,7 @@ public class MilitaryManager extends Module {
 	ArrayGraphics aaThreatGraphics;
 	ArrayGraphics aaPorcGraphics;
 	ArrayGraphics valueGraphics;
+	ArrayGraphics raiderValueGraphics;
 	ByteArrayGraphics bpGraphics;
 	ByteArrayGraphics riotGraphics;
 	ByteArrayGraphics scytheGraphics;
@@ -76,7 +77,8 @@ public class MilitaryManager extends Module {
 	int lastDefenseFrame = 0;
 	int lastValueRedrawFrame = 0;
 	
-	public int availableMobileThreat;
+	public float availableMobileThreat;
+	public float availableRaiderThreat;
 
 	public float enemyPorcValue = 0f;
 	public float enemyLightPorcValue = 0f;
@@ -133,6 +135,7 @@ public class MilitaryManager extends Module {
 		this.aaThreatGraphics = new ArrayGraphics(width, height);
 		this.aaPorcGraphics = new ArrayGraphics(width, height);
 		this.valueGraphics = new ArrayGraphics(width, height);
+		this.raiderValueGraphics = new ArrayGraphics(width, height);
 		this.bpGraphics = new ByteArrayGraphics(width, height);
 		this.riotGraphics = new ByteArrayGraphics(width, height);
 		this.scytheGraphics = new ByteArrayGraphics(width, height);
@@ -774,8 +777,9 @@ public class MilitaryManager extends Module {
 		scytheGraphics.clear();
 		
 		boolean updatePorc = false;
-		if (frame % 300 == (ai.offset + 2) % 300){
+		if (frame % 30 == (ai.offset + 2) % 30){
 			enemyPorcGraphics.clear();
+			raiderValueGraphics.clear();
 			updatePorc = true;
 		}
 
@@ -787,10 +791,12 @@ public class MilitaryManager extends Module {
 				allyRaiderGraphics.clear();
 				allyPorcGraphics.clear();
 				availableMobileThreat = 0;
+				availableRaiderThreat = 0;
 				// paint allythreat for raiders
 				for (Raider r : raiderHandler.soloRaiders) {
 					if (r.getUnit().getHealth() <= 0 || r.getUnit().getTeam() != ai.teamID) continue;
 					int power = (int) ((r.power + r.getUnit().getMaxHealth()) / 10f);
+					availableRaiderThreat += power;
 					AIFloat3 pos = r.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
@@ -812,7 +818,11 @@ public class MilitaryManager extends Module {
 				for (RaiderSquad rs: raiderHandler.raiderSquads) {
 					if (rs.isDead()) continue;
 					int power = rs.getThreat();
-					if (rs.status != 'a') availableMobileThreat += power;
+					if (rs.status != 'a'){
+						availableMobileThreat += power;
+					}else{
+						availableRaiderThreat += power;
+					}
 					AIFloat3 pos = rs.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
@@ -899,6 +909,8 @@ public class MilitaryManager extends Module {
 				
 				availableMobileThreat /= 500f;
 				availableMobileThreat *= 1.5f;
+				
+				availableRaiderThreat /= 500f;
 
 				// paint allythreat for commanders and welders
 				for (Worker w: ai.ecoManager.workers.values()){
@@ -958,8 +970,6 @@ public class MilitaryManager extends Module {
 		});
 		thread.start();
 
-		// Note: allythreat for porc is painted separately.
-
 		for(Enemy t:targets.values()){
 			int effectivePower = (int) t.getDanger();
 
@@ -986,7 +996,7 @@ public class MilitaryManager extends Module {
 				if (!t.isStatic) {
 					if (!t.ud.isAbleToFly()) {
 						// Reduce threat gradually for units that haven't been seen recently.
-						float timeMod = (((frame - t.lastSeen)) / 900f);
+						float timeMod = (((frame - t.lastSeen)) / 1800f);
 						timeMod *= timeMod;
 						timeMod = Math.max(0, (1f - timeMod));
 						effectivePower = (int) (effectivePower * timeMod);
@@ -1020,6 +1030,26 @@ public class MilitaryManager extends Module {
 				// something more brutal happened
 				ai.debug(e);
 				System.exit(-1);
+			}
+		}
+		
+		if (updatePorc){
+			// Update loot value for raiders.
+			for (Enemy t: targets.values()){
+				if (!t.identified || t.ud == null || (!t.isWorker && !t.isStatic) || t.isCom) continue;
+				AIFloat3 position = t.position;
+				float rthreat = getThreat(position) * (1f + getRiotThreat(position));
+				if (rthreat > availableRaiderThreat) continue;
+				float value = t.ud.getCost(m)/10f;
+				if (t.isPorc) value /= 2f;
+				float threatMod = rthreat/availableRaiderThreat;
+				threatMod *= threatMod;
+				value *= Math.max(0.5f, 1f - threatMod);
+				
+				int x = Math.round(position.x / 64f);
+				int y = Math.round(position.z / 64f);
+				int r = 7;
+				raiderValueGraphics.paintCircle(x, y, r, Math.round(value));
 			}
 		}
 	}
@@ -1237,6 +1267,13 @@ public class MilitaryManager extends Module {
 		int y = Math.round(position.z / 64f);
 		
 		return (valueGraphics.getValue(x, y));
+	}
+	
+	public float getRaiderValue(AIFloat3 position){
+		int x = Math.round(position.x / 64f);
+		int y = Math.round(position.z / 64f);
+		
+		return (raiderValueGraphics.getValue(x, y));
 	}
 
 	public float getBP(AIFloat3 position){
