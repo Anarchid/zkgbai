@@ -1244,33 +1244,12 @@ public class FactoryManager extends Module {
 	}
 	
 	private String getPlanes(Factory fac){
-		// note: planes do not have raiders and lichos are best AA.
 		if(needWorkers(fac)) {
 			return "planecon";
 		}
-		
-		if (fac.raiderSpam < 0){
-			fac.raiderSpam++;
-			return "planefighter";
-		}
-        
-        /*if (((enemyHasAir || enemyHasDrones) && warManager.AAs.size() < 3 + Math.ceil(ai.mergedAllies/2f)) ||
-                (enemyHasAir && fighterValue > AAvalue * (3f + (3f * graphManager.territoryFraction * graphManager.territoryFraction)) && Math.random() > 0.5)){
-            return "planeheavyfighter";
-        }*/
-		
-		if (graphManager.eminentTerritory) {
-			fac.raiderSpam--;
-		}
-		
-		if (numRavens <= (economyManager.baseIncome/(12 * (1 + (0.5 * ai.mergedAllies)))) + 1 || economyManager.adjustedIncome < 35) {
-			if (Math.random() > 0.2) {
-				return "bomberprec";
-			}
-			return "bomberriot";
-		}
-		fac.raiderSpam -= 3;
-		return "bomberheavy";
+		if (economyManager.sparrow == null) return "planescout";
+		// raven raven raven raven raven... :D
+		return "bomberprec";
 	}
 	
 	private String getStrider(){

@@ -566,19 +566,27 @@ public class RaiderHandler {
 			float tmpcost = distance(pos, e.position);
 			if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
 				tmpcost += 1250f;
+				if (e.isRiot) tmpcost *= 2f;
 			}else if (e.isPorc) {
-				tmpcost -= 100f * warManager.getRaiderValue(e.position);
-				tmpcost += 5000f * ethreat;
+				if (e.unit.isBeingBuilt()){
+					tmpcost -= 1000f * (1f - e.unit.getBuildProgress());
+					tmpcost += 1500f * ethreat;
+				}else {
+					float valueMod = (float) Math.log(warManager.getRaiderValue(e.position));
+					valueMod *= valueMod;
+					valueMod -= 10f * ethreat;
+					tmpcost /= Math.max(1f,  valueMod);
+				}
 			}else if (e.isCom){
 				tmpcost -= 250f;
 			}else if (e.isWorker){
-				tmpcost = (tmpcost/2f) - 1000f;
+				tmpcost = (tmpcost/2f) - (500f + (500f * (1f - e.getHealth())));
 				tmpcost += 2500f * ethreat;
 			}else if (e.isStatic){
 				tmpcost = (tmpcost/2f) - 750f;
 				tmpcost += 2500f * ethreat;
 			}else {
-				tmpcost += 1000f * ethreat;
+				tmpcost += 750f * ethreat;
 			}
 			
 			if (tmpcost < cost){
@@ -819,19 +827,27 @@ public class RaiderHandler {
 				float tmpcost = distance(pos, e.position);
 				if (!e.isArty && !e.isWorker && !e.isStatic && (!e.isAA || e.ud.getName().equals("turretaalaser"))){
 					tmpcost += 1250f;
+					if (e.isRiot) tmpcost *= 2f;
 				}else if (e.isPorc) {
-					tmpcost -= 100f * warManager.getRaiderValue(e.position);
-					tmpcost += 5000f * ethreat;
+					if (e.unit.isBeingBuilt()){
+						tmpcost -= 1000f * (1f - e.unit.getBuildProgress());
+						tmpcost += 1500f * ethreat;
+					}else {
+						float valueMod = (float) Math.log(warManager.getRaiderValue(e.position));
+						valueMod *= valueMod;
+						valueMod -= 10f * ethreat;
+						tmpcost /= Math.max(1f,  valueMod);
+					}
 				}else if (e.isCom){
 					tmpcost -= 250f;
 				}else if (e.isWorker){
-					tmpcost = (tmpcost/2f) - 1000f;
+					tmpcost = (tmpcost/2f) - (500f + (500f * (1f - e.getHealth())));
 					tmpcost += 2500f * ethreat;
 				}else if (e.isStatic){
 					tmpcost = (tmpcost/2f) - 750f;
 					tmpcost += 2500f * ethreat;
 				}else {
-					tmpcost += 1500f * ethreat;
+					tmpcost += 750f * ethreat;
 				}
 
 				if (tmpcost < cost){

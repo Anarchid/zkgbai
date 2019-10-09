@@ -187,7 +187,7 @@ public class MiscHandler {
             if (frame % 450 == (ai.offset + 10) % 450){
                 if (zenith != null){
                     int meteors = (int) zenith.getRulesParamFloat("meteorsControlled", 0f);
-                    if (meteors > 150) {
+                    if (meteors > 75) {
                         AIFloat3 target = warManager.getSuperWepTarget(zenith, true);
                         if (target != null) {
                             zenith.attackArea(target, 0f, (short) 0, Integer.MAX_VALUE);

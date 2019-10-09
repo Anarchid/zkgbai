@@ -38,6 +38,7 @@ public class Enemy {
 	boolean isMajorCancer = false;
 	boolean isNanoSpam = false;
 	boolean isStrong = false;
+	public boolean isDead = false;
 	float maxObservedSpeed = 0;
 	
 	Enemy(Unit unit, float cost){
@@ -115,15 +116,14 @@ public class Enemy {
 			this.isMajorCancer = true;
 		}
 		
+		if (u.getTooltip().contains("Anti-Air")){
+			this.isAA = true;
+		}
+		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
-			if (u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("shieldfelon") || u.getName().equals("turretemp") || u.getName().equals("turretheavy") || u.getName().equals("turretaaheavy") || u.getName().equals("turretaaflak") || u.getName().contains("dyn")){
-				// identify riots
-				this.isRiot = true;
-			}
-			
-			if (defName.equals("turretheavylaser") || defName.equals("amphraid")){
-				isStrong = true;
+			if (isStatic && !isAA && !isSuperWep){
+				isPorc = true;
 			}
 
 			if (u.getName().contains("dyn")){
@@ -153,42 +153,44 @@ public class Enemy {
 					}
 				}
 			}
-			
-			if (ud.getName().contains("factory") || ud.getName().contains("hub") || ud.getName().equals("energyfusion") || ud.getName().equals("energysingu") || isCom){
-				this.isImportant = true;
-			}
-
-			if (u.getTooltip().contains("aider") || u.getTooltip().contains("cout")){
-				// this is for keeping assault mobs from chasing raiders around.
-				this.isRaider = true;
-				if (!defName.startsWith("amph")) this.isRiot = false; // count archers as riots but not pyros.
-			}
-
-			if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("vehsupport")) || u.isBuilder() && !u.getTooltip().contains("Riot")){
-				// identify arty/skirms
-				this.isArty = true;
-			}
-
-			if (u.getTooltip().contains("Anti-Air")){
-				this.isAA = true;
-			}
-			
-			if (ud.getName().equals("gunshipskirm") || ud.getName().equals("gunshipheavyskirm") || ud.getName().equals("gunshipkrow") || ud.getName().equals("jumpskirm")){
-				isFlexAA = true;
-			}
-
-			if (ud.getName().equals("staticheavyarty") || ud.getName().equals("staticnuke") || ud.getName().equals("tacnuke")
-					|| ud.getName().equals("napalmmissile") || ud.getName().equals("raveparty") || ud.getName().equals("zenith")
-					|| ud.getName().equals("mahlazer")){
-				this.isSuperWep = true;
-			}
-			
-			if (isStatic && !isAA && !isSuperWep && getDanger() > 0f){
-				isPorc = true;
-			}
-			
-			if (ud.getName().equals("staticmex")) isMex = true;
 		}
+		
+		if (u.getTooltip().contains("Riot") || u.getTooltip().contains("Anti-Swarm") || u.getName().equals("shieldfelon") || u.getName().equals("turretemp") || u.getName().equals("turretheavy") || u.getName().equals("turretaaheavy") || u.getName().equals("turretaaflak") || u.getName().contains("dyn")){
+			// identify riots
+			this.isRiot = true;
+		}
+		
+		if (defName.equals("turretheavylaser") || defName.equals("amphraid")){
+			isStrong = true;
+		}
+		
+		if (ud.getName().contains("factory") || ud.getName().contains("hub") || ud.getName().equals("energyfusion") || ud.getName().equals("energysingu") || isCom){
+			this.isImportant = true;
+		}
+
+		if (u.getTooltip().contains("aider") || u.getTooltip().contains("cout")){
+			// this is for keeping assault mobs from chasing raiders around.
+			this.isRaider = true;
+			if (!defName.startsWith("amph")) this.isRiot = false; // count archers as riots but not pyros.
+		}
+
+		if ((u.getTooltip().contains("Arti") || u.getTooltip().contains("Skirm") || u.getName().equals("vehsupport")) || u.isBuilder() && !u.getTooltip().contains("Riot")){
+			// identify arty/skirms
+			this.isArty = true;
+		}
+		
+		if (ud.getName().equals("gunshipskirm") || ud.getName().equals("gunshipheavyskirm") || ud.getName().equals("gunshipkrow") || ud.getName().equals("jumpskirm") || ud.getName().equals("turretemp")){
+			isFlexAA = true;
+		}
+
+		if (ud.getName().equals("staticheavyarty") || ud.getName().equals("staticnuke") || ud.getName().equals("tacnuke")
+				|| ud.getName().equals("napalmmissile") || ud.getName().equals("raveparty") || ud.getName().equals("zenith")
+				|| ud.getName().equals("mahlazer")){
+			this.isSuperWep = true;
+		}
+		
+		if (ud.getName().equals("staticmex")) isMex = true;
+		
 		this.speed = u.getSpeed()/30;
 	}
 	
@@ -240,5 +242,20 @@ public class Enemy {
 			}*/
 		}
 		return danger;
+	}
+	
+	public float getHealth(){
+		if (!identified) return 1f;
+		
+		float health;
+		if (unit.getHealth() > 0) {
+			health = unit.getHealth();
+			lastHealth = health;
+		}else if (lastHealth > 0){
+			health = lastHealth;
+		}else{
+			health = ud.getHealth();
+		}
+		return health/ud.getHealth();
 	}
 }

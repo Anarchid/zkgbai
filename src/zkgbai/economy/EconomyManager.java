@@ -20,6 +20,7 @@ import zkgbai.military.MilitaryManager;
 import com.springrts.ai.oo.AIFloat3;
 import zkgbai.military.UnitClasses;
 import zkgbai.military.tasks.DefenseTarget;
+import zkgbai.military.unitwrappers.Porc;
 
 import static zkgbai.kgbutil.KgbUtil.*;
 
@@ -49,6 +50,7 @@ public class EconomyManager extends Module {
 	List<ConstructionTask> airpadTasks = new ArrayList<>();
 	List<Unit> radars = new ArrayList<>();
 	public List<Unit> porcs = new ArrayList<>();
+	public Map<Integer ,Porc> dporcs = new HashMap<>();
 	public Map<Integer, Nanotower> nanos = new HashMap<>();
 	List<Unit> airpads = new ArrayList<>();
 	public List<Unit> fusions = new ArrayList<>();
@@ -66,7 +68,7 @@ public class EconomyManager extends Module {
 	List<Unit> newMexes = new ArrayList<>();
 	List<Unit> newEnergy = new ArrayList<>();
 	
-	Unit sparrow = null;
+	public Unit sparrow = null;
 	
 	public float effectiveIncomeMetal = 0;
 	float effectiveIncomeEnergy = 0;
@@ -100,6 +102,10 @@ public class EconomyManager extends Module {
 	boolean havePlanes = false;
 	boolean antiNuke = false;
 	boolean screamer = false;
+	
+	boolean hasStriders = false;
+	boolean hasPlanes = false;
+	boolean hasGunship = false;
 	
 	boolean hasSuperWep = false;
 
@@ -208,7 +214,7 @@ public class EconomyManager extends Module {
 			}
 			
 			if (userFac != null){
-				ai.say("Set first factory: " + userFac);
+				ai.say("Set first factory: " + callback.getUnitDefByName(userFac).getHumanName());
 			}
 		}else if (ai.mergedAllies > 0 && message.startsWith("kgbfac")){
 			ai.say("Teams mode, cannot set first factory!");
@@ -314,9 +320,18 @@ public class EconomyManager extends Module {
 			Boolean eFac = false; // note: cloaky uniquely requires running energy rich.
 			if (ai.mergedAllies < 2) {
 				for (Factory f : facManager.factories.values()) {
-					if (f.getUnit().getDef().getName().equals("factorycloak")) {
+					String defName = f.getUnit().getDef().getName();
+					if (defName.equals("striderhub")) {
+						hasStriders = true;
+					}
+					if (defName.equals("factoryplane")) {
+						hasPlanes = true;
+					}
+					if (defName.equals("factorygunship")){
+						hasGunship = true;
+					}
+					if (defName.equals("factorycloak")) {
 						eFac = true;
-						break;
 					}
 				}
 			}
@@ -361,7 +376,7 @@ public class EconomyManager extends Module {
 				}
 			}
 			
-			if (effectiveIncome > 30f && sparrow == null) morphSparrow();
+			if (effectiveIncome > 30f && sparrow == null && !hasPlanes) morphSparrow();
 			
 			/*if (!morphedComs && adjustedIncome > 20f){
 				morphComs();
@@ -377,6 +392,10 @@ public class EconomyManager extends Module {
 	public int unitCreated(Unit unit,  Unit builder) {
 		UnitDef def = unit.getDef();
 		String defName = def.getName();
+		
+		if (defName.equals("planescout")){
+			sparrow = unit;
+		}
 		
 		if (def.getSpeed() > 0 && def.getBuildOptions().size() > 0 && def.getBuildSpeed() <= 8f){
 			unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
@@ -430,6 +449,7 @@ public class EconomyManager extends Module {
 		
 		if(defName.equals("turretmissile") || defName.equals("turretlaser") || defName.equals("turretheavylaser") || defName.equals("turretgauss") || defName.equals("turretemp") || defName.equals("turretriot") || defName.equals("turretaalaser")){
 			porcs.add(unit);
+			if (!defName.equals("turretaalaser")) dporcs.put(unit.getUnitId(), new Porc(unit));
 		}
 		
 		if (defName.equals("turretaalaser") || defName.equals("turretaaflak") || defName.equals("turretaafar")){
@@ -623,7 +643,7 @@ public class EconomyManager extends Module {
 		if (h.getDef().getUnitDefId() == wolvMineID) return 0;
 
 		// add repair tasks for damaged units
-		if (h.getUnitId() != lastRepairedUnit && h.getHealth() > 0){
+		if (h.getUnitId() != lastRepairedUnit && h.getHealth() > 0 && !h.getDef().getName().contains("bomber")){
 			lastRepairedUnit = h.getUnitId();
 			RepairTask task = new RepairTask(h);
 			if (!repairTasks.contains(task)) {
@@ -678,6 +698,7 @@ public class EconomyManager extends Module {
 		if (unit.getDef().getSpeed() == 0f) {
 			radars.remove(unit);
 			porcs.remove(unit);
+			dporcs.remove(unit.getUnitId());
 			nanos.remove(unit.getUnitId());
 			airpads.remove(unit);
 			fusions.remove(unit);
@@ -1183,7 +1204,7 @@ public class EconomyManager extends Module {
 				return ((dist/4f) - 100f) + Math.max(0, (600f * (costMod - 2)));
 			}
 			
-			if (worker.isGreedy && !facManager.factories.isEmpty() && ((ctask.facDef && effectiveIncome < 15f) || ctask.buildType.getCost(m) > 300f)){
+			if (worker.isGreedy && !facManager.factories.isEmpty() && ((ctask.facDef && effectiveIncome < 15f) || (ctask.buildType.getCost(m) > 300f && ctask.buildType.getUnitDefId() != buildIDs.airpadID))){
 				return dist + (10000f * costMod);
 			}
 			
@@ -1220,9 +1241,14 @@ public class EconomyManager extends Module {
 				if (worker.isGreedy) return ((dist/3f) - 200f) + Math.max(0, (600f * (costMod - 1)));
 				return ((dist/2f) - 200f) + Math.max(0, (1500 * (costMod - 2)));
 			}
+			
+			if (ctask.buildType.getUnitDefId() == buildIDs.airpadID){
+				// for airpads
+				return (dist/3f) - 350f + Math.max(0, (500 * (costMod - 2)));
+			}
 
-			if (ctask.buildType.getUnitDefId() == buildIDs.nanoID || ctask.buildType.getUnitDefId() == buildIDs.storageID || ctask.buildType.getUnitDefId() == buildIDs.airpadID) {
-				// for nanotowers, airpads and storages
+			if (ctask.buildType.getUnitDefId() == buildIDs.nanoID || ctask.buildType.getUnitDefId() == buildIDs.storageID) {
+				// for nanotowers and storages
 				if (worker.isCom || (hardEstalled && !worker.isGreedy)) return dist;
 				return dist - 1000 + (500 * (costMod - 2));
 			}
@@ -1505,22 +1531,6 @@ public class EconomyManager extends Module {
     	AIFloat3 position = worker.getPos();
 	    
 		// do we need a factory?
-		boolean hasStriders = false;
-		boolean hasPlanes = false;
-		boolean hasGunship = false;
-		for (Worker f:facManager.factories.values()) {
-			String defName = f.getUnit().getDef().getName();
-			if (defName.equals("striderhub")) {
-				hasStriders = true;
-			}
-			if (defName.equals("factoryplane")) {
-				hasPlanes = true;
-			}
-			if (defName.equals("factorygunship")){
-				hasGunship = true;
-			}
-		}
-		
 		boolean hasPlop = worker.hasPlop();
 		if ((hasPlop && !worker.assignedPlop)
 			      || (frame > 900 && !hasPlop && facManager.factories.size() < 1 + ai.mergedAllies && factoryTasks.isEmpty())
@@ -1561,7 +1571,7 @@ public class EconomyManager extends Module {
 		// do we need airpads for planes
 		if (!worker.isGreedy && !facManager.factories.isEmpty() &&
 			  havePlanes && airpadTasks.isEmpty() && staticIncome > 15f
-				&& ((float)airpads.size() < Math.round(warManager.bomberHandler.getBomberSize()/4f) && warManager.bomberHandler.getBomberSize() > 3)){
+				&& (airpads.size() < Math.round(warManager.bomberHandler.getBomberSize()/8f) || airpads.isEmpty())){
 			createAirPadTask(getCaretakerTarget());
 		}
 
@@ -1622,10 +1632,10 @@ public class EconomyManager extends Module {
 			if (!potentialFacList.contains("factorygunship")) {
 				potentialFacList.add("factorygunship");
 			}
-			// Planes are disabled because the meta is total shit.
-			/*if(!potentialFacList.contains("factoryplane") && ai.mergedAllies > 2){
+			
+			if(!potentialFacList.contains("factoryplane")){
 				potentialFacList.add("factoryplane");
-			}*/
+			}
 			potentialFacList.add("striderhub");
 			
 			if (facManager.factories.size() > 0 && (facManager.factories.size() < 3 || ai.mergedAllies > 0)) {
@@ -1659,20 +1669,23 @@ public class EconomyManager extends Module {
 			return;
 		}
 		
+		String facName = null;
+		
 		// Uncomment this to set the intial fac for debugging purposes.
 		/*if (facManager.factories.size() == 0){
-			factory = callback.getUnitDefByName("factoryveh");
-			potentialFacList.remove("factoryveh");
+			facName = "factoryveh";
+			factory = callback.getUnitDefByName(facName);
+			potentialFacList.remove(facName);
 		}else*/ if (userFac != null && facManager.factories.size() == 0){
 			factory = callback.getUnitDefByName(userFac);
 			potentialFacList.remove(userFac);
 		}else if (isPlop && potentialFacList.contains("factorygunship")){
-			String facName = "factorygunship";
+			facName = "factorygunship";
 			factory = callback.getUnitDefByName(facName);
 			potentialFacList.remove(facName);
 		}else if (facManager.factories.size() < 1 + Math.max(ai.mergedAllies, 1) || hasStriders || isPlop) {
-			int i = (int) Math.round(Math.random() * (potentialFacList.size() - 1.0));
-			String facName = potentialFacList.get(i);
+			int i = (int) Math.ceil(Math.random() * (potentialFacList.size())) - 1;
+			facName = potentialFacList.get(i);
 			factory = callback.getUnitDefByName(facName);
 			potentialFacList.remove(i);
 			
@@ -1716,7 +1729,10 @@ public class EconomyManager extends Module {
 		float clearance = Math.max(factory.getXSize(), factory.getZSize()) * 4f;
 		if (facManager.factories.isEmpty() || isPlop) {
 			while (!good) {
-				if (i++ > 10) return;
+				if (i++ > 10){
+					potentialFacList.add(facName);
+					return;
+				}
 				position = worker.getPos();
 				position = getDirectionalPoint(position, graphManager.getMapCenter(), clearance + 20f);
 				position = callback.getMap().findClosestBuildSite(factory, position,600f, 3, facing);
@@ -1724,7 +1740,7 @@ public class EconomyManager extends Module {
 				// don't let factories get blocked by random crap, nor build them on top of mexes
 				int j = 0;
 				while (!callback.getFriendlyUnitsIn(position, clearance).isEmpty() || !callback.getFeaturesIn(position, clearance).isEmpty() || distance(graphManager.getClosestSpot(position).getPos(), position) < 100 || !buildCheck(new ConstructionTask(factory, position, 0))) {
-					if (j++ > 5) return;
+					if (j++ > 5) break;
 					position = (i < 8) ? getAngularPoint(worker.getPos(), graphManager.getMapCenter(), clearance + 20f) : getRadialPoint(worker.getPos(), 125f);
 					position = callback.getMap().findClosestBuildSite(factory,position,600f, 3, facing);
 				}
@@ -1736,7 +1752,10 @@ public class EconomyManager extends Module {
 			}
 		}else{
 			while (!good) {
-				if (i > 5) return;
+				if (i > 5){
+					potentialFacList.add(facName);
+					return;
+				}
 				// don't cram factories together
 				position = getAngularPoint(graphManager.getAllyCenter(), graphManager.getAllyBase(), Math.max(450f, distance(graphManager.getAllyBase(), graphManager.getAllyCenter()) * (float) Math.random()));
 				AIFloat3 facpos = getNearestFac(position).getPos();
@@ -1768,6 +1787,8 @@ public class EconomyManager extends Module {
 			}
 			constructionTasks.add(ct);
 			factoryTasks.add(ct);
+		}else if (facName != null){
+			potentialFacList.add(facName);
 		}
 	}
 

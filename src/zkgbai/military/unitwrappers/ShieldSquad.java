@@ -212,7 +212,9 @@ public class ShieldSquad extends Squad {
 		numFelons = 0;
 		numAspis = 0;
 		metalValue = 0;
-		if (leader != null && leader.isDead()){
+		if (leader == null){
+			if (fighters.isEmpty()) return true;
+		}else if (leader.isDead()){
 			leader.squad = null;
 			leader = null;
 		}else if (leader.getUnit().getDef().getUnitDefId() == felonID){
@@ -261,7 +263,7 @@ public class ShieldSquad extends Squad {
 			threat += f.power + f.getUnit().getMaxHealth();
 		}
 		for (Weapon w:shields.values()){
-			threat += w.getDef().getShield().getPower();
+			threat += w.getDef().getShield().getPower()/2f;
 		}
 		return (int) (threat/10f);
 	}

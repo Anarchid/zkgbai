@@ -766,7 +766,7 @@ public class Pathfinder extends Object {
         
         @Override
         public float getCost(float slope, float maxSlope, AIFloat3 pos) {
-            return 1f + (5f * warManager.getThreat(pos) + (10 * warManager.getAAThreat(pos)));
+            return 1f + (30f * warManager.getAAThreat(pos));
         }
     };
     /**
@@ -776,7 +776,7 @@ public class Pathfinder extends Object {
         
         @Override
         public float getCost(float slope, float maxSlope, AIFloat3 pos) {
-            return 1f + (20 * Math.max(Math.max(warManager.getThreat(pos), warManager.getAAThreat(pos)), warManager.getRiotThreat(pos)));
+            return 1f + (40f * Math.max(Math.max(warManager.getThreat(pos), warManager.getAAThreat(pos)), warManager.getRiotThreat(pos)));
         }
     };
     /**
@@ -790,7 +790,7 @@ public class Pathfinder extends Object {
                 return -1;
             }
             // use inverse slope-cost relation for spiders, because they actually benefit from hills!
-            return 1f + (1f - slope) + (20f * Math.max(warManager.getThreat(pos), warManager.getRiotThreat(pos)));
+            return 1f + (1f - slope) + (40f * Math.max(warManager.getThreat(pos), warManager.getRiotThreat(pos)));
         }
     };
     /**
@@ -831,7 +831,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return -1;
             }
-            return 1f + (slope/maxSlope) + (20f * Math.max(warManager.getThreat(pos), warManager.getRiotThreat(pos)));
+            return 1f + (slope/maxSlope) + (40f * Math.max(warManager.getThreat(pos), warManager.getRiotThreat(pos)));
         }
     };
     /**
@@ -844,7 +844,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return -1;
             }
-            return 1f + (slope/maxSlope) + (20f * Math.max(warManager.getScytheThreat(pos), warManager.getRiotThreat(pos)));
+            return 1f + (slope/maxSlope) + (40f * Math.max(warManager.getScytheThreat(pos), warManager.getRiotThreat(pos)));
         }
     };
     /**
@@ -857,7 +857,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return -1;
             }
-            return 1f + (slope/maxSlope) + (5f * warManager.getThreat(pos));
+            return 1f + (slope/maxSlope) + (10f * warManager.getThreat(pos));
         }
     };
 	/**
@@ -870,7 +870,7 @@ public class Pathfinder extends Object {
 			if (slope > maxSlope || !maputil.isPossibleToBuildAt(blocker, pos, 0)) {
 				return -1;
 			}
-			return 1f + (slope/maxSlope) + (5f * warManager.getThreat(pos));
+			return 1f + (slope/maxSlope) + (10f * warManager.getThreat(pos));
 		}
 	};
     /**
@@ -883,7 +883,7 @@ public class Pathfinder extends Object {
             if (slope > maxSlope) {
                 return -1;
             }
-            return 1f + (slope/maxSlope) + (20f * warManager.getThreat(pos));
+            return 1f + (slope/maxSlope) + (40f * warManager.getThreat(pos));
         }
     };
     /**
@@ -933,11 +933,10 @@ public class Pathfinder extends Object {
     public final CostSupplier AIR_CHECK = new CostSupplier() {
         @Override
         public float getCost(float slope, float maxSlope, AIFloat3 pos) {
-            if (warManager.getAAThreat(pos) > 0) {
+            if (warManager.getAAThreat(pos) > 1f) {
                 return -1;
             }else {
-                float threat = warManager.getThreat(pos);
-                if (threat > maxThreat) return -1;
+                float threat = warManager.getAAThreat(pos) + warManager.getThreat(pos);
                 return 1f + (10f * threat);
             }
         }

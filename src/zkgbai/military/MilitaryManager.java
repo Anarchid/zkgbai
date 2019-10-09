@@ -176,10 +176,8 @@ public class MilitaryManager extends Module {
 	public int update(int frame) {
 		this.frame = frame;
 		
-		if(frame % 15 == (ai.offset + 2) % 15) {
-			updateTargets();
-			paintThreatMap();
-		}
+		if (frame % 15 == (ai.offset + 3) % 15) updateTargets();
+		if (frame % 7 == (ai.offset + 2) % 7) paintThreatMap();
 		
 		retreatHandler.update(frame);
 		raiderHandler.update(frame);
@@ -229,11 +227,19 @@ public class MilitaryManager extends Module {
 		String defName = unit.getDef().getName();
 		UnitDef ud = unit.getDef();
 		
-		if (defName.equals("planelightscout")){
+		if (defName.equals("planelightscout") || defName.equals("planescout")){
 			unit.setIdleMode(0, (short) 0, Integer.MAX_VALUE);
 			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
 			Raider r = new Raider(unit, unit.getDef().getCost(m));
 			raiderHandler.addSparrow(r);
+		}
+		
+		if (unitTypes.bombers.contains(defName)) {
+			unit.setIdleMode(0, (short) 0, Integer.MAX_VALUE);
+			unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
+			unit.setFireState(0, (short) 0, Integer.MAX_VALUE);
+			Bomber b = new Bomber(unit);
+			bomberHandler.addBomber(b);
 		}
 		
 		// Deactivate outlaws so they don't destroy reclaim
@@ -411,11 +417,6 @@ public class MilitaryManager extends Module {
 			unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, Integer.MAX_VALUE);
 			unit.fight(getRadialPoint(graphManager.getAllyCenter(), 800f), (short) 0, Integer.MAX_VALUE);
 			miscHandler.addSapper(unit);
-		}else if (unitTypes.bombers.contains(defName)) {
-			unit.setMoveState(2, (short) 0, Integer.MAX_VALUE);
-			unit.setFireState(2, (short) 0, Integer.MAX_VALUE);
-			Fighter f = new Fighter(unit, unit.getDef().getCost(m));
-			bomberHandler.addBomber(f);
 		}
 		
 		return 0; // signaling: OK
@@ -578,7 +579,7 @@ public class MilitaryManager extends Module {
 			}
 			
 			// paint enemy threat for aa
-			if (e.isStatic && e.isAA && !e.isPainted && !e.unit.isBeingBuilt()) {
+			if (e.isStatic && (e.isAA || e.isFlexAA) && !e.isPainted && !e.unit.isBeingBuilt()) {
 				int effectivePower = (int) e.getDanger();
 				AIFloat3 position = e.position;
 				int x = Math.round(position.x / 64f);
@@ -633,7 +634,7 @@ public class MilitaryManager extends Module {
 				}
 			}
 			// paint enemy threat for aa
-			if (e.isStatic && e.isAA && !e.isPainted) {
+			if (e.isStatic && (e.isAA || e.isFlexAA) && !e.isPainted) {
 				int effectivePower = (int) e.getDanger();
 				AIFloat3 position = e.position;
 				int x = Math.round(position.x / 64f);
@@ -694,12 +695,13 @@ public class MilitaryManager extends Module {
 	public int enemyDestroyed(Unit unit, Unit attacker) {
 		if(targets.containsKey(unit.getUnitId())){
 			Enemy e = targets.get(unit.getUnitId());
+			e.isDead = true;
 			if (e.identified && e.ud != null && (e.ud.getName().equals("energysingu") || e.ud.getName().equals("energyheavygeo")) && !e.isNanoSpam){
 				ai.say("SHINY!");
 			}
 			
 			// Unpaint enemy threat for statics
-			if (e.isStatic && e.isAA && e.isPainted) {
+			if (e.isStatic && (e.isAA || e.isFlexAA) && e.isPainted) {
 				int effectivePower = (int) e.getDanger();
 				AIFloat3 position = e.position;
 				int x = Math.round(position.x / 64f);
@@ -708,7 +710,6 @@ public class MilitaryManager extends Module {
 				
 				aaPorcGraphics.unpaintCircle(x, y, r + 1, effectivePower);
 			}
-			e.position = null;
 			
 			targets.remove(unit.getUnitId());
 			if (e.isPorc && !e.isNanoSpam){
@@ -771,25 +772,12 @@ public class MilitaryManager extends Module {
 	}
 	
 	private void paintThreatMap(){
-		threatGraphics.clear();
-		aaThreatGraphics.clear();
-		riotGraphics.clear();
-		scytheGraphics.clear();
-		
-		boolean updatePorc = false;
-		if (frame % 30 == (ai.offset + 2) % 30){
-			enemyPorcGraphics.clear();
-			raiderValueGraphics.clear();
-			updatePorc = true;
-		}
-
-		// paint allythreat in a separate thread, since it's independent of enemy threat.
-		Thread thread = new Thread(new Runnable() {
-			@Override
-			public void run() {
+		Thread thread;
+		if (frame % 14 == (ai.offset + 2) % 14) {
+			// paint allythreat in a separate thread, since it's independent of enemy threat.
+			thread = new Thread( () -> {
 				allyThreatGraphics.clear();
 				allyRaiderGraphics.clear();
-				allyPorcGraphics.clear();
 				availableMobileThreat = 0;
 				availableRaiderThreat = 0;
 				// paint allythreat for raiders
@@ -814,13 +802,13 @@ public class MilitaryManager extends Module {
 					int rad = 7;
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
-
-				for (RaiderSquad rs: raiderHandler.raiderSquads) {
+				
+				for (RaiderSquad rs : raiderHandler.raiderSquads) {
 					if (rs.isDead()) continue;
 					int power = rs.getThreat();
-					if (rs.status != 'a'){
+					if (rs.status != 'a') {
 						availableMobileThreat += power;
-					}else{
+					} else {
 						availableRaiderThreat += power;
 					}
 					AIFloat3 pos = rs.getPos();
@@ -830,9 +818,9 @@ public class MilitaryManager extends Module {
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 					if (rs.status != 'f') allyRaiderGraphics.paintCircle(x, y, rad, power);
 				}
-
+				
 				// paint allythreat for squads
-				for (Squad s: squadHandler.squads) {
+				for (Squad s : squadHandler.squads) {
 					if (s.isDead()) continue;
 					int power = s.getThreat();
 					availableMobileThreat += power;
@@ -840,11 +828,11 @@ public class MilitaryManager extends Module {
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
 					int rad = 10;
-
+					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 				
-				for (Squad s: squadHandler.airSquads) {
+				for (Squad s : squadHandler.airSquads) {
 					if (s.isDead()) continue;
 					int power = s.getThreat();
 					availableMobileThreat += power;
@@ -856,7 +844,7 @@ public class MilitaryManager extends Module {
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 				
-				for (ShieldSquad s: squadHandler.shieldSquads) {
+				for (ShieldSquad s : squadHandler.shieldSquads) {
 					if (s.isDead()) continue;
 					int power = s.getThreat();
 					availableMobileThreat += power;
@@ -880,7 +868,7 @@ public class MilitaryManager extends Module {
 					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
-
+				
 				// paint allythreat for striders
 				for (Strider s : miscHandler.striders.values()) {
 					if (s.getUnit().getHealth() <= 0 || s.getUnit().getTeam() != ai.teamID) continue;
@@ -890,7 +878,7 @@ public class MilitaryManager extends Module {
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
 					int rad = 15;
-
+					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 				
@@ -911,114 +899,134 @@ public class MilitaryManager extends Module {
 				availableMobileThreat *= 1.5f;
 				
 				availableRaiderThreat /= 500f;
-
+				
 				// paint allythreat for commanders and welders
-				for (Worker w: ai.ecoManager.workers.values()){
-					if (w.getUnit().getHealth() <= 0 || w.getUnit().getTeam() != ai.teamID || !w.getUnit().getDef().isAbleToAttack()) continue;
+				for (Worker w : ai.ecoManager.workers.values()) {
+					if (w.getUnit().getHealth() <= 0 || w.getUnit().getTeam() != ai.teamID || !w.getUnit().getDef().isAbleToAttack())
+						continue;
 					int power = (int) ((w.power + w.getUnit().getMaxHealth()) / 14f);
 					AIFloat3 pos = w.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
 					int rad = 10;
-
+					
 					allyThreatGraphics.paintCircle(x, y, rad, power);
 				}
 				
-				// paint ally porc threat
-				for (Unit u:ai.ecoManager.porcs){
-					if (u.getHealth() <= 0 || u.getTeam() != ai.teamID) continue;
-					float power = 0;
-					for (WeaponMount w:u.getDef().getWeaponMounts()){
-						WeaponDef wd = w.getWeaponDef();
-						if (!wd.getName().contains("fake")) {
-							// take the max between burst damage and continuous dps as weapon power.
-							float wepShot = wd.getDamage().getTypes().get(1) * wd.getProjectilesPerShot() * wd.getSalvoSize();
-							for (Map.Entry<String, String> param: wd.getCustomParams().entrySet()){
-								if (param.getKey().equals("extra_damage")) wepShot += Float.parseFloat(param.getValue()); // emp
-								if (param.getKey().equals("impulse")) wepShot += Float.parseFloat(param.getValue())/10f; // impulse
-								if (param.getKey().equals("timeslow_damagefactor")) wepShot += Math.min((wepShot * Float.parseFloat(param.getValue())), wepShot/2f); // slow
-								if (param.getKey().equals("disarmDamageOnly")) wepShot /= 10f;
-								if (param.getKey().equals("setunitsonfire")) wepShot *= 2f;
-							}
-							if (wd.isParalyzer()) wepShot *= 2f;
-							wepShot *= 1f + wd.getAreaOfEffect()/100f;
-							power += wepShot/wd.getReload();
-						}
-					}
-					power += u.getMaxHealth();
-					power /= 10f;
-					if (u.isBeingBuilt()) power *= u.getBuildProgress() * u.getBuildProgress();
-					float radius = u.getMaxRange();
-					AIFloat3 pos = u.getPos();
-					int x = Math.round(pos.x/64f);
-					int y = Math.round(pos.z/64f);
-					int rad = Math.round(radius/64f);
-					
-					allyPorcGraphics.paintCircle(x, y, rad, (int) power);
-				}
-
 				//paint buildpower
-				for (Worker w: ai.ecoManager.workers.values()){
+				for (Worker w : ai.ecoManager.workers.values()) {
 					if (w.getUnit().getHealth() <= 0 || w.getUnit().getTeam() != ai.teamID) continue;
 					AIFloat3 pos = w.getPos();
 					int x = Math.round(pos.x / 64f);
 					int y = Math.round(pos.z / 64f);
-
+					
 					bpGraphics.paintCircle(x, y, w.buildRange, Math.round(w.bp));
 				}
-			}
-		});
-		thread.start();
-
-		for(Enemy t:targets.values()){
-			int effectivePower = (int) t.getDanger();
-
-			AIFloat3 position = t.position;
+			});
+			thread.start();
 			
-			int x = Math.round(position.x / 64f);
-			int y = Math.round(position.z / 64f);
-			if (!t.identified || t.ud == null || !t.ud.isAbleToFly()) {
-				scytheGraphics.paintCircle(x, y, 4, 1);
-			}
-
-			if (position != null && t.ud != null
-					&& effectivePower > 0
-					&& (!unitTypes.planes.contains(t.ud.getName()))
-					&& !t.unit.isBeingBuilt()
-					&& !t.unit.isParalyzed()
-					&& t.unit.getRulesParamFloat("disarmed", 0f) == 0) {
-				int r = Math.round(t.threatRadius/64f);
-
-				if (t.ud.getName().equals("gunshipskirm")){
-					r *= 5;
+			threatGraphics.clear();
+			aaThreatGraphics.clear();
+			riotGraphics.clear();
+			scytheGraphics.clear();
+			for (Enemy t : targets.values()) {
+				int effectivePower = (int) t.getDanger();
+				
+				AIFloat3 position = t.position;
+				
+				int x = Math.round(position.x / 64f);
+				int y = Math.round(position.z / 64f);
+				if (!t.identified || t.ud == null || !t.ud.isAbleToFly()) {
+					scytheGraphics.paintCircle(x, y, 4, 1);
 				}
 				
-				if (!t.isStatic) {
-					if (!t.ud.isAbleToFly()) {
-						// Reduce threat gradually for units that haven't been seen recently.
-						float timeMod = (((frame - t.lastSeen)) / 1800f);
-						timeMod *= timeMod;
-						timeMod = Math.max(0, (1f - timeMod));
-						effectivePower = (int) (effectivePower * timeMod);
+				if (position != null && t.ud != null
+					      && effectivePower > 0
+					      && (!unitTypes.planes.contains(t.ud.getName()))
+					      && !t.unit.isBeingBuilt()
+					      && !t.unit.isParalyzed()
+					      && t.unit.getRulesParamFloat("disarmed", 0f) == 0) {
+					int r = Math.round(t.threatRadius / 64f);
+					
+					if (t.ud.getName().equals("gunshipskirm")) {
+						r *= 5;
 					}
-					// paint enemy threat for mobiles
-					if (t.isAA || t.isFlexAA){
-						aaThreatGraphics.paintCircle(x, y, Math.round(r * 1.25f), effectivePower);
-					}else{
-						if (t.isRiot) riotGraphics.paintCircle(x, y, r + 2, 1);
-						threatGraphics.paintCircle(x, y, r + 2, effectivePower);
+					
+					if (!t.isStatic) {
+						if (!t.ud.isAbleToFly()) {
+							// Reduce threat gradually for units that haven't been seen recently.
+							float timeMod = (((frame - t.lastSeen)) / 1800f);
+							timeMod *= timeMod;
+							timeMod = Math.max(0, (1f - timeMod));
+							effectivePower = (int) (effectivePower * timeMod);
+						}
+						// paint enemy threat for mobiles
+						if (t.isAA || t.isFlexAA) {
+							aaThreatGraphics.paintCircle(x, y, Math.round(r * 1.25f), effectivePower);
+						} else {
+							if (t.isRiot) riotGraphics.paintCircle(x, y, r + 2, 1);
+							threatGraphics.paintCircle(x, y, r + 2, effectivePower);
+						}
+					} else if (!t.isAA) {
+						// for statics
+						if (t.isRiot) riotGraphics.paintCircle(x, y, r + 1, 1);
+						threatGraphics.paintCircle(x, y, r + 1, effectivePower);
 					}
-				}else if (!t.isAA){
-					// for statics
-					if (t.isRiot) riotGraphics.paintCircle(x, y, r + 1, 1);
-					threatGraphics.paintCircle(x, y, r + 1, effectivePower);
-					if (updatePorc){
+				}
+			}
+		}else {
+			thread = new Thread( () -> {
+				allyPorcGraphics.clear();
+				
+				// paint ally porc threat separately from painting other ally threat because it's freaking expensive.
+				for (Porc p : ai.ecoManager.dporcs.values()) {
+					if (p.isDead()) continue;
+					
+					AIFloat3 pos = p.getPos();
+					int x = Math.round(pos.x / 64f);
+					int y = Math.round(pos.z / 64f);
+					int rad = p.radius;
+					
+					allyPorcGraphics.paintCircle(x, y, rad, p.getPower());
+				}
+			});
+			thread.start();
+			
+			enemyPorcGraphics.clear();
+			raiderValueGraphics.clear();
+			// Update porc threat and loot value for raiders.
+			for (Enemy t : targets.values()) {
+				if (!t.identified || t.ud == null || (!t.isWorker && !t.isStatic) || t.isCom) continue;
+				AIFloat3 position = t.position;
+				int x = Math.round(position.x / 64f);
+				int y = Math.round(position.z / 64f);
+				int r;
+				float value = t.value / 10f;
+				if (t.isPorc){
+					value /= 2f;
+					if (!t.unit.isBeingBuilt()
+						      && !t.unit.isParalyzed()
+						      && t.unit.getRulesParamFloat("disarmed", 0f) == 0) {
+						// paint trimmed porc threat radii for workers and raiders to reference
+						r = Math.round(t.threatRadius / 64f);
+						int effectivePower = (int) t.getDanger();
 						enemyPorcGraphics.paintCircle(x, y, r - 1, effectivePower);
 					}
 				}
+				r = 7;
+				
+				float rthreat = getThreat(position) * (1f + getRiotThreat(position));
+				if (rthreat > availableRaiderThreat) continue;
+				
+				float threatMod = rthreat / availableRaiderThreat;
+				threatMod *= threatMod;
+				value *= Math.max(0.5f, 1f - threatMod);
+				
+				raiderValueGraphics.paintCircle(x, y, r, Math.round(value));
 			}
 		}
 		
+		// synchronize the second thread.
 		boolean ok = false;
 		while (!ok) {
 			try {
@@ -1030,26 +1038,6 @@ public class MilitaryManager extends Module {
 				// something more brutal happened
 				ai.debug(e);
 				System.exit(-1);
-			}
-		}
-		
-		if (updatePorc){
-			// Update loot value for raiders.
-			for (Enemy t: targets.values()){
-				if (!t.identified || t.ud == null || (!t.isWorker && !t.isStatic) || t.isCom) continue;
-				AIFloat3 position = t.position;
-				float rthreat = getThreat(position) * (1f + getRiotThreat(position));
-				if (rthreat > availableRaiderThreat) continue;
-				float value = t.ud.getCost(m)/10f;
-				if (t.isPorc) value /= 2f;
-				float threatMod = rthreat/availableRaiderThreat;
-				threatMod *= threatMod;
-				value *= Math.max(0.5f, 1f - threatMod);
-				
-				int x = Math.round(position.x / 64f);
-				int y = Math.round(position.z / 64f);
-				int r = 7;
-				raiderValueGraphics.paintCircle(x, y, r, Math.round(value));
 			}
 		}
 	}
@@ -1069,7 +1057,7 @@ public class MilitaryManager extends Module {
 				outdated.add(t);
 				
 				// Unpaint enemy threat for aa
-				if (t.isAA && t.isPainted) {
+				if ((t.isAA || t.isFlexAA) && t.isPainted) {
 					int effectivePower = (int) t.getDanger();
 					AIFloat3 position = t.position;
 					int x = Math.round(position.x / 64f);
@@ -1082,7 +1070,7 @@ public class MilitaryManager extends Module {
 		}
 		
 		for (Enemy t: outdated){
-			t.position = null; // needed for BomberTasks
+			if (t.isStatic) t.isDead = true; // needed for BomberTasks
 			targets.remove(t.unitID);
 			if (t.isPorc && !t.isNanoSpam){
 				enemyPorcs.remove(t.unitID);
@@ -1612,88 +1600,28 @@ public class MilitaryManager extends Module {
 		return nullpos;
 	}
 	
-	public AIFloat3 getBomberTarget(AIFloat3 origin, boolean defend){
-		AIFloat3 target = null;
-		float cost = Float.MAX_VALUE;
-		
-		// first check defense targets
-		if (defend) {
-			for (DefenseTarget d : defenseTargets) {
-				float tmpcost = (distance(origin, d.position) - d.damage)/1+(2 * Math.max(0f, getThreat(d.position) - getAAThreat(d.position)));
-				
-				if (tmpcost < cost) {
-					cost = tmpcost;
-					target = d.position;
-				}
-				
+	public PriorityQueue<Enemy> getBomberTargets(){
+		Comparator<Enemy> pnComp = (Enemy t, Enemy t1) -> {
+			if (t == null && t1 == null) {
+				return 0;
 			}
-		}
-		
-		// then look for enemy mexes to kill, and see which is cheaper
-		List<MetalSpot> ms = graphManager.getEnemySpots();
-		if(ms.size() > 0){
-			for (MetalSpot m:ms){
-				float tmpcost = distance(m.getPos(), origin)/(2 - Math.min(getAAThreat(m.getPos()), 1f));
-				
-				if (tmpcost < cost){
-					target = m.getPos();
-					cost = tmpcost;
-				}
+			if (t == null) {
+				return -1;
 			}
-		}
-		
-		// then look for enemy units to kill, and see if any are better targets
-		if(targets.size() > 0){
-			Iterator<Enemy> enemies = targets.values().iterator();
-			while(enemies.hasNext()){
-				Enemy e = enemies.next();
-				if (e.position != null && e.identified) {
-					float tmpcost = distance(origin, e.position) - e.getDanger();
-					
-					if (e.isMajorCancer){
-						tmpcost /= 4;
-						tmpcost -= 1000;
-					}else if (e.isMinorCancer){
-						tmpcost /= 2;
-						tmpcost -= 500;
-					}
-					
-					tmpcost += 2000f * getAAThreat(e.position);
-					
-					if (tmpcost < cost) {
-						cost = tmpcost;
-						target = e.position;
-					}
-				}
+			if (t1 == null) {
+				return 1;
 			}
-		}
+			float tthreat = (1f + getAAThreat(t.position));
+			float t1threat = (1f + getAAThreat(t1.position));
+			return (int) ((((distance(t.position, graphManager.getAllyCenter()) * tthreat) - (t.value/tthreat))) - ((distance(t1.position, graphManager.getAllyCenter()) * t1threat) - (t1.value/t1threat)));
+		};
+		PriorityQueue<Enemy> result = new PriorityQueue<>(10, pnComp);
 		
-		if (target != null){
-			TargetMarker tm = new TargetMarker(target, frame);
-			targetMarkers.add(tm);
-			return target;
+		for (Enemy t: targets.values()){
+			if (!t.identified || t.ud == null || (!t.isStatic && t.value < 700f) || t.isNanoSpam) continue;
+			result.add(t);
 		}
-		
-		// if no targets are available attack enemyshadowed metal spots until we find one
-		ms = graphManager.getUnownedSpots();
-		for (MetalSpot m:ms){
-			if (m.enemyShadowed){
-				float tmpcost = distance(m.getPos(), origin);
-				tmpcost /= 1+getThreat(m.getPos());
-				tmpcost /= (frame-m.getLastSeen())/600;
-				
-				if (tmpcost < cost) {
-					target = m.getPos();
-					cost = tmpcost;
-				}
-			}
-		}
-		if (target != null) {
-			TargetMarker tm = new TargetMarker(target, frame);
-			targetMarkers.add(tm);
-			return target;
-		}
-		return nullpos;
+		return result;
 	}
 	
 	public Enemy getUltiTarget(AIFloat3 origin){

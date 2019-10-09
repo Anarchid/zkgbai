@@ -64,7 +64,7 @@ public class Factory extends Worker {
 				scoutAllowance--;
 				maxScoutAllowance++;
 				raiderSpam = -5;
-				if (bigMap) expensiveRaiderSpam = -2;
+				if (bigMap) raiderSpam = -10;
 			}
 
 			if (defName.equals("factoryspider")){

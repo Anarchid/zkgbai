@@ -6,10 +6,11 @@ import zkgbai.ZKGraphBasedAI;
 import zkgbai.economy.EconomyManager;
 import zkgbai.graph.GraphManager;
 import zkgbai.graph.MetalSpot;
+import zkgbai.kgbutil.Pathfinder;
 import zkgbai.los.LosManager;
 import zkgbai.military.Enemy;
 import zkgbai.military.MilitaryManager;
-import zkgbai.military.unitwrappers.Fighter;
+import zkgbai.military.unitwrappers.Bomber;
 
 import java.util.*;
 
@@ -26,12 +27,17 @@ public class BomberHandler {
     RetreatHandler retreatHandler;
     GraphManager graphManager;
     EconomyManager ecoManager;
+    Pathfinder pathfinder;
+	
+	Map<Integer, Bomber> bombers = new HashMap<>();
 
-    Map<Integer, Fighter> unarmedBombers;
-    Map<Integer, Fighter> readyBombers;
-    Map<Integer, Fighter> activeBombers;
+    List<Bomber> unarmedBombers = new LinkedList<>();
+    Queue<Bomber> readyBombers = new LinkedList<>();
+    List<Bomber> activeBombers = new LinkedList<>();
 
     int frame;
+    
+    int minFlock = 8;
 
     private static final int CMD_FIND_PAD = 33411;
 
@@ -42,28 +48,21 @@ public class BomberHandler {
         this.ecoManager = ai.ecoManager;
         this.losManager = ai.losManager;
         this.retreatHandler = warManager.retreatHandler;
-
-        this.unarmedBombers = new HashMap<Integer, Fighter>();
-        this.readyBombers = new HashMap<Integer, Fighter>();
-        this.activeBombers = new HashMap<Integer, Fighter>();
+        this.pathfinder = Pathfinder.getInstance();
     }
 
-    public void addBomber(Fighter b){
-        readyBombers.put(b.id, b);
+    public void addBomber(Bomber b){
+        bombers.put(b.id, b);
+        readyBombers.add(b);
     }
 
     public void removeUnit(Unit u) {
-        int key = u.getUnitId();
-        if (unarmedBombers.containsKey(key)) {
-            unarmedBombers.remove(key);
-        }
-
-        if (readyBombers.containsKey(key)) {
-            readyBombers.remove(key);
-        }
-
-        if (activeBombers.containsKey(key)) {
-            activeBombers.remove(key);
+        Bomber f = bombers.get(u.getUnitId());
+        if (f != null) {
+            unarmedBombers.remove(f);
+	        readyBombers.remove(f);
+	        activeBombers.remove(f);
+	        bombers.remove(u.getUnitId());
         }
     }
 
@@ -74,21 +73,18 @@ public class BomberHandler {
     public void update(int frame){
         this.frame = frame;
 
-        if(frame % 60 == 0) {
+        if(frame % 60 == ai.offset % 60) {
             if (unarmedBombers.isEmpty() && readyBombers.isEmpty() && activeBombers.isEmpty()) {return;}
             cleanUnits();
             checkBombers();
-        }
-
-        if (frame % 300 == 0){
-            assignBombers();
+	        assignBombers();
         }
     }
 
     private void checkBombers(){
-        List<Integer> swap = new ArrayList<Integer>();
+        List<Bomber> swap = new ArrayList<>();
 
-        for (Fighter b:unarmedBombers.values()){
+        for (Bomber b:unarmedBombers){
             boolean isUnarmed = false;
             if (b.getUnit().getHealth() < b.getUnit().getMaxHealth()){
                 isUnarmed = true;
@@ -99,91 +95,76 @@ public class BomberHandler {
             }
 
             if (!isUnarmed){
-                swap.add(b.id);
-                readyBombers.put(b.id, b);
+	            readyBombers.add(b);
+                swap.add(b);
             }
         }
-
-        for (Integer id:swap){
-            unarmedBombers.remove(id);
-        }
-
-        // Allow all bombers to sift themselves into readyBombers before sending them to attack.
-        // Also ensure that there are enough bombers to do damage.
-        if (activeBombers.isEmpty() && unarmedBombers.isEmpty() && readyBombers.size() > ecoManager.baseIncome/(12 * (1 + (0.5 * ai.mergedAllies)))){
-            activeBombers.putAll(readyBombers);
-            readyBombers.clear();
-        }
+        unarmedBombers.removeAll(swap);
     }
 
     private void assignBombers(){
-        AIFloat3 target = warManager.getBomberTarget(graphManager.getAllyCenter(), true);
-
-        List<Integer> swap = new ArrayList<Integer>();
-        for (Fighter b:activeBombers.values()){
+        List<Bomber> swap = new ArrayList<>();
+        for (Bomber b:activeBombers){
             // sift unarmed bombers back into the unarmed list.
             boolean isUnarmed = false;
             if (b.getUnit().getRulesParamFloat("noammo", 0.0f) > 0) {
                 isUnarmed = true;
             }
 
-            // don't attack with retreating units
-            if (retreatHandler.isRetreating(b.getUnit())){isUnarmed = true;}
-
             if (isUnarmed){
-                swap.add(b.id);
-                unarmedBombers.put(b.id, b);
+                swap.add(b);
+                unarmedBombers.add(b);
                 continue;
             }
-
-            b.fightTo(getRadialPoint(target, 300f));
+			
+            if (b.targetMissing() /*|| warManager.getAAThreat(b.target.position) > activeBombers.size()/4f*/){
+	            swap.add(b);
+	            readyBombers.add(b);
+	            b.flyTo(graphManager.getAllyCenter());
+            }else{
+                b.bomb();
+            }
         }
-
-        for (Integer id:swap){
-            activeBombers.remove(id);
-        }
+        activeBombers.removeAll(swap);
 
         // have all unarmed bombers reload/heal themselves.
         List<Float> params = new ArrayList<Float>();
-        for (Fighter b:unarmedBombers.values()) {
+        for (Bomber b:unarmedBombers) {
             if (!graphManager.isEnemyTerritory(b.getPos())) {
-                b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 0, frame + 300);
+                b.findPad();
             }else{
-                b.moveTo(graphManager.getAllyCenter()); // if in enemy territory, maneuver back to safety before finding an airpad.
-                b.getUnit().executeCustomCommand(CMD_FIND_PAD, params, (short) 32, frame + 300);
+                b.flyTo(graphManager.getAllyCenter()); // if in enemy territory, maneuver back to safety before finding an airpad.
             }
+        }
+        
+        if (unarmedBombers.isEmpty() && readyBombers.size() >= minFlock){
+	        PriorityQueue<Enemy> targets = warManager.getBomberTargets();
+	        if (!targets.isEmpty()) minFlock = Math.max(8, (int) (Math.ceil(targets.peek().ud.getHealth()/800f) + (targets.peek().isImportant ? 1 : 0)));
+	        
+	        while (!targets.isEmpty() && !readyBombers.isEmpty()){
+	        	Enemy e = targets.poll();
+	        	int neededBombers = (int) (Math.ceil(e.ud.getHealth()/800f) + (e.isImportant ? 1 : 0));
+	        	if (neededBombers > readyBombers.size() /*|| !pathfinder.isAssaultReachable(readyBombers.peek().getUnit(), e.position, 1.5f)*/) continue;
+	        	while (neededBombers > 0){
+	        		Bomber b = readyBombers.poll();
+	        		b.target = e;
+	        		activeBombers.add(b);
+	        		neededBombers--;
+		        }
+	        }
         }
     }
 
     void cleanUnits(){
-        List<Integer> invalidBombers = new ArrayList<Integer>();
-        for (Fighter f:unarmedBombers.values()){
-            if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != ai.teamID){
-                invalidBombers.add(f.id);
-            }
+        List<Bomber> invalidBombers = new ArrayList<>();
+        for (Bomber f:bombers.values()){
+            if (f.isDead()) invalidBombers.add(f);
         }
-        for (Integer key:invalidBombers){
-            unarmedBombers.remove(key);
-        }
-        invalidBombers.clear();
-
-        for (Fighter f:readyBombers.values()){
-            if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != ai.teamID){
-                invalidBombers.add(f.id);
-            }
-        }
-        for (Integer key:invalidBombers){
-            readyBombers.remove(key);
-        }
-        invalidBombers.clear();
-
-        for (Fighter f:activeBombers.values()){
-            if (f.getUnit().getHealth() <= 0 || f.getUnit().getTeam() != ai.teamID){
-                invalidBombers.add(f.id);
-            }
-        }
-        for (Integer key:invalidBombers){
-            activeBombers.remove(key);
+        for (Bomber f: invalidBombers){
+            unarmedBombers.remove(f);
+            readyBombers.remove(f);
+            activeBombers.remove(f);
+            bombers.remove(f.id);
         }
     }
 
