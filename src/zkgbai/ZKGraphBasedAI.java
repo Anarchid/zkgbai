@@ -303,8 +303,8 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
 	    	for (Enemy e: warManager.getTargets()){
-	    		if (e.value > 400f){
-	    			marker(e.position, "AAThreat: " + warManager.getAAThreat(e.position));
+	    		if (e.isPorc){
+	    			marker(e.position, e.ud.getHumanName());
 			    }
 		    }
 		    /*for (Worker w:ecoManager.workers.values()){

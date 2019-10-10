@@ -120,6 +120,12 @@ public class Enemy {
 			this.isAA = true;
 		}
 		
+		if (ud.getName().equals("staticheavyarty") || ud.getName().equals("staticnuke") || ud.getName().equals("tacnuke")
+			      || ud.getName().equals("napalmmissile") || ud.getName().equals("raveparty") || ud.getName().equals("zenith")
+			      || ud.getName().equals("mahlazer")){
+			this.isSuperWep = true;
+		}
+		
 		if(u.getWeaponMounts().size() > 0){
 			this.threatRadius = u.getMaxWeaponRange();
 			if (isStatic && !isAA && !isSuperWep){
@@ -181,12 +187,6 @@ public class Enemy {
 		
 		if (ud.getName().equals("gunshipskirm") || ud.getName().equals("gunshipheavyskirm") || ud.getName().equals("gunshipkrow") || ud.getName().equals("jumpskirm") || ud.getName().equals("turretemp")){
 			isFlexAA = true;
-		}
-
-		if (ud.getName().equals("staticheavyarty") || ud.getName().equals("staticnuke") || ud.getName().equals("tacnuke")
-				|| ud.getName().equals("napalmmissile") || ud.getName().equals("raveparty") || ud.getName().equals("zenith")
-				|| ud.getName().equals("mahlazer")){
-			this.isSuperWep = true;
 		}
 		
 		if (ud.getName().equals("staticmex")) isMex = true;

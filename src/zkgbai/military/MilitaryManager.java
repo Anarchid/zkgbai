@@ -1034,7 +1034,7 @@ public class MilitaryManager extends Module {
 				ok = true;
 			} catch (InterruptedException e) {
 				// ignore, JVM is just being a dolt
-			} catch (Exception e) {
+			} catch (Throwable e) {
 				// something more brutal happened
 				ai.debug(e);
 				System.exit(-1);
