@@ -299,7 +299,7 @@ public class EconomyManager extends Module {
 			adjustedIncome = (staticIncome/(1 + (ai.mergedAllies))) + ((1f + ai.mergedAllies) * (frame/1800f));
 			
 			if (fusions.size() > 3) {
-				ArrayList<Float> params = new ArrayList<>();
+				ArrayList<Float> params = new ArrayList<>(1);
 				if (!fusionTasks.isEmpty()) {
 					params.add(1f);
 					for (Unit u : superWeps) {
@@ -335,7 +335,8 @@ public class EconomyManager extends Module {
 					}
 				}
 			}
-			float eratio = (eFac ? 1.5f : 1f) + (graphManager.territoryFraction + (graphManager.territoryFraction * graphManager.territoryFraction)) / 2f;
+			float eratio = 2f + fusions.size();
+			//float eratio = (eFac ? 1.5f : 1f) + (graphManager.territoryFraction + (graphManager.territoryFraction * graphManager.territoryFraction)) / 2f;
 			hardEstalled = (maxStorage > 1f && energy < Math.min(effectiveIncomeEnergy * (1f + graphManager.territoryFraction), maxStorage/2f)) || staticIncome > effectiveIncomeEnergy;
 			estalled = hardEstalled || rawMexIncome * eratio > effectiveIncomeEnergy;
 			if (maxStorage > 1f && hardEstalled && metal/maxStorage > 0.5f) energyReclaim = true;
@@ -822,7 +823,7 @@ public class EconomyManager extends Module {
 		if (newWorkers.contains(u.getUnitId()) && u.getCurrentCommands().isEmpty()){
 			Worker w = new Worker(u);
 			workers.put(w.id, w);
-			if (workers.size() > 1 + ai.mergedAllies && (greed < 2 || greed < ((workers.size() - commanders.size())) * Math.min(1f - graphManager.territoryFraction, 1f))){
+			if (workers.size() > 1 + ai.mergedAllies && (greed < 2 || greed < (workers.size() - commanders.size()) * Math.min(1f - graphManager.territoryFraction, 1f))){
 				w.isGreedy = true;
 				greed++;
 			}
@@ -885,7 +886,7 @@ public class EconomyManager extends Module {
 	}
 	
 	private void setEcoPriorities(){
-		List<Float> params = new ArrayList<>();
+		List<Float> params = new ArrayList<>(1);
 		if (!hardEstalled && !graphManager.eminentTerritory && adjustedIncome < 20f){
 			params.add(2f);
 		}else {
@@ -2429,7 +2430,7 @@ public class EconomyManager extends Module {
 			if (best != null){
 				sparrow = best;
 				radars.remove(sparrow);
-				List<Float> params = new ArrayList<>();
+				List<Float> params = new ArrayList<>(1);
 				params.add((float) callback.getUnitDefByName("planelightscout").getUnitDefId());
 				sparrow.executeCustomCommand(CMD_MORPH, params, (short) 0, Integer.MAX_VALUE);
 				params.clear();
@@ -2447,7 +2448,7 @@ public class EconomyManager extends Module {
 		ConstructionTask ct;
 
 		// for solars
-		if (((solars.size() + solarTasks.size()) < Math.round(rawMexIncome/2f) || Math.random() > 0.35)
+		if (((solars.size() + solarTasks.size()) < Math.round(rawMexIncome/2f) || Math.random() > 0.25)
 				&& callback.getMap().getElevationAt(position.x, position.z) > 0){
 			if (position == null){
 				return;
@@ -2831,9 +2832,6 @@ public class EconomyManager extends Module {
 	}
 
 	public float getReclaimValue(){
-		if (effectiveIncome < 20f){
-			return 0f;
-		}
 		if (lastRCValueFrame == 0 || frame - lastRCValueFrame > 300){
 			reclaimValue = 0;
 			lastRCValueFrame = frame;

@@ -117,9 +117,9 @@ public class BomberHandler {
                 continue;
             }
 			
-            if (b.targetMissing() /*|| warManager.getAAThreat(b.target.position) > activeBombers.size()/4f*/){
+            if (b.targetMissing()){
 	            swap.add(b);
-	            readyBombers.add(b);
+	            unarmedBombers.add(b);
 	            b.flyTo(graphManager.getAllyCenter());
             }else{
                 b.bomb();
@@ -128,7 +128,6 @@ public class BomberHandler {
         activeBombers.removeAll(swap);
 
         // have all unarmed bombers reload/heal themselves.
-        List<Float> params = new ArrayList<Float>();
         for (Bomber b:unarmedBombers) {
             if (!graphManager.isEnemyTerritory(b.getPos())) {
                 b.findPad();
@@ -144,7 +143,7 @@ public class BomberHandler {
 	        while (!targets.isEmpty() && !readyBombers.isEmpty()){
 	        	Enemy e = targets.poll();
 	        	int neededBombers = (int) (Math.ceil(e.ud.getHealth()/800f) + (e.isImportant ? 1 : 0));
-	        	if (neededBombers > readyBombers.size() /*|| !pathfinder.isAssaultReachable(readyBombers.peek().getUnit(), e.position, 1.5f)*/) continue;
+	        	if (neededBombers > readyBombers.size()) continue;
 	        	while (neededBombers > 0){
 	        		Bomber b = readyBombers.poll();
 	        		b.target = e;

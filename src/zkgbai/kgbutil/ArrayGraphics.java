@@ -29,16 +29,17 @@ public class ArrayGraphics {
 
         int radsq = radius * radius;
 
-        for (int x = beginX; x < endX; x++) {
-            int dX = (cx - x);
-            int dxSq = dX*dX;
+        for (int y = beginY; y < endY; y++) {
+	        int dY = (cy - y);
+	        int dySq = dY*dY;
+	        int ypos = (y * width);
 
-            for (int y = beginY; y < endY; y++) {
-                int dY = (cy - y);
-                int dySq = dY*dY;
-
+            for (int x = beginX; x < endX; x++) {
+	            int dX = (cx - x);
+	            int dxSq = dX*dX;
+	            
                 int sum = dxSq + dySq;
-                int index = (y * width) + x;
+                int index = ypos + x;
 
                 if(sum <= radsq) {
                     data[index] += intensity;
@@ -59,16 +60,17 @@ public class ArrayGraphics {
 
         int radsq = radius * radius;
 
-        for (int x = beginX; x < endX; x++) {
-            int dX = (cx - x);
-            int dxSq = dX*dX;
+        for (int y = beginY; y < endY; y++) {
+	        int dY = (cy - y);
+	        int dySq = dY*dY;
+	        int ypos = (y * width);
 
-            for (int y = beginY; y < endY; y++) {
-                int dY = (cy - y);
-                int dySq = dY*dY;
+            for (int x = beginX; x < endX; x++) {
+	            int dX = (cx - x);
+	            int dxSq = dX*dX;
 
                 int sum = dxSq + dySq;
-                int index = (y * width) + x;
+                int index = ypos + x;
 
                 if(sum <= radsq) {
                     data[index] = (short) Math.max(data[index] - intensity, 0);

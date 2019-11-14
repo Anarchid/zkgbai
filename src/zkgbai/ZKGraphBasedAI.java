@@ -224,16 +224,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     
     @Override
     public int update(int frame) {
-		if (slave) {
-			/*if (frame % 30 == 0) {
-				// give away income from communism when merged with another AI instance.
-				Resource metal = callback.getResources().get(0);
-				Resource energy = callback.getResources().get(1);
-				callback.getEconomy().sendResource(metal, callback.getEconomy().getIncome(metal), mergeTarget);
-				callback.getEconomy().sendResource(energy, callback.getEconomy().getIncome(energy), mergeTarget);
-			}*/
-			return 0;
-		}
+		if (slave) return 0;
 		
 		if (frame == 0){
 			say("glhf!");
@@ -302,15 +293,7 @@ public class ZKGraphBasedAI extends com.springrts.ai.oo.AbstractOOAI {
     @Override
     public int message(int player, String message) {
 	    if (!slave && message.equals("kgbdebug")){
-	    	for (Enemy e: warManager.getTargets()){
-	    		if (e.isPorc){
-	    			marker(e.position, e.ud.getHumanName());
-			    }
-		    }
-		    /*for (Worker w:ecoManager.workers.values()){
-		    	//marker(w.getPos(), w.getTask() == null ? "no task" : w.getTask().toString());
-			    marker(w.getPos(), w.isGreedy ? "greedy" : "non-greedy");
-		    }*/
+	    	say("Mobile BP: " + facManager.mobileBP + " Income: " + ecoManager.effectiveIncomeMetal + " Income + Reclaim Bonus: " + (ecoManager.effectiveIncomeMetal + (ecoManager.getReclaimValue() / ((2f + 20f * graphManager.territoryFraction) * 25f))));
 		}
 
 		for (Module module : modules) {

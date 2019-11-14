@@ -17,6 +17,7 @@ public class ShieldSquad extends Squad {
 	static final int CMD_ORBIT = 13923;
 	static final int CMD_ORBIT_DRAW = 13924;
 	static final int CMD_WANTED_SPEED = 38825;
+	static final int CMD_WANT_ONOFF = 35667;
 	static final short OPTION_SHIFT_KEY = 32;
 	public Fighter leader;
 	private int leaderWeight;
@@ -58,7 +59,11 @@ public class ShieldSquad extends Squad {
 		
 		if (defID == felonID) numFelons++;
 		
-		if (defID == lawID) f.getUnit().setOn(true, (short) 0, Integer.MAX_VALUE);
+		if (defID == lawID){
+			List<Float> params = new ArrayList<>(1);
+			params.add(1f);
+			f.getUnit().executeCustomCommand(CMD_WANT_ONOFF, params, (short) 0, Integer.MAX_VALUE);
+		}
 		
 		if (defID != aspisID) {
 			for (Weapon w : f.getUnit().getWeapons()) {
@@ -76,14 +81,14 @@ public class ShieldSquad extends Squad {
 			f.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
 			leader = f;
 			leaderWeight = getUnitWeight(f);
-			List<Float> moveparams = new ArrayList<>();
+			List<Float> moveparams = new ArrayList<>(1);
 			moveparams.add(45f);
 			f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
 		}else if (getUnitWeight(f) < leaderWeight){
 			f.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
 			leader.getUnit().setMoveState(0, (short) 0, Integer.MAX_VALUE);
 			// Set the wanted max speed for the new leader and remove the speed limit from the old leader.
-			List<Float> moveparams = new ArrayList<>();
+			List<Float> moveparams = new ArrayList<>(1);
 			moveparams.add(45f);
 			f.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
 			moveparams.clear();
@@ -99,8 +104,8 @@ public class ShieldSquad extends Squad {
 		}else{
 			f.getUnit().setMoveState(0, (short) 0, Integer.MAX_VALUE);
 			fighters.add(f);
-			List<Float> params = new ArrayList<>();
-			List<Float> drawParams = new ArrayList<>();
+			List<Float> params = new ArrayList<>(2);
+			List<Float> drawParams = new ArrayList<>(1);
 			params.add((float)leader.id);
 			drawParams.add((float)leader.id);
 			if (f.getUnit().getDef().getUnitDefId() == domiID){
@@ -174,13 +179,15 @@ public class ShieldSquad extends Squad {
 	}
 	
 	private void collectStragglers(){
+		List<Float> drawParams = new ArrayList<>(1);
+		drawParams.add((float)leader.id);
 		for (Fighter f:fighters){
 			if (distance(leader.getPos(), f.getPos()) > 600f){
 				f.moveTo(getAngularPoint(leader.getPos(), f.getPos(), 400f)); // have units that haven't rallied yet avoid enemies.
-				List<Float> params = new ArrayList<>();
-				List<Float> drawParams = new ArrayList<>();
+				
+				List<Float> params = new ArrayList<>(2);
 				params.add((float)leader.id);
-				drawParams.add((float)leader.id);
+				
 				if (f.getUnit().getDef().getUnitDefId() == domiID){
 					params.add(250f);
 				}else if (f.getUnit().getDef().getUnitDefId() == aspisID){
@@ -190,6 +197,7 @@ public class ShieldSquad extends Squad {
 				}else{
 					params.add(90f);
 				}
+				
 				f.getUnit().executeCustomCommand(CMD_ORBIT, params, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 				f.getUnit().executeCustomCommand(CMD_ORBIT_DRAW, drawParams, OPTION_SHIFT_KEY, Integer.MAX_VALUE);
 			}
@@ -247,7 +255,7 @@ public class ShieldSquad extends Squad {
 				fighters.remove(leader);
 				leader.getUnit().setMoveState(1, (short) 0, Integer.MAX_VALUE);
 				leaderWeight = getUnitWeight(leader);
-				List<Float> moveparams = new ArrayList<>();
+				List<Float> moveparams = new ArrayList<>(1);
 				moveparams.add(45f);
 				leader.getUnit().executeCustomCommand(CMD_WANTED_SPEED, moveparams, (short) 0, Integer.MAX_VALUE);
 				collectStragglers();

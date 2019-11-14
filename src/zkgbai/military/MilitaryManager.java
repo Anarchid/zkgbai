@@ -97,10 +97,11 @@ public class MilitaryManager extends Module {
 	Set<Integer> newUnits = new HashSet<>();
 	Set<Integer> unbuiltPorcs = new HashSet<>();
 
-	static int CMD_DONT_FIRE_AT_RADAR = 38372;
-	static int CMD_AIR_STRAFE = 39381;
-	static int CMD_AP_FLY_STATE = 34569;
-	static int CMD_UNIT_AI = 36214;
+	static final int CMD_DONT_FIRE_AT_RADAR = 38372;
+	static final int CMD_AIR_STRAFE = 39381;
+	static final int CMD_AP_FLY_STATE = 34569;
+	static final int CMD_UNIT_AI = 36214;
+	static final int CMD_WANT_ONOFF = 35667;
 
 	// unit and weapon def IDs for unitDamaged.
 	int wolvMineID = 0;
@@ -244,7 +245,9 @@ public class MilitaryManager extends Module {
 		
 		// Deactivate outlaws so they don't destroy reclaim
 		if (defName.equals("shieldriot")){
-			unit.setOn(false, (short) 0, Integer.MAX_VALUE);
+			List<Float> params = new ArrayList<>(1);
+			params.add(0f);
+			unit.executeCustomCommand(CMD_WANT_ONOFF, params, (short) 0, Integer.MAX_VALUE);
 		}
 		
 		if (defName.equals("staticnuke")){
@@ -310,7 +313,7 @@ public class MilitaryManager extends Module {
 		
 		// enable snipers and penetrators to shoot radar dots
 		if (defName.equals("cloaksnipe") || defName.equals("hoverarty")){
-			ArrayList<Float> params = new ArrayList<>();
+			ArrayList<Float> params = new ArrayList<>(1);
 			params.add((float) 0);
 			unit.executeCustomCommand(CMD_DONT_FIRE_AT_RADAR, params, (short) 0, Integer.MAX_VALUE);
 			unit.setMoveState(1, (short) 0, Integer.MAX_VALUE);
@@ -318,7 +321,7 @@ public class MilitaryManager extends Module {
 		
 		// disable air strafe for brawlers
 		if (defName.equals("gunshipheavyskirm")){
-			ArrayList<Float> params = new ArrayList<>();
+			ArrayList<Float> params = new ArrayList<>(1);
 			params.add((float) 0);
 			unit.executeCustomCommand(CMD_AIR_STRAFE, params, (short) 0, Integer.MAX_VALUE);
 		}
@@ -382,7 +385,7 @@ public class MilitaryManager extends Module {
 		}else if(unitTypes.loners.contains(defName)) {
 			if (defName.equals("vehsupport") || defName.equals("spidercrabe")) {
 				unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
-				ArrayList<Float> params = new ArrayList<>();
+				ArrayList<Float> params = new ArrayList<>(1);
 				params.add((float) 1);
 				unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, Integer.MAX_VALUE);
 			} else {
@@ -393,7 +396,7 @@ public class MilitaryManager extends Module {
 		}else if (unitTypes.arties.contains(defName)){
 			if (defName.equals("vehheavyarty") || defName.equals("tankarty") || defName.equals("striderarty") || defName.equals("tankheavyarty")){
 				unit.setMoveState(0, (short) 0, Integer.MAX_VALUE);
-				ArrayList<Float> params = new ArrayList<>();
+				ArrayList<Float> params = new ArrayList<>(1);
 				params.add((float) 1);
 				unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, Integer.MAX_VALUE);
 			}else{
@@ -412,7 +415,7 @@ public class MilitaryManager extends Module {
 		}else if (unitTypes.sappers.contains(defName)){
 			unit.setMoveState(2, (short) 0, Integer.MAX_VALUE);
 			unit.setFireState(2, (short) 0, Integer.MAX_VALUE);
-			ArrayList<Float> params = new ArrayList<>();
+			ArrayList<Float> params = new ArrayList<>(1);
 			params.add((float) 0);
 			unit.executeCustomCommand(CMD_UNIT_AI, params, (short) 0, Integer.MAX_VALUE);
 			unit.fight(getRadialPoint(graphManager.getAllyCenter(), 800f), (short) 0, Integer.MAX_VALUE);
@@ -928,7 +931,6 @@ public class MilitaryManager extends Module {
 			threatGraphics.clear();
 			aaThreatGraphics.clear();
 			riotGraphics.clear();
-			scytheGraphics.clear();
 			for (Enemy t : targets.values()) {
 				int effectivePower = (int) t.getDanger();
 				
@@ -936,9 +938,6 @@ public class MilitaryManager extends Module {
 				
 				int x = Math.round(position.x / 64f);
 				int y = Math.round(position.z / 64f);
-				if (!t.identified || t.ud == null || !t.ud.isAbleToFly()) {
-					scytheGraphics.paintCircle(x, y, 4, 1);
-				}
 				
 				if (position != null && t.ud != null
 					      && effectivePower > 0
@@ -994,13 +993,17 @@ public class MilitaryManager extends Module {
 			
 			enemyPorcGraphics.clear();
 			raiderValueGraphics.clear();
+			scytheGraphics.clear();
 			// Update porc threat and loot value for raiders.
 			for (Enemy t : targets.values()) {
-				if (!t.identified || t.ud == null || (!t.isWorker && !t.isStatic) || t.isCom) continue;
 				AIFloat3 position = t.position;
 				int x = Math.round(position.x / 64f);
 				int y = Math.round(position.z / 64f);
 				int r;
+				if (!t.identified || t.ud == null || !t.ud.isAbleToFly()) {
+					scytheGraphics.paintCircle(x, y, 4, 1);
+				}
+				if (!t.identified || t.ud == null || (!t.isWorker && !t.isStatic) || t.isCom) continue;
 				float value = t.value / 10f;
 				if (t.isPorc){
 					value /= 2f;
@@ -1142,7 +1145,7 @@ public class MilitaryManager extends Module {
 					if (defName.equals("dronelight") || defName.equals("droneheavyslow") || defName.equals("dronecarry")){
 						enemyAirValue += 25f;
 					}else {
-						enemyAirValue += t.ud.getBuildTime();
+						enemyAirValue += t.ud.getCost(m);
 					}
 				}else if (t.unit.getRulesParamFloat("comm_level", 0f) > 3f){
 					enemyHasTrollCom = true;
@@ -1153,9 +1156,8 @@ public class MilitaryManager extends Module {
 				}
 			}
 		}
-		if (enemyAirValue > maxEnemyAirValue){
-			maxEnemyAirValue = enemyAirValue;
-		}
+		
+		maxEnemyAirValue = Math.max(enemyAirValue, maxEnemyAirValue);
 		
 		ArrayList<TargetMarker> deadMarkers = new ArrayList<TargetMarker>();
 		for(TargetMarker tm:targetMarkers){

@@ -69,7 +69,7 @@ public class Coward {
 	}
 	
 	public void findPad(){
-		List<Float> params = new ArrayList<Float>();
+		List<Float> params = new ArrayList<Float>(0);
 		unit.executeCustomCommand(CMD_FIND_PAD, params, (short) 0, Integer.MAX_VALUE);
 	}
 	

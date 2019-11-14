@@ -67,7 +67,7 @@ public class Bomber {
 	
 	public void findPad(){
 		if (unit.getHealth() < unit.getMaxHealth() || unit.getRulesParamFloat("noammo", 0.0f) > 0) {
-			List<Float> params = new ArrayList<Float>();
+			List<Float> params = new ArrayList<Float>(0);
 			unit.executeCustomCommand(CMD_FIND_PAD, params, (short) 0, Integer.MAX_VALUE);
 		}
 	}

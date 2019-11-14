@@ -50,7 +50,7 @@ public class TerrainAnalyzer {
         if (veh.result){
             log(taMsg + "Veh path check succeeded, enabling veh!");
             initialFacList.add("factoryveh");
-            //if (veh.avgCostRatio < 1.2f) initialFacList.add("factorytank"); // fuck tanks. Kodachi nerf and dart buff have made them unplayable.
+            if (veh.avgCostRatio < 1.2f) initialFacList.add("factorytank"); // fuck tanks. Kodachi nerf and dart buff have made them unplayable.
             initialFacList.add("factoryhover");
         }
 
